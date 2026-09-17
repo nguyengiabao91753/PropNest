@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PropNest.Api/PropNest.Api.csproj" />
+    <Project Path="src/PropNest.Application/PropNest.Application.csproj" />
+    <Project Path="src/PropNest.Domain/PropNest.Domain.csproj" />
+    <Project Path="src/PropNest.Infrastructure/PropNest.Infrastructure.csproj" />
+    <Project Path="src/PropNest.Workflow.Worker/PropNest.Workflow.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PropNest.Domain.Tests/PropNest.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
