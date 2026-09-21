@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Abstractions;
 using PropNest.Domain.Listings;
@@ -7,9 +9,9 @@ using PropNest.Domain.Workflows;
 
 namespace PropNest.Infrastructure.Persistence;
 
-public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> options) : DbContext(options), IUnitOfWork
+public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> options)
+    : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>(options), IUnitOfWork
 {
-    public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
     public DbSet<Listing> Listings => Set<Listing>();
     public DbSet<ListingHistory> ListingHistories => Set<ListingHistory>();
     public DbSet<ListingModerationReview> ListingModerationReviews => Set<ListingModerationReview>();
@@ -20,9 +22,9 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<IdempotencyRequest> IdempotencyRequests => Set<IdempotencyRequest>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PropNestDbContext).Assembly);
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(PropNestDbContext).Assembly);
     }
 }

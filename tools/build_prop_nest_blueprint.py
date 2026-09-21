@@ -435,13 +435,14 @@ def add_database(doc):
     add_table(doc,
               ["Bảng", "Cột chính", "Khóa và ràng buộc", "Mục đích"],
               [
-                  ["Users", "UserId BIGINT, Email, FullName, PhoneNumber, Status, CreatedAt", "PK UserId; UQ Email; do ASP.NET Core Identity map AppUser.", "Người dùng và profile."],
-                  ["Roles and UserRoles", "RoleId, Name, UserId", "Identity-managed tables; UQ role name; FK tới Users.", "Seller, Moderator, Admin."],
+                  ["Users", "UserId BIGINT, Email, PasswordHash, SecurityStamp, FullName, PhoneNumber, Role, Status, CreatedAt, UpdatedAt", "PK UserId; UQ Email; ApplicationUser kế thừa IdentityUser<long> do IdentityDbContext map.", "Xác thực, bảo mật mật khẩu và hồ sơ người dùng."],
+                  ["Roles and UserRoles", "RoleId, Name, UserId", "Identity-managed tables (AspNetRoles, AspNetUserRoles); FK tới Users.", "Quản lý phân quyền Seller, Moderator, Admin."],
                   ["RefreshTokens", "TokenId, UserId, TokenHash, ExpiresAt, RevokedAt", "PK TokenId; index UserId and ExpiresAt.", "Refresh JWT an toàn."],
                   ["Wallets", "WalletId, UserId, MainBalance, PromoBalance, RowVersion, UpdatedAt", "PK WalletId; UQ UserId; FK Users; RowVersion.", "Số dư ví theo người dùng."],
                   ["WalletTransactions", "TransactionId, WalletId, CorrelationId, Type, Amount, BalanceBefore, BalanceAfter, CreatedAt", "PK; FK Wallets; UQ WalletId plus CorrelationId plus Type when CorrelationId exists.", "Ledger bất biến cho nạp, charge, refund."],
                   ["PackageDefinitions", "PackageCode, Name, Price, DurationDays, Kind, IsActive", "PK PackageId; UQ PackageCode; check Price >= 0.", "Bảng giá Standard, VIP and Boost."],
               ], widths=[1.20, 2.30, 2.25, 1.25], font_size=8.7)
+    add_text(doc, "Quyết định thiết kế Identity: Nhóm thống nhất tích hợp ASP.NET Core Identity theo trường phái Pragmatic Clean Architecture. Thực thể ApplicationUser ở tầng Domain kế thừa IdentityUser<long> (thông qua package nhẹ Microsoft.Extensions.Identity.Stores) để tận dụng toàn diện UserManager và RoleManager (mã hóa mật khẩu chuẩn PBKDF2, lockout, concurrency stamp). Tầng Infrastructure cấu hình PropNestDbContext kế thừa IdentityDbContext<ApplicationUser, IdentityRole<long>, long> và map bảng chính thành 'Users' với khóa chính 'UserId' để tương thích toàn vẹn với các khóa ngoại từ Listings và Wallets.")
     heading(doc, "5 3 Nhóm listing và moderation", 2)
     add_table(doc,
               ["Bảng", "Cột chính", "Khóa và index", "Mục đích"],
