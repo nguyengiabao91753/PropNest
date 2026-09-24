@@ -10,8 +10,8 @@
     <Project Path="tests/PropNest.Domain.Tests/PropNest.Domain.Tests.csproj" />
   </Folder>
   <Folder Name="/web/">
-    <Project Path="web/ProNest.Web.Admin/ProNest.Web.Admin.csproj" Id="c98dfb07-9230-47f8-b669-0a0b69d7c177" />
-    <Project Path="web/ProNest.Web.Client/ProNest.Web.Client.csproj" Id="449ce694-f52a-4ae6-86c4-b7bedcae520f" />
-    <Project Path="web/ProNest.Web.Seller/ProNest.Web.Seller.csproj" Id="edbd5b11-997c-4f45-bb17-d7714e909a16" />
+    <Project Path="web/ProNest.Web.Admin/PropNest.Web.Admin.csproj" Id="c98dfb07-9230-47f8-b669-0a0b69d7c177" />
+    <Project Path="web/ProNest.Web.Client/PropNest.Web.Client.csproj" Id="449ce694-f52a-4ae6-86c4-b7bedcae520f" />
+    <Project Path="web/ProNest.Web.Seller/PropNest.Web.Seller.csproj" Id="edbd5b11-997c-4f45-bb17-d7714e909a16" />
   </Folder>
 </Solution>
