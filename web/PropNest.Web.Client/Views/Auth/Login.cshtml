@@ -1,0 +1,214 @@
+@model PropNest.Web.Client.Models.ViewModels.LoginViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Đăng nhập — PropNest";
+}
+
+<!DOCTYPE html>
+<html lang="vi" data-scroll-behavior="smooth">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Google Fonts: Be Vietnam Pro & Playfair Display with Vietnamese subset -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&display=swap&subset=vietnamese" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#fff8e3',
+                        surface: '#fdf9eb',
+                        card: '#ffffff',
+                        primary: '#d7730c',
+                        'primary-hover': '#b85e07',
+                        'brand-soft': '#fbe6cc',
+                        destructive: '#d23b2f',
+                        border: '#e8e3d5',
+                        muted: { foreground: '#5f5a4f' }
+                    },
+                    fontFamily: {
+                        sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        display: ['"Playfair Display"', 'Georgia', 'Cambria', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="~/css/client.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen bg-surface font-sans text-neutral-900 antialiased">
+    <main class="grid min-h-screen lg:grid-cols-2">
+        <!-- Left Dark Visual Panel -->
+        <div class="hidden bg-[#1f1a14] p-12 text-[#fffaf0] lg:flex lg:flex-col lg:justify-between border-r border-white/10">
+            <div>
+                <a href="/" class="flex items-center gap-2.5">
+                    <div class="grid size-10 place-items-center rounded-xl bg-primary text-white font-bold font-display text-lg">PN</div>
+                    <span class="font-display text-2xl font-bold tracking-tight">PropNest</span>
+                </a>
+                <span class="mt-3 inline-block rounded-full bg-primary/20 text-primary border border-primary/40 px-3 py-0.5 text-xs font-semibold">
+                    Nền tảng BĐS Toàn diện
+                </span>
+            </div>
+
+            <div class="space-y-6 max-w-lg">
+                <p class="font-display text-4xl sm:text-5xl font-medium leading-snug">
+                    Nâng tầm trải nghiệm <br />
+                    <em class="text-primary italic">giao dịch bất động sản.</em>
+                </p>
+                <p class="text-xs text-[#fffaf0]/75 leading-relaxed">
+                    Hệ thống phân quyền chuẩn mực cho Khách hàng, Người bán và Ban Quản trị. Minh bạch trong kiểm duyệt, tức thì trong điều phối Saga.
+                </p>
+
+                <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/10 text-xs">
+                    <div>
+                        <p class="text-3xl font-bold font-display text-primary">8 States</p>
+                        <p class="text-white/60 mt-1">Vòng đời tin đăng</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold font-display text-primary">100%</p>
+                        <p class="text-white/60 mt-1">Audit Delta History</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold font-display text-primary">Saga</p>
+                        <p class="text-white/60 mt-1">Orchestration F06</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-xs text-[#fffaf0]/40">
+                © 2026 PropNest Real Estate Platform. Bảo lưu mọi quyền.
+            </p>
+        </div>
+
+        <!-- Right Form Panel -->
+        <div class="flex items-center justify-center p-6 sm:p-12">
+            <div class="w-full max-w-md space-y-6">
+                <div>
+                    <a href="/" class="text-xs font-semibold text-muted-foreground hover:text-neutral-900 inline-flex items-center gap-1.5 mb-4 transition-colors">
+                        <i data-lucide="arrow-left" class="size-4"></i> Quay lại trang chủ
+                    </a>
+                    <p class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Đăng nhập tài khoản</p>
+                    <h1 class="font-display text-3xl font-bold mt-1 text-neutral-900">Chào mừng trở lại PropNest</h1>
+                    <p class="text-xs text-muted-foreground mt-1">
+                        Nhập địa chỉ email và mật khẩu của bạn để tiếp tục.
+                    </p>
+                </div>
+
+                <form asp-action="Login" method="post" class="space-y-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="rounded-xl border border-rose-300 bg-rose-50 p-3.5 text-xs text-rose-800 space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <i data-lucide="alert-circle" class="size-4 text-rose-600"></i>
+                                <span>Vui lòng kiểm tra lại thông tin:</span>
+                            </div>
+                            <div asp-validation-summary="All" class="text-rose-700"></div>
+                        </div>
+                    }
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label asp-for="Email" class="font-semibold text-neutral-800 mb-1.5 block">Địa chỉ Email *</label>
+                            <input id="emailInput" asp-for="Email" type="email" required
+                                   placeholder="you@example.com"
+                                   class="w-full rounded-xl border border-border bg-card p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                            <span asp-validation-for="Email" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+
+                        <div>
+                            <label asp-for="Password" class="font-semibold text-neutral-800 mb-1.5 block">Mật khẩu *</label>
+                            <div class="relative">
+                                <input id="passwordInput" asp-for="Password" type="password" required value="123456"
+                                       placeholder="Nhập mật khẩu của bạn"
+                                       class="w-full rounded-xl border border-border bg-card p-3 pr-10 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                                <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3 text-muted-foreground hover:text-neutral-900">
+                                    <i data-lucide="eye" id="eyeIcon" class="size-4"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Password" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer text-muted-foreground">
+                            <input type="checkbox" checked class="size-3.5 rounded text-primary" />
+                            <span>Ghi nhớ đăng nhập</span>
+                        </label>
+                        <a href="#" class="text-primary hover:underline font-medium">Quên mật khẩu?</a>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full rounded-xl bg-primary py-3 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors flex items-center justify-center gap-1.5 mt-2">
+                        <span>Đăng nhập</span>
+                        <i data-lucide="arrow-right" class="size-4"></i>
+                    </button>
+                </form>
+
+                <!-- Quick Demo Login Presets -->
+                <div class="rounded-xl border border-border/80 bg-surface p-3.5 text-xs space-y-2">
+                    <p class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tài khoản demo (Bấm để điền nhanh):</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="setQuickLogin('khachhang@example.com')"
+                                class="rounded-lg border border-border bg-card p-2 text-center hover:border-primary transition-colors">
+                            <strong class="block text-[11px] text-neutral-900">Khách hàng</strong>
+                            <span class="text-[10px] text-muted-foreground truncate block">khachhang&#64;</span>
+                        </button>
+                        <button type="button" onclick="setQuickLogin('minh.nguyen@propnest.vn')"
+                                class="rounded-lg border border-border bg-card p-2 text-center hover:border-primary transition-colors">
+                            <strong class="block text-[11px] text-neutral-900">Người bán</strong>
+                            <span class="text-[10px] text-muted-foreground truncate block">minh.nguyen&#64;</span>
+                        </button>
+                        <button type="button" onclick="setQuickLogin('admin@propnest.vn')"
+                                class="rounded-lg border border-border bg-card p-2 text-center hover:border-primary transition-colors">
+                            <strong class="block text-[11px] text-neutral-900">Quản trị</strong>
+                            <span class="text-[10px] text-muted-foreground truncate block">admin&#64;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-border pt-4 text-center text-xs text-muted-foreground">
+                    Chưa có tài khoản?
+                    <a asp-action="Signup" class="font-semibold text-primary hover:underline">
+                        Đăng ký tài khoản mới
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        function setQuickLogin(email) {
+            document.getElementById('emailInput').value = email;
+            document.getElementById('passwordInput').value = '123456';
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('passwordInput');
+            const eye = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                eye.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                eye.setAttribute('data-lucide', 'eye');
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) window.lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

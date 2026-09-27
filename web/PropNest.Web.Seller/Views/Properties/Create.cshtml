@@ -1,0 +1,784 @@
+@model PropNest.Web.Seller.Models.InputModels.CreatePropertyInputModel
+@inject PropNest.Web.Seller.Services.ISellerPropertyService SellerService
+
+@{
+    ViewData["Title"] = "Đăng tin mới (F02)";
+    var wallet = await SellerService.GetWalletAsync();
+}
+
+<div class="mx-auto max-w-6xl space-y-8">
+    <!-- Top Stepper Header -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="font-display text-3xl font-bold text-neutral-900">Đăng Tin Bất Động Sản (Listing Wizard F02)</h1>
+                <p class="text-xs text-muted-foreground mt-1">
+                    Trình hướng dẫn từng bước chuẩn mực: Vị trí hành chính, Quy chuẩn kỹ thuật, Gói VIP & Điều phối Saga.
+                </p>
+            </div>
+            <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-neutral-900 transition-colors">
+                <i data-lucide="arrow-left" class="size-4"></i> Hủy & Quay lại
+            </a>
+        </div>
+
+        <!-- 5-Step Progress Indicators -->
+        <ol class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 pt-2" id="stepperList">
+            <li class="step-item active cursor-pointer" onclick="jumpToStep(0)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-neutral-900 text-white shadow-xs">01</span>
+                    <span class="step-label text-xs font-semibold text-neutral-900">Thông tin BĐS</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(1)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">02</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Hình ảnh & Giá</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(2)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">03</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Giao diện hiển thị</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(3)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">04</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Chọn gói dịch vụ</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(4)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">05</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Xác nhận & Đăng</span>
+                </div>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Main Wizard Form & Live Preview Card -->
+    <form id="wizardForm" asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+
+        <!-- Validation Summary -->
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="mb-6 rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs text-rose-800 space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                    <i data-lucide="alert-circle" class="size-4 text-rose-600"></i>
+                    <span>Vui lòng kiểm tra lại các trường thông tin:</span>
+                </div>
+                <div asp-validation-summary="All" class="text-rose-700"></div>
+            </div>
+        }
+
+        <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <!-- Left Form Steps -->
+            <div class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs">
+                <!-- STEP 1: Property Details & Location -->
+                <div id="step-0" class="wizard-step space-y-6">
+                    <div>
+                        <h2 class="font-display text-2xl font-bold text-neutral-900">01. Thông tin Bất động sản</h2>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Thiết lập địa giới hành chính Việt Nam và các chỉ tiêu quy cách kỹ thuật.
+                        </p>
+                    </div>
+
+                    <!-- Cascading Location -->
+                    <div class="grid sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Tỉnh / Thành phố *</label>
+                            <select id="inputCity" asp-for="City" onchange="onCityChange(this.value)"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                                <option value="Hà Nội">Hà Nội</option>
+                                <option value="Đà Nẵng">Đà Nẵng</option>
+                                <option value="Bình Dương">Bình Dương</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Quận / Huyện *</label>
+                            <select id="inputDistrict" asp-for="District" onchange="onDistrictChange(this.value)"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="Quận 2 (Thủ Đức)">Quận 2 (Thủ Đức)</option>
+                                <option value="Quận 1">Quận 1</option>
+                                <option value="Quận 7">Quận 7</option>
+                                <option value="Bình Thạnh">Bình Thạnh</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Phường / Xã *</label>
+                            <select id="inputWard" asp-for="Ward" onchange="updateLivePreview()"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="Thảo Điền">Thảo Điền</option>
+                                <option value="An Phú">An Phú</option>
+                                <option value="Thủ Thiêm">Thủ Thiêm</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid sm:grid-cols-4 gap-3">
+                        <div class="sm:col-span-1">
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Số nhà</label>
+                            <input id="inputStreetNumber" type="text" placeholder="Ví dụ: 42" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Tên đường / Địa chỉ chi tiết *</label>
+                            <input id="inputAddress" asp-for="Address" placeholder="Ví dụ: Nguyễn Văn Hưởng, Phường Thảo Điền" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                        </div>
+                    </div>
+
+                    <!-- Property Specs -->
+                    <div class="grid sm:grid-cols-3 gap-3 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Loại hình BĐS *</label>
+                            <select id="inputPropertyType" asp-for="PropertyType" onchange="updateLivePreview()"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="Apartment">Căn hộ / Chung cư (Apartment)</option>
+                                <option value="House">Nhà riêng / Nhà phố (House)</option>
+                                <option value="Villa">Biệt thự đơn lập (Villa)</option>
+                                <option value="Townhouse">Nhà liền kề (Townhouse)</option>
+                                <option value="Commercial">Mặt bằng kinh doanh (Commercial)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng ngủ</label>
+                            <select id="inputBeds" asp-for="Beds" onchange="updateLivePreview()"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="1">1 Phòng ngủ</option>
+                                <option value="2" selected>2 Phòng ngủ</option>
+                                <option value="3">3 Phòng ngủ</option>
+                                <option value="4">4 Phòng ngủ</option>
+                                <option value="5">5 Phòng ngủ</option>
+                                <option value="6">6+ Phòng ngủ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng tắm (WC)</label>
+                            <select id="inputBaths" asp-for="Baths" onchange="updateLivePreview()"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="1">1 WC</option>
+                                <option value="2" selected>2 WC</option>
+                                <option value="3">3 WC</option>
+                                <option value="4">4 WC</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Chỗ đỗ xe ô tô</label>
+                            <select id="inputCarports" asp-for="Carports"
+                                    class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option value="0">Không có</option>
+                                <option value="1" selected>1 Chỗ đỗ xe</option>
+                                <option value="2">2 Chỗ đỗ xe</option>
+                                <option value="3">3+ Chỗ đỗ xe</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Diện tích đất (m²)</label>
+                            <input id="inputLandSize" type="number" placeholder="Ví dụ: 120"
+                                   class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Tình trạng nhà</label>
+                            <select class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                                <option>Nhà mới hoàn thiện</option>
+                                <option>Đang sử dụng tốt</option>
+                                <option>Bàn giao thô</option>
+                                <option>Cần cải tạo lại</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Facilities Checkboxes -->
+                    <div class="space-y-2 pt-2 border-t border-border/60">
+                        <label class="block text-xs font-semibold text-neutral-800">Tiện ích BĐS & Khu vực lân cận:</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-border bg-surface hover:border-primary">
+                                <input type="checkbox" checked class="size-3.5 text-primary rounded" />
+                                <span>Hồ bơi tràn viền</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-border bg-surface hover:border-primary">
+                                <input type="checkbox" checked class="size-3.5 text-primary rounded" />
+                                <span>Sân vườn cảnh quan</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-border bg-surface hover:border-primary">
+                                <input type="checkbox" checked class="size-3.5 text-primary rounded" />
+                                <span>An ninh 24/7 & Camera</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-border bg-surface hover:border-primary">
+                                <input type="checkbox" checked class="size-3.5 text-primary rounded" />
+                                <span>Gần trường học & Bệnh viện</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Media, Pricing & Description -->
+                <div id="step-1" class="wizard-step hidden space-y-6">
+                    <div>
+                        <h2 class="font-display text-2xl font-bold text-neutral-900">02. Hình ảnh & Giá niêm yết</h2>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Chọn ảnh thực tế nổi bật và thiết lập mức giá cạnh tranh trên thị trường.
+                        </p>
+                    </div>
+
+                    <!-- Sample Photo Gallery Picker -->
+                    <div>
+                        <label class="block text-xs font-semibold text-neutral-800 mb-2">Thư viện ảnh bất động sản (Chọn ảnh bìa):</label>
+                        <input type="hidden" id="inputImageUrl" asp-for="ImageUrl" value="/images/p1.png" />
+                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2.5" id="photoGallery">
+                            @foreach (var img in new[] { "/images/p1.png", "/images/p2.png", "/images/p3.png", "/images/p4.png", "/images/p5.png", "/images/p6.png" })
+                            {
+                                <div onclick="selectImage('@img')"
+                                     class="photo-thumb relative aspect-[4/3] rounded-xl overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 @(img == "/images/p1.png" ? "border-primary ring-2 ring-primary/40" : "border-border")">
+                                    <img src="@img" alt="Gallery sample" class="size-full object-cover" />
+                                    <span class="cover-badge absolute bottom-1 left-1 bg-black/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded @(img == "/images/p1.png" ? "" : "hidden")">
+                                        Ảnh bìa
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Title & Listing Type -->
+                    <div class="space-y-3 pt-2 border-t border-border/60">
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Tiêu đề bài đăng *</label>
+                            <input id="inputTitle" asp-for="Title" placeholder="Ví dụ: Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn Tuyệt Đẹp" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                            <span asp-validation-for="Title" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Hình thức giao dịch *</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex items-center justify-center p-2.5 rounded-xl border border-border bg-surface cursor-pointer text-xs font-semibold hover:border-primary transition-colors" id="btnSale">
+                                        <input type="radio" asp-for="ListingType" value="sale" checked class="sr-only" onchange="onListingTypeChange('sale')" />
+                                        <span>Cần bán (Sale)</span>
+                                    </label>
+                                    <label class="flex items-center justify-center p-2.5 rounded-xl border border-border bg-surface cursor-pointer text-xs font-semibold hover:border-primary transition-colors" id="btnRent">
+                                        <input type="radio" asp-for="ListingType" value="rent" class="sr-only" onchange="onListingTypeChange('rent')" />
+                                        <span>Cho thuê (Rent)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-800 mb-1.5" id="labelPrice">Giá niêm yết (VNĐ) *</label>
+                                <input id="inputPrice" asp-for="Price" type="number" step="1000000" oninput="updateLivePreview()"
+                                       class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
+                                <span id="priceFormatted" class="text-[11px] text-primary font-bold mt-1 block">5,00 tỷ VNĐ</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Diện tích sử dụng (m²) *</label>
+                            <input id="inputArea" asp-for="Area" type="number" step="1" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Mô tả chi tiết *</label>
+                            <textarea id="inputDescription" asp-for="Description" rows="4" placeholder="Mô tả kỹ về vị trí, hướng view, nội thất bàn giao, pháp lý sổ hồng và liên hệ chính chủ..."
+                                      class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900"></textarea>
+                            <span asp-validation-for="Description" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Display Settings & Banner -->
+                <div id="step-2" class="wizard-step hidden space-y-6">
+                    <div>
+                        <h2 class="font-display text-2xl font-bold text-neutral-900">03. Giao diện hiển thị</h2>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Cấu hình nhãn quảng cáo (Banner/Ribbon) và quyền riêng tư địa chỉ.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Banner Toggle -->
+                        <div class="rounded-xl border border-border bg-surface p-4 space-y-3">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <span class="text-xs font-bold text-neutral-900 block">Kích hoạt nhãn Ribbon nổi bật</span>
+                                    <span class="text-[11px] text-muted-foreground">Hiển thị ruy-băng vát góc 45 độ trên ảnh đại diện</span>
+                                </div>
+                                <input type="checkbox" id="inputBannerOn" asp-for="BannerOn" checked onchange="toggleBanner(this.checked)" class="size-4 text-primary rounded" />
+                            </label>
+
+                            <div id="bannerNameContainer" class="pt-2">
+                                <label class="block text-xs font-semibold text-neutral-800 mb-1">Nội dung nhãn Ribbon</label>
+                                <input id="inputBanner" asp-for="Banner" maxlength="18" placeholder="VIP Nổi Bật, View Sông, Giá Tốt..." oninput="updateLivePreview()"
+                                       class="w-full rounded-xl border border-border bg-card p-2.5 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                            </div>
+                        </div>
+
+                        <!-- Address Visibility Toggle -->
+                        <div class="rounded-xl border border-border bg-surface p-4">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <span class="text-xs font-bold text-neutral-900 block">Hiển thị số nhà chính xác công khai</span>
+                                    <span class="text-[11px] text-muted-foreground">Nếu tắt, khách hàng chỉ thấy Phường/Quận/Thành phố nhằm bảo mật</span>
+                                </div>
+                                <input type="checkbox" id="inputShowAddress" asp-for="ShowAddress" checked onchange="updateLivePreview()" class="size-4 text-primary rounded" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Package & Wallet (F05/F06) -->
+                <div id="step-3" class="wizard-step hidden space-y-6">
+                    <div>
+                        <h2 class="font-display text-2xl font-bold text-neutral-900">04. Chọn Gói Dịch Vụ (F05)</h2>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Chọn gói hiển thị phù hợp và sử dụng số dư ví để thanh toán nâng cấp tin đăng.
+                        </p>
+                    </div>
+
+                    <!-- Wallet Balance Widget -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-primary/30 bg-brand-soft/50 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="grid size-11 place-items-center rounded-xl bg-primary text-white shadow-xs">
+                                <i data-lucide="wallet" class="size-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Số dư ví của bạn</p>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold font-display text-neutral-900">@FormatHelper.FormatVnd(wallet.TotalBalance)</span>
+                                    <span class="text-xs text-muted-foreground">
+                                        (Chính: @FormatHelper.FormatVnd(wallet.MainBalance) · KM: @FormatHelper.FormatVnd(wallet.PromoBalance))
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <a asp-controller="Wallet" asp-action="Index" target="_blank"
+                           class="rounded-xl border border-primary/50 bg-card px-3.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-white transition-colors">
+                            + Nạp thêm tiền vào ví
+                        </a>
+                    </div>
+
+                    <!-- 3 Package Cards -->
+                    <input type="hidden" id="inputPackageCode" asp-for="PackageCode" value="VIP" />
+                    <div class="grid sm:grid-cols-3 gap-4">
+                        <!-- Standard -->
+                        <div onclick="selectPackage('Standard')"
+                             class="pkg-card cursor-pointer rounded-2xl border-2 p-4 flex flex-col justify-between transition-all border-border bg-surface hover:border-primary">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-neutral-900">Gói Tiêu Chuẩn</span>
+                                    <span class="pkg-check size-4 rounded-full border border-border grid place-items-center"></span>
+                                </div>
+                                <span class="text-xl font-bold text-neutral-700 block mb-1">Miễn phí</span>
+                                <span class="text-[10px] text-muted-foreground block mb-3">Hiển thị trong 30 ngày</span>
+                                <ul class="text-[11px] text-neutral-600 space-y-1.5">
+                                    <li>✓ Đăng tin cơ bản</li>
+                                    <li>✓ Hiển thị theo thứ tự thời gian</li>
+                                    <li>✓ Kiểm duyệt tiêu chuẩn</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- VIP (Featured) -->
+                        <div onclick="selectPackage('VIP')"
+                             class="pkg-card cursor-pointer rounded-2xl border-2 p-4 flex flex-col justify-between transition-all relative border-amber-500 bg-amber-50/60 shadow-xs ring-2 ring-amber-500/30">
+                            <span class="absolute -top-2.5 right-3 rounded-full bg-amber-500 text-white text-[10px] font-bold px-2 py-0.2 shadow-xs">
+                                Phổ biến nhất
+                            </span>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-amber-900 flex items-center gap-1">
+                                        <i data-lucide="sparkles" class="size-3.5 text-amber-500"></i> VIP Nổi Bật
+                                    </span>
+                                    <span class="pkg-check size-4 rounded-full bg-amber-500 text-white grid place-items-center text-[10px]">✓</span>
+                                </div>
+                                <span class="text-xl font-bold text-amber-900 block mb-1">500.000 ₫</span>
+                                <span class="text-[10px] text-muted-foreground block mb-3">Thời hạn 30 ngày</span>
+                                <ul class="text-[11px] text-neutral-700 space-y-1.5">
+                                    <li>✓ Ghim TOP đầu trang tìm kiếm</li>
+                                    <li>✓ Viền vàng kim nổi bật</li>
+                                    <li>✓ Ưu tiên duyệt tin trong 15 phút</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Boost -->
+                        <div onclick="selectPackage('Boost')"
+                             class="pkg-card cursor-pointer rounded-2xl border-2 p-4 flex flex-col justify-between transition-all border-border bg-surface hover:border-primary">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-neutral-900 flex items-center gap-1">
+                                        <i data-lucide="zap" class="size-3.5 text-blue-500"></i> Gói Đẩy Tin
+                                    </span>
+                                    <span class="pkg-check size-4 rounded-full border border-border grid place-items-center"></span>
+                                </div>
+                                <span class="text-xl font-bold text-neutral-700 block mb-1">200.000 ₫</span>
+                                <span class="text-[10px] text-muted-foreground block mb-3">Thời hạn 14 ngày</span>
+                                <ul class="text-[11px] text-neutral-600 space-y-1.5">
+                                    <li>✓ Tự động đẩy top mỗi ngày</li>
+                                    <li>✓ Tăng 3x lượt xem tự nhiên</li>
+                                    <li>✓ Thông báo đẩy đến khách lưu tin</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Demo Saga Simulation Notice -->
+                    <div class="rounded-xl border border-dashed border-border bg-surface p-4 text-xs text-muted-foreground flex items-start gap-3">
+                        <i data-lucide="shield-alert" class="size-4 text-amber-600 shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-neutral-900 block mb-0.5">Cơ chế giao dịch Saga Orchestrator (MassTransit F06)</span>
+                            <p class="leading-relaxed">
+                                Khi bấm Thanh toán, tiền trong ví sẽ được tạm trừ. Nếu dịch vụ kiểm duyệt hoặc nâng cấp gặp sự cố, hệ thống Saga sẽ tự động thực thi Compensation để hoàn lại 100% số tiền vào ví bạn.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: Review & Submit -->
+                <div id="step-4" class="wizard-step hidden space-y-6">
+                    <div>
+                        <h2 class="font-display text-2xl font-bold text-neutral-900">05. Rà soát & Xác nhận</h2>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Kiểm tra lại toàn bộ thông tin trước khi lưu nháp hoặc gửi phê duyệt.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 text-xs">
+                        <!-- Summary 1: Property Info -->
+                        <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                            <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                <span class="font-bold text-neutral-900">01. Thông tin Bất động sản</span>
+                                <button type="button" onclick="jumpToStep(0)" class="text-primary hover:underline font-semibold">Chỉnh sửa</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-muted-foreground">
+                                <div>Địa chỉ: <span id="revAddress" class="font-medium text-neutral-900">—</span></div>
+                                <div>Khu vực: <span id="revLocation" class="font-medium text-neutral-900">—</span></div>
+                                <div>Loại hình: <span id="revType" class="font-medium text-neutral-900">—</span></div>
+                                <div>Quy cách: <span id="revSpecs" class="font-medium text-neutral-900">—</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Summary 2: Price & Title -->
+                        <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                            <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                <span class="font-bold text-neutral-900">02. Tiêu đề & Giá bán</span>
+                                <button type="button" onclick="jumpToStep(1)" class="text-primary hover:underline font-semibold">Chỉnh sửa</button>
+                            </div>
+                            <div class="space-y-1.5 text-muted-foreground">
+                                <div>Tiêu đề: <span id="revTitle" class="font-medium text-neutral-900">—</span></div>
+                                <div>Giá niêm yết: <span id="revPrice" class="font-bold text-primary font-display text-sm">—</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Summary 3: Package -->
+                        <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                            <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                <span class="font-bold text-neutral-900">03. Gói dịch vụ đã chọn</span>
+                                <button type="button" onclick="jumpToStep(3)" class="text-primary hover:underline font-semibold">Chỉnh sửa</button>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span id="revPackage" class="font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">Gói VIP Nổi Bật</span>
+                                <span id="revPackageCost" class="font-mono font-bold text-neutral-900">500.000 ₫</span>
+                            </div>
+                        </div>
+
+                        <!-- Commitment Checkbox -->
+                        <div class="rounded-xl border border-primary/20 bg-brand-soft/40 p-4">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="checkbox" id="commitmentCheck" checked class="size-4 text-primary rounded mt-0.5" />
+                                <span class="text-neutral-800 leading-relaxed">
+                                    Tôi cam kết mọi thông tin cung cấp ở trên là hoàn toàn chính xác, trung thực và tôi có quyền hợp pháp đăng tải bất động sản này.
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wizard Navigation Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-6 mt-6 border-t border-border">
+                    <button type="button" id="prevBtn" onclick="moveStep(-1)" disabled
+                            class="rounded-xl border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:bg-surface disabled:opacity-40 transition-colors">
+                        <i data-lucide="arrow-left" class="size-4 inline mr-1"></i> Quay lại
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Save as Draft Button (Always available) -->
+                        <button type="submit" name="IsDraft" value="true"
+                                class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-surface hover:text-neutral-900 transition-colors">
+                            <i data-lucide="file-text" class="size-4 inline mr-1"></i> Lưu bản nháp (Draft)
+                        </button>
+
+                        <!-- Next / Submit Button -->
+                        <button type="button" id="nextBtn" onclick="moveStep(1)"
+                                class="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                            <span>Tiếp theo</span> <i data-lucide="arrow-right" class="size-4 inline ml-1"></i>
+                        </button>
+
+                        <button type="submit" id="submitBtn" name="IsDraft" value="false" class="hidden rounded-xl bg-primary px-6 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                            <i data-lucide="send" class="size-4 inline mr-1"></i> Thanh toán & Gửi duyệt tin
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Preview Card -->
+            <aside class="space-y-4 lg:sticky lg:top-8 self-start">
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Xem trước hiển thị</span>
+                    <span class="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.2 font-semibold">Live Preview</span>
+                </div>
+
+                <!-- Preview Card -->
+                <div class="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                    <div class="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100">
+                        <img id="prevImg" src="/images/p1.png" alt="Preview cover" class="size-full object-cover transition-transform duration-300" />
+                        
+                        <!-- 45-degree Ribbon Banner -->
+                        <div id="prevRibbon" class="absolute -right-10 top-5 w-36 rotate-45 bg-amber-500 py-0.5 text-center text-[10px] font-bold uppercase text-white shadow-xs">
+                            <span id="prevRibbonText">VIP Nổi Bật</span>
+                        </div>
+
+                        <!-- Listing type pill -->
+                        <span id="prevTypePill" class="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] px-2.5 py-0.5 rounded-full font-medium">
+                            Cần bán
+                        </span>
+                    </div>
+
+                    <div class="p-4 space-y-2">
+                        <p id="prevPriceDisplay" class="font-display text-xl font-bold text-primary">5,00 tỷ VNĐ</p>
+                        <h3 id="prevTitleDisplay" class="font-semibold text-xs text-neutral-900 line-clamp-2">
+                            Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn Tuyệt Đẹp
+                        </h3>
+                        <p id="prevAddressDisplay" class="text-[11px] text-muted-foreground truncate">
+                            📍 42 Nguyễn Văn Hưởng, Thảo Điền, Quận 2 (Thủ Đức)
+                        </p>
+                        <div class="flex items-center gap-3 pt-2 border-t border-border/60 text-[11px] text-neutral-700">
+                            <span id="prevBedsDisplay">2 PN</span>
+                            <span>·</span>
+                            <span id="prevBathsDisplay">2 WC</span>
+                            <span>·</span>
+                            <span id="prevAreaDisplay">85 m²</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border bg-surface p-3 text-[11px] text-muted-foreground leading-relaxed">
+                    💡 Thẻ này sẽ xuất hiện trên kết quả tìm kiếm của khách hàng sau khi được duyệt.
+                </div>
+            </aside>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let currentStep = 0;
+        const totalSteps = 5;
+
+        function jumpToStep(target) {
+            if (target < 0 || target >= totalSteps) return;
+            currentStep = target;
+            renderStep();
+        }
+
+        function moveStep(delta) {
+            jumpToStep(currentStep + delta);
+        }
+
+        function renderStep() {
+            // Hide all steps, show current
+            for (let i = 0; i < totalSteps; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if (el) {
+                    if (i === currentStep) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            }
+
+            // Update stepper headers
+            const items = document.querySelectorAll('#stepperList .step-item');
+            items.forEach((item, idx) => {
+                const num = item.querySelector('.step-number');
+                const label = item.querySelector('.step-label');
+
+                if (idx < currentStep) {
+                    // Done
+                    num.className = 'step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-emerald-600 text-white';
+                    num.innerHTML = '✓';
+                    label.className = 'step-label text-xs font-medium text-neutral-900';
+                } else if (idx === currentStep) {
+                    // Active
+                    num.className = 'step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-neutral-900 text-white shadow-xs';
+                    num.innerHTML = String(idx + 1).padStart(2, '0');
+                    label.className = 'step-label text-xs font-bold text-neutral-900';
+                } else {
+                    // Upcoming
+                    num.className = 'step-number grid size-9 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border';
+                    num.innerHTML = String(idx + 1).padStart(2, '0');
+                    label.className = 'step-label text-xs font-medium text-muted-foreground';
+                }
+            });
+
+            // Buttons state
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const submitBtn = document.getElementById('submitBtn');
+
+            prevBtn.disabled = currentStep === 0;
+
+            if (currentStep === totalSteps - 1) {
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+                populateReviewSummary();
+            } else {
+                nextBtn.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectImage(url) {
+            document.getElementById('inputImageUrl').value = url;
+            document.querySelectorAll('.photo-thumb').forEach(thumb => {
+                const isMatch = thumb.querySelector('img').src.includes(url);
+                thumb.className = `photo-thumb relative aspect-[4/3] rounded-xl overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${isMatch ? 'border-primary ring-2 ring-primary/40' : 'border-border'}`;
+                const badge = thumb.querySelector('.cover-badge');
+                if (badge) {
+                    if (isMatch) badge.classList.remove('hidden');
+                    else badge.classList.add('hidden');
+                }
+            });
+            updateLivePreview();
+        }
+
+        function onListingTypeChange(type) {
+            document.getElementById('labelPrice').innerText = type === 'rent' ? 'Giá thuê / tháng (VNĐ) *' : 'Giá bán (VNĐ) *';
+            updateLivePreview();
+        }
+
+        function toggleBanner(checked) {
+            const container = document.getElementById('bannerNameContainer');
+            if (container) {
+                if (checked) container.classList.remove('hidden');
+                else container.classList.add('hidden');
+            }
+            updateLivePreview();
+        }
+
+        function selectPackage(code) {
+            document.getElementById('inputPackageCode').value = code;
+            document.querySelectorAll('.pkg-card').forEach(card => {
+                card.classList.remove('border-amber-500', 'bg-amber-50/60', 'ring-2', 'ring-amber-500/30', 'border-primary');
+                const check = card.querySelector('.pkg-check');
+                check.innerHTML = '';
+                check.className = 'pkg-check size-4 rounded-full border border-border grid place-items-center';
+            });
+
+            // Target selected
+            event.currentTarget.classList.add('border-primary', 'ring-2', 'ring-primary/40');
+            const targetCheck = event.currentTarget.querySelector('.pkg-check');
+            targetCheck.className = 'pkg-check size-4 rounded-full bg-primary text-white grid place-items-center text-[10px]';
+            targetCheck.innerHTML = '✓';
+        }
+
+        function formatVndCompact(num) {
+            if (!num || isNaN(num)) return '0 ₫';
+            if (num >= 1000000000) {
+                return (num / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ VNĐ';
+            }
+            return (num / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' triệu VNĐ';
+        }
+
+        function updateLivePreview() {
+            // Image
+            const imgUrl = document.getElementById('inputImageUrl')?.value || '/images/p1.png';
+            document.getElementById('prevImg').src = imgUrl;
+
+            // Title
+            const title = document.getElementById('inputTitle')?.value || 'Tiêu đề tin đăng bất động sản...';
+            document.getElementById('prevTitleDisplay').innerText = title;
+
+            // Price
+            const price = parseFloat(document.getElementById('inputPrice')?.value) || 0;
+            const priceText = formatVndCompact(price);
+            document.getElementById('prevPriceDisplay').innerText = priceText;
+            const priceHelp = document.getElementById('priceFormatted');
+            if (priceHelp) priceHelp.innerText = priceText;
+
+            // Listing Type
+            const isRent = document.querySelector('input[name="ListingType"]:checked')?.value === 'rent';
+            document.getElementById('prevTypePill').innerText = isRent ? 'Cho thuê' : 'Cần bán';
+
+            // Address
+            const showExact = document.getElementById('inputShowAddress')?.checked;
+            const num = document.getElementById('inputStreetNumber')?.value;
+            const street = document.getElementById('inputAddress')?.value;
+            const ward = document.getElementById('inputWard')?.value;
+            const dist = document.getElementById('inputDistrict')?.value;
+            const city = document.getElementById('inputCity')?.value;
+
+            let addr = '';
+            if (showExact) {
+                addr = [num ? `Số ${num}` : '', street, ward, dist, city].filter(Boolean).join(', ');
+            } else {
+                addr = [ward, dist, city].filter(Boolean).join(', ');
+            }
+            document.getElementById('prevAddressDisplay').innerText = '📍 ' + (addr || 'Địa chỉ BĐS');
+
+            // Specs
+            const beds = document.getElementById('inputBeds')?.value || '2';
+            const baths = document.getElementById('inputBaths')?.value || '2';
+            const area = document.getElementById('inputArea')?.value || '85';
+
+            document.getElementById('prevBedsDisplay').innerText = `${beds} PN`;
+            document.getElementById('prevBathsDisplay').innerText = `${baths} WC`;
+            document.getElementById('prevAreaDisplay').innerText = `${area} m²`;
+
+            // Ribbon
+            const bannerOn = document.getElementById('inputBannerOn')?.checked;
+            const bannerText = document.getElementById('inputBanner')?.value || 'VIP Nổi Bật';
+            const ribbon = document.getElementById('prevRibbon');
+            if (bannerOn && bannerText) {
+                ribbon.classList.remove('hidden');
+                document.getElementById('prevRibbonText').innerText = bannerText;
+            } else {
+                ribbon.classList.add('hidden');
+            }
+        }
+
+        function populateReviewSummary() {
+            document.getElementById('revTitle').innerText = document.getElementById('inputTitle')?.value || '—';
+            document.getElementById('revPrice').innerText = document.getElementById('prevPriceDisplay')?.innerText || '—';
+            document.getElementById('revAddress').innerText = document.getElementById('prevAddressDisplay')?.innerText || '—';
+            document.getElementById('revLocation').innerText = `${document.getElementById('inputDistrict')?.value}, ${document.getElementById('inputCity')?.value}`;
+            document.getElementById('revType').innerText = document.getElementById('inputPropertyType')?.value;
+            document.getElementById('revSpecs').innerText = `${document.getElementById('inputBeds')?.value} PN · ${document.getElementById('inputBaths')?.value} WC · ${document.getElementById('inputArea')?.value} m²`;
+
+            const pkgCode = document.getElementById('inputPackageCode')?.value;
+            const pkgLabel = document.getElementById('revPackage');
+            const pkgCost = document.getElementById('revPackageCost');
+            if (pkgCode === 'VIP') {
+                pkgLabel.innerText = 'Gói VIP Nổi Bật';
+                pkgCost.innerText = '500.000 ₫';
+            } else if (pkgCode === 'Boost') {
+                pkgLabel.innerText = 'Gói Đẩy Tin (Boost)';
+                pkgCost.innerText = '200.000 ₫';
+            } else {
+                pkgLabel.innerText = 'Gói Tiêu Chuẩn';
+                pkgCost.innerText = '0 ₫ (Miễn phí)';
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateLivePreview();
+        });
+    </script>
+}

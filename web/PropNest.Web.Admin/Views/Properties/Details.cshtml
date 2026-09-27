@@ -1,0 +1,99 @@
+@model PropNest.Web.Admin.Models.ViewModels.PropertyItemViewModel
+
+@{
+    ViewData["Title"] = $"Chi tiết: {Model.Id}";
+}
+
+<div class="mx-auto max-w-[1200px] space-y-6">
+    <div class="flex items-center justify-between">
+        <a asp-action="Index" class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-neutral-900 transition-colors">
+            <i data-lucide="arrow-left" class="size-4"></i> Quay lại danh sách tin đăng
+        </a>
+        <div class="flex items-center gap-2">
+            <span class="font-mono text-xs font-semibold text-muted-foreground">@Model.Id</span>
+            <partial name="_StatusBadge" model="Model.Status" />
+            @if (Model.PackageCode == "VIP")
+            {
+                <span class="rounded bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5">
+                    Gói VIP
+                </span>
+            }
+        </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6">
+        <div class="grid gap-6 lg:grid-cols-2">
+            <!-- Cover image -->
+            <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-border bg-neutral-100">
+                <img src="@Model.PrimaryImage" alt="@Model.Title" class="size-full object-cover" />
+                <span class="absolute left-3 top-3 bg-black/75 text-white text-xs px-3 py-1 rounded-full font-medium">
+                    @(Model.ListingType == "sale" ? "Cần bán" : "Cho thuê") · @Model.PropertyType
+                </span>
+            </div>
+
+            <!-- Basic details -->
+            <div class="flex flex-col justify-between space-y-4">
+                <div>
+                    <h1 class="font-display text-2xl font-bold text-neutral-900">@Model.Title</h1>
+                    <p class="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <i data-lucide="map-pin" class="size-3.5 text-primary"></i>
+                        @Model.FullAddress
+                    </p>
+                    <p class="mt-4 text-3xl font-extrabold text-primary font-display">
+                        @FormatHelper.FormatPrice(Model.Price, Model.ListingType)
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
+                    <div>
+                        <strong class="text-sm block text-neutral-900">@Model.Beds</strong>
+                        <span class="text-muted-foreground">Phòng ngủ</span>
+                    </div>
+                    <div>
+                        <strong class="text-sm block text-neutral-900">@Model.Baths</strong>
+                        <span class="text-muted-foreground">Phòng tắm</span>
+                    </div>
+                    <div>
+                        <strong class="text-sm block text-neutral-900">@FormatHelper.FormatArea(Model.Area)</strong>
+                        <span class="text-muted-foreground">Diện tích</span>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-xl border border-border bg-surface/50 text-xs space-y-1">
+                    <p><strong>Người đăng:</strong> @Model.SellerName (Mã: @Model.SellerId)</p>
+                    <p><strong>Ngày gửi:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                    <p><strong>Gói dịch vụ:</strong> @Model.PackageCode</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.RejectReason))
+                    {
+                        <p class="text-destructive"><strong>Lý do từ chối:</strong> @Model.RejectReason</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="border-t border-border pt-4">
+            <h3 class="text-xs font-semibold uppercase text-muted-foreground mb-2">Nội dung mô tả chi tiết</h3>
+            <p class="text-sm text-neutral-800 leading-relaxed bg-surface/50 p-4 rounded-xl border border-border/60">
+                @Model.Description
+            </p>
+        </div>
+
+        <!-- Additional Images -->
+        @if (Model.Images.Count > 1)
+        {
+            <div class="border-t border-border pt-4">
+                <h3 class="text-xs font-semibold uppercase text-muted-foreground mb-3">Hình ảnh đính kèm (@Model.Images.Count)</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    @foreach (var img in Model.Images)
+                    {
+                        <div class="relative aspect-video rounded-xl overflow-hidden border border-border bg-neutral-100">
+                            <img src="@img" alt="" class="size-full object-cover" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

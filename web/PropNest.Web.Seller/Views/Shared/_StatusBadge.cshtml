@@ -1,0 +1,9 @@
+@model PropNest.Domain.Listings.ListingStatus
+
+@{
+    var (label, badgeClass) = FormatHelper.GetStatusBadgeInfo(Model);
+}
+
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border @badgeClass">
+    @label
+</span>

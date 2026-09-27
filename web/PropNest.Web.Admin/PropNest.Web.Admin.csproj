@@ -5,5 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PropNest.Domain\PropNest.Domain.csproj" />
+  </ItemGroup>
 
 </Project>

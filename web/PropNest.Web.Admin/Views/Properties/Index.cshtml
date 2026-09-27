@@ -1,0 +1,129 @@
+@model PropNest.Web.Admin.Models.ViewModels.PropertyListViewModel
+
+@{
+    ViewData["Title"] = "Toàn bộ tin đăng";
+
+    var statusFilters = new[]
+    {
+        ("all", "Tất cả"),
+        ("Published", "Đang hiển thị"),
+        ("PendingModeration", "Chờ kiểm duyệt"),
+        ("PendingPayment", "Chờ thanh toán"),
+        ("Draft", "Bản nháp"),
+        ("Rejected", "Bị từ chối"),
+        ("Hidden", "Đã ẩn"),
+        ("Expired", "Hết hạn")
+    };
+}
+
+<div class="mx-auto max-w-[1400px] space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Quản lý kho dữ liệu</p>
+            <h1 class="font-display text-3xl font-bold mt-1 text-neutral-900">Toàn Bộ Tin Đăng Hệ Thống</h1>
+        </div>
+        <span class="text-xs text-muted-foreground bg-card border border-border px-3.5 py-1.5 rounded-full shadow-xs">
+            Tổng cộng: <strong class="text-neutral-900">@Model.TotalCount</strong> tin đăng trong cơ sở dữ liệu
+        </span>
+    </div>
+
+    <!-- Filter Pills & Search Input -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Status Tabs -->
+        <div class="flex flex-wrap gap-1.5">
+            @foreach (var (key, label) in statusFilters)
+            {
+                var isActive = string.Equals(Model.CurrentFilterStatus, key, StringComparison.OrdinalIgnoreCase);
+                <a asp-action="Index" asp-route-status="@key" asp-route-q="@Model.SearchTerm"
+                   class="rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors @(isActive ? "bg-primary text-white font-semibold shadow-xs" : "bg-card border border-border text-muted-foreground hover:bg-surface hover:text-neutral-900")">
+                    @label
+                </a>
+            }
+        </div>
+
+        <!-- Search Bar -->
+        <form method="get" asp-action="Index" class="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-xs w-72 shadow-xs">
+            <input type="hidden" name="status" value="@Model.CurrentFilterStatus" />
+            <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
+            <input type="text" name="q" value="@Model.SearchTerm"
+                   placeholder="Tìm mã PN-, tiêu đề, môi giới..."
+                   class="w-full bg-transparent outline-none text-neutral-900 placeholder:text-muted-foreground/70" />
+            @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+            {
+                <a asp-action="Index" asp-route-status="@Model.CurrentFilterStatus" class="text-muted-foreground hover:text-neutral-900">
+                    <i data-lucide="x" class="size-3.5"></i>
+                </a>
+            }
+        </form>
+    </div>
+
+    <!-- Data Table -->
+    <div class="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-surface/60 text-xs text-muted-foreground border-b border-border uppercase">
+                    <tr>
+                        <th class="px-5 py-3.5 font-semibold">Bất động sản</th>
+                        <th class="px-4 py-3.5 font-semibold">Mã tin</th>
+                        <th class="px-4 py-3.5 font-semibold">Trạng thái</th>
+                        <th class="px-4 py-3.5 font-semibold">Người đăng</th>
+                        <th class="px-4 py-3.5 font-semibold">Gói</th>
+                        <th class="px-4 py-3.5 font-semibold">Giá</th>
+                        <th class="px-4 py-3.5 font-semibold">Diện tích</th>
+                        <th class="px-4 py-3.5 font-semibold text-right">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                    @if (Model.Properties.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="p-12 text-center text-xs text-muted-foreground">
+                                Không tìm thấy tin đăng nào phù hợp với bộ lọc hiện tại.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var p in Model.Properties)
+                        {
+                            <tr class="hover:bg-surface/50 transition-colors">
+                                <td class="px-5 py-3.5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative size-11 rounded-lg overflow-hidden border border-border shrink-0 bg-neutral-100">
+                                            <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
+                                        </div>
+                                        <div class="min-w-0 max-w-sm">
+                                            <p class="font-medium text-neutral-900 truncate">@p.Title</p>
+                                            <p class="text-xs text-muted-foreground truncate">@p.FormattedLocation</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3.5 font-mono text-xs text-muted-foreground font-semibold">@p.Id</td>
+                                <td class="px-4 py-3.5">
+                                    <partial name="_StatusBadge" model="p.Status" />
+                                </td>
+                                <td class="px-4 py-3.5 text-xs text-neutral-900 font-medium">@p.SellerName</td>
+                                <td class="px-4 py-3.5">
+                                    <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "")">
+                                        @p.PackageCode
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3.5 font-semibold text-primary font-display">
+                                    @FormatHelper.FormatPrice(p.Price, p.ListingType)
+                                </td>
+                                <td class="px-4 py-3.5 text-xs text-muted-foreground">@FormatHelper.FormatArea(p.Area)</td>
+                                <td class="px-4 py-3.5 text-right">
+                                    <a asp-action="Details" asp-route-id="@p.Id"
+                                       class="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-hover font-medium hover:underline">
+                                        <span>Xem</span>
+                                        <i data-lucide="external-link" class="size-3.5"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
