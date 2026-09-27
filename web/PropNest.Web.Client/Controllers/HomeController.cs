@@ -1,32 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
-using ProNest.Web.Client.Models;
-using System.Diagnostics;
+using PropNest.Web.Client.Services;
 
-namespace ProNest.Web.Client.Controllers
+namespace PropNest.Web.Client.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly IClientListingService _listingService;
+
+    public HomeController(IClientListingService listingService)
     {
-        private readonly ILogger<HomeController> _logger;
+        _listingService = listingService;
+    }
 
-        public HomeController(ILogger<HomeController> logger)
-        {
-            _logger = logger;
-        }
-
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+    [HttpGet("")]
+    [HttpGet("Index")]
+    public async Task<IActionResult> Index()
+    {
+        var model = await _listingService.GetHomeDataAsync();
+        return View(model);
     }
 }

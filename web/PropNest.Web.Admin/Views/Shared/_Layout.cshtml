@@ -1,49 +1,200 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@inject PropNest.Web.Admin.Services.IAdminListingService AdminService
+
+@{
+    var activeNav = ViewData["ActiveNav"]?.ToString() ?? "Dashboard";
+    var pendingCount = await AdminService.GetPendingCountAsync();
+}
+
+<!DOCTYPE html>
+<html lang="vi" data-scroll-behavior="smooth">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ProNest.Web.Admin</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/ProNest.Web.Admin.styles.css" asp-append-version="true" />
+    <title>@(ViewData["Title"] ?? "Quản trị") - PropNest Admin</title>
+
+    <!-- Google Fonts: Be Vietnam Pro & Playfair Display with full Vietnamese Unicode subset -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&display=swap&subset=vietnamese" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#fff8e3',
+                        surface: '#fdf9eb',
+                        card: '#ffffff',
+                        primary: {
+                            DEFAULT: '#d7730c',
+                            foreground: '#ffffff',
+                            hover: '#b85e07'
+                        },
+                        'brand-soft': '#fbe6cc',
+                        destructive: {
+                            DEFAULT: '#d23b2f',
+                            foreground: '#ffffff'
+                        },
+                        border: '#e8e3d5',
+                        muted: {
+                            DEFAULT: '#f6eed3',
+                            foreground: '#6b6354'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        display: ['"Playfair Display"', 'Georgia', 'Cambria', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom Theme Styles -->
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ProNest.Web.Admin</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+<body class="min-h-screen bg-background text-neutral-900 antialiased font-sans">
+    <div class="min-h-screen">
+        <!-- Admin Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border bg-card p-6 lg:flex lg:flex-col lg:justify-between shadow-sm">
+            <div>
+                <!-- Logo & Badge -->
+                <div class="flex items-center justify-between">
+                    <a asp-controller="Dashboard" asp-action="Index" class="flex items-center gap-2">
+                        <div class="grid size-9 place-items-center rounded-xl bg-primary text-white shadow-xs font-bold text-lg font-display">
+                            PN
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-display text-lg font-bold tracking-tight text-neutral-900 leading-none">PropNest</span>
+                            <span class="text-[10px] text-muted-foreground font-sans uppercase tracking-widest mt-0.5">Admin Portal</span>
+                        </div>
+                    </a>
+                    <span class="rounded-full bg-destructive/10 text-destructive border border-destructive/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                        Admin
+                    </span>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="mt-8">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                        Quản trị hệ thống
+                    </p>
+                    <nav class="flex flex-col gap-1 text-sm font-medium" aria-label="Admin Navigation">
+                        <!-- Dashboard -->
+                        <a asp-controller="Dashboard" asp-action="Index"
+                           class="flex items-center justify-between rounded-xl px-3.5 py-2.5 transition-colors @(activeNav == "Dashboard" ? "bg-primary text-white font-semibold shadow-xs" : "text-muted-foreground hover:bg-surface hover:text-neutral-900")">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="layout-dashboard" class="size-4 shrink-0"></i>
+                                <span>Bảng điều khiển</span>
+                            </div>
+                        </a>
+
+                        <!-- Moderation -->
+                        <a asp-controller="Moderation" asp-action="Index"
+                           class="flex items-center justify-between rounded-xl px-3.5 py-2.5 transition-colors @(activeNav == "Moderation" ? "bg-primary text-white font-semibold shadow-xs" : "text-muted-foreground hover:bg-surface hover:text-neutral-900")">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="check-square" class="size-4 shrink-0"></i>
+                                <span>Duyệt tin đăng</span>
+                            </div>
+                            @if (pendingCount > 0)
+                            {
+                                <span class="rounded-full px-2 py-0.5 text-xs font-bold @(activeNav == "Moderation" ? "bg-white text-primary" : "bg-destructive text-white")">
+                                    @pendingCount
+                                </span>
+                            }
+                        </a>
+
+                        <!-- Properties -->
+                        <a asp-controller="Properties" asp-action="Index"
+                           class="flex items-center justify-between rounded-xl px-3.5 py-2.5 transition-colors @(activeNav == "Properties" ? "bg-primary text-white font-semibold shadow-xs" : "text-muted-foreground hover:bg-surface hover:text-neutral-900")">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="list-filter" class="size-4 shrink-0"></i>
+                                <span>Toàn bộ tin đăng</span>
+                            </div>
+                        </a>
+                    </nav>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+            <!-- Bottom User & Client link -->
+            <div class="space-y-3 border-t border-border pt-4">
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <a href="https://localhost:7129/" target="_blank" class="flex items-center justify-center gap-1.5 rounded-xl border border-border px-2.5 py-2 text-muted-foreground hover:bg-surface hover:text-neutral-900 transition-colors">
+                        <i data-lucide="store" class="size-3.5 text-primary"></i> Khách hàng
+                    </a>
+                    <a href="https://localhost:7006/" target="_blank" class="flex items-center justify-center gap-1.5 rounded-xl border border-border px-2.5 py-2 text-muted-foreground hover:bg-surface hover:text-neutral-900 transition-colors">
+                        <i data-lucide="home" class="size-3.5 text-emerald-600"></i> Người bán
+                    </a>
+                </div>
+
+                <div class="flex items-center justify-between p-2 rounded-xl bg-surface border border-border/60">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="grid size-8 place-items-center rounded-full bg-destructive/15 text-destructive text-xs font-bold shrink-0">
+                            AD
+                        </div>
+                        <div class="truncate">
+                            <p class="text-xs font-semibold truncate text-neutral-900">Quản trị viên</p>
+                            <p class="text-[10px] text-muted-foreground truncate">admin@propnest.vn</p>
+                        </div>
+                    </div>
+                    <a href="https://localhost:7129/login" class="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors" title="Đăng xuất" aria-label="Đăng xuất">
+                        <i data-lucide="log-out" class="size-4"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Top Header -->
+        <header class="sticky top-0 z-30 h-16 border-b border-border bg-card/85 backdrop-blur-md px-6 flex items-center justify-between lg:ml-64 shadow-xs">
+            <div class="flex items-center gap-2.5">
+                <i data-lucide="shield-check" class="size-5 text-primary"></i>
+                <h2 class="text-sm font-semibold text-neutral-900">Cổng Quản trị & Kiểm duyệt Bất động sản PropNest</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-surface border border-border px-3 py-1 rounded-full">
+                    <span class="size-2 rounded-full @(pendingCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500")"></span>
+                    <strong>@pendingCount</strong> tin đang đợi phê duyệt
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="p-6 lg:ml-64 lg:p-8">
+            <!-- Flash Notifications -->
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 shadow-xs transition-opacity duration-300">
+                    <i data-lucide="check-circle-2" class="size-4 shrink-0 text-emerald-600"></i>
+                    <span>@TempData["SuccessMessage"]</span>
+                </div>
+            }
+            @if (TempData["WarningMessage"] != null)
+            {
+                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-medium text-amber-800 shadow-xs transition-opacity duration-300">
+                    <i data-lucide="alert-triangle" class="size-4 shrink-0 text-amber-600"></i>
+                    <span>@TempData["WarningMessage"]</span>
+                </div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs font-medium text-rose-800 shadow-xs transition-opacity duration-300">
+                    <i data-lucide="x-circle" class="size-4 shrink-0 text-rose-600"></i>
+                    <span>@TempData["ErrorMessage"]</span>
+                </div>
+            }
+
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - ProNest.Web.Admin - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <!-- Lucide Icons Script -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="~/js/admin.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

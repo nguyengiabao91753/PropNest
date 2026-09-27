@@ -1,8 +1,434 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model PropNest.Web.Client.Models.ViewModels.HomeViewModel
+
+@{
+    ViewData["Title"] = "Tổ ấm trong mơ cùng PropNest";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!-- Section 1: Hero -->
+<section class="mx-auto max-w-7xl px-4 pt-6 md:px-8 md:pt-10">
+    <h1 class="text-center font-display text-4xl sm:text-6xl md:text-7xl font-semibold text-neutral-900 leading-tight tracking-normal">
+        Tìm tổ ấm cùng <em class="font-medium text-primary">PropNest</em>
+    </h1>
+
+    <!-- Tabs Search Mode -->
+    <div role="tablist" class="mt-6 flex flex-wrap justify-center gap-2">
+        <button type="button" onclick="setHeroMode('sale')" id="heroTabSale"
+                class="rounded-full border border-primary bg-primary text-white px-5 py-2 text-sm font-semibold shadow-xs transition-colors">
+            Mua nhà
+        </button>
+        <button type="button" onclick="setHeroMode('rent')" id="heroTabRent"
+                class="rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-sm font-medium transition-colors">
+            Thuê nhà
+        </button>
+        <a href="https://localhost:7006/seller/properties/new"
+           class="rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-sm font-medium transition-colors">
+            Đăng tin bán
+        </a>
+    </div>
+
+    <!-- Search Form Input Over Banner -->
+    <div class="relative mt-8">
+        <form method="get" asp-controller="Listings" asp-action="Index" id="heroSearchForm"
+              class="absolute inset-x-4 -top-5 z-10 mx-auto flex max-w-xl items-center gap-2 rounded-full border border-border bg-surface/95 backdrop-blur-md p-2 pl-6 shadow-xl md:-top-7">
+            <input type="hidden" name="type" id="heroSearchType" value="sale" />
+            <input name="q" placeholder="Tìm theo địa chỉ, quận huyện, tên dự án..."
+                   class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-neutral-900" />
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-primary-hover">
+                <i data-lucide="search" class="size-4"></i>
+                <span>Tìm kiếm</span>
+            </button>
+        </form>
+
+        <div class="relative aspect-[4/3] overflow-hidden rounded-3xl md:aspect-[21/8] bg-neutral-200">
+            <img src="/images/hero-home.png" alt="PropNest Hero Home" class="size-full object-cover" />
+        </div>
+    </div>
+</section>
+
+<!-- Section 2: Home About & Numbers -->
+<section id="about" class="mx-auto max-w-7xl scroll-mt-24 px-4 py-20 md:px-8 md:py-28">
+    <div class="grid gap-8 md:grid-cols-2 md:items-end">
+        <div class="flex items-center gap-4">
+            <h2 class="font-display text-4xl leading-tight text-neutral-900 md:text-5xl">
+                Chúng tôi tìm kiếm <br />
+                những gì <em class="font-medium text-primary">Tốt nhất</em> cho bạn
+            </h2>
+        </div>
+        <p class="max-w-md text-sm leading-relaxed text-muted-foreground md:justify-self-end">
+            PropNest kết nối bạn với những bất động sản chuẩn xác, được xác thực minh bạch qua quy trình kiểm duyệt khắt khe, phù hợp hoàn hảo với phong cách sống và ngân sách của gia đình bạn.
+        </p>
+    </div>
+
+    <div class="mt-12 grid gap-6 lg:grid-cols-2">
+        <dl class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-2xs">
+                <dt class="order-2 mt-2 text-xs text-muted-foreground">Khách hàng hài lòng</dt>
+                <dd class="order-1 font-display text-4xl font-bold text-neutral-900">12K+</dd>
+            </div>
+            <div class="flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-2xs">
+                <dt class="order-2 mt-2 text-xs text-muted-foreground">Năm kinh nghiệm uy tín</dt>
+                <dd class="order-1 font-display text-4xl font-bold text-neutral-900">20+</dd>
+            </div>
+            <div class="flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-2xs">
+                <dt class="order-2 mt-2 text-xs text-muted-foreground">Đối tác phát triển dự án</dt>
+                <dd class="order-1 font-display text-4xl font-bold text-neutral-900">600+</dd>
+            </div>
+            <div class="flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-2xs">
+                <dt class="order-2 mt-2 text-xs text-muted-foreground">Tin đăng đã kiểm duyệt</dt>
+                <dd class="order-1 font-display text-4xl font-bold text-neutral-900">@Model.TotalVerifiedCount+</dd>
+            </div>
+        </dl>
+
+        <div class="flex flex-col gap-6 overflow-hidden rounded-2xl bg-primary p-8 text-white sm:flex-row sm:items-stretch shadow-md">
+            <div class="flex flex-1 flex-col justify-between gap-6">
+                <p class="max-w-xs text-sm leading-relaxed">
+                    Khám phá ngôi nhà mơ ước cùng PropNest — nơi sự tiện nghi gặp gỡ vẻ đẹp sang trọng, từng bước xây đắp tương lai thịnh vượng.
+                </p>
+                <a href="#contact" class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider underline hover:text-white/80">
+                    Liên hệ tư vấn ngay <i data-lucide="arrow-up-right" class="size-4"></i>
+                </a>
+            </div>
+            <div class="relative min-h-48 flex-1 overflow-hidden rounded-xl bg-black/20">
+                <img src="/images/p5.png" alt="Villa hồ bơi riêng" class="size-full object-cover" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Section 3: Latest Projects (Featured Listings Tabs) -->
+<section class="mx-auto max-w-7xl px-4 pb-20 md:px-8 md:pb-28">
+    <div class="text-center space-y-2">
+        <p class="text-xs uppercase font-bold tracking-widest text-primary">Dự án Bất động sản</p>
+        <h2 class="font-display text-4xl font-bold text-neutral-900">
+            Tuyển chọn <em class="font-medium text-primary">Nổi bật</em>
+        </h2>
+    </div>
+
+    <!-- Category Tabs -->
+    <div role="tablist" class="mt-8 flex justify-center gap-2">
+        <button type="button" onclick="showLatestCategory('Residential')" id="catTabResidential"
+                class="rounded-full border border-primary bg-primary text-white px-5 py-2 text-xs font-semibold shadow-xs transition-colors">
+            Khu dân cư (Residential)
+        </button>
+        <button type="button" onclick="showLatestCategory('Commercial')" id="catTabCommercial"
+                class="rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-xs font-medium transition-colors">
+            Mặt bằng kinh doanh (Commercial)
+        </button>
+        <button type="button" onclick="showLatestCategory('Apartments')" id="catTabApartments"
+                class="rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-xs font-medium transition-colors">
+            Căn hộ chung cư (Apartments)
+        </button>
+    </div>
+
+    <!-- Residential Grid -->
+    <div id="latest-Residential" class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (var p in Model.FeaturedResidential)
+        {
+            <partial name="_PropertyCard" model="p" />
+        }
+    </div>
+
+    <!-- Commercial Grid -->
+    <div id="latest-Commercial" class="mt-10 hidden grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (var p in Model.FeaturedCommercial)
+        {
+            <partial name="_PropertyCard" model="p" />
+        }
+    </div>
+
+    <!-- Apartments Grid -->
+    <div id="latest-Apartments" class="mt-10 hidden grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (var p in Model.FeaturedApartments)
+        {
+            <partial name="_PropertyCard" model="p" />
+        }
+    </div>
+
+    <div class="mt-10 flex justify-center">
+        <a asp-controller="Listings" asp-action="Index"
+           class="rounded-full border border-primary px-7 py-3 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white shadow-xs">
+            Khám phá tất cả bất động sản <i data-lucide="arrow-right" class="size-3.5 inline ml-1"></i>
+        </a>
+    </div>
+</section>
+
+<!-- Section 4: Project Categories Dark Banner -->
+<section class="relative isolate overflow-hidden bg-neutral-900 py-20 text-white md:py-28">
+    <img src="/images/categories-bg.png" alt="" class="absolute inset-0 -z-10 size-full object-cover opacity-30" />
+    <div class="mx-auto max-w-5xl px-4 text-center md:px-8">
+        <h2 class="font-display text-3xl md:text-5xl font-bold">
+            Danh mục <em class="font-medium text-primary">Dự án</em>
+        </h2>
+        <p class="mx-auto mt-3 max-w-md text-sm text-white/80">
+            Đa dạng các loại hình bất động sản từ khu dân cư, biệt thự nghỉ dưỡng, shophouse đến mặt bằng thương mại cao tầng.
+        </p>
+        <ul class="mt-12 grid grid-cols-1 gap-y-8 sm:grid-cols-2 md:grid-cols-3">
+            <li class="md:border-r md:border-white/10">
+                <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Apartment" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="armchair" class="size-4"></i>
+                    </span>
+                    <span>Căn hộ & Chung cư</span>
+                </a>
+            </li>
+            <li class="md:border-r md:border-white/10">
+                <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Commercial" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="building-2" class="size-4"></i>
+                    </span>
+                    <span>Mặt bằng kinh doanh</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Villa" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="trees" class="size-4"></i>
+                    </span>
+                    <span>Biệt thự & Nghỉ dưỡng</span>
+                </a>
+            </li>
+            <li class="md:border-r md:border-white/10">
+                <a asp-controller="Listings" asp-action="Index" asp-route-homeType="House" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="home" class="size-4"></i>
+                    </span>
+                    <span>Nhà phố trung tâm</span>
+                </a>
+            </li>
+            <li class="md:border-r md:border-white/10">
+                <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Townhouse" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="landmark" class="size-4"></i>
+                    </span>
+                    <span>Nhà liền kề KĐT</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Listings" asp-action="Index" asp-route-type="rent" class="group inline-flex items-center gap-3 px-4 py-2 text-sm hover:text-primary transition-colors">
+                    <span class="grid size-9 place-items-center rounded-full bg-primary text-white transition-transform group-hover:scale-110">
+                        <i data-lucide="key" class="size-4"></i>
+                    </span>
+                    <span>Bất động sản cho thuê</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- Section 5: What We Offer -->
+<section class="bg-surface py-20 md:py-28">
+    <div class="mx-auto max-w-6xl px-4 md:px-8">
+        <div class="text-center space-y-2">
+            <p class="text-xs uppercase font-bold tracking-widest text-primary">Giá trị cốt lõi</p>
+            <h2 class="font-display text-4xl font-bold text-neutral-900">
+                PropNest mang lại <em class="font-medium text-primary">gì cho bạn</em>
+            </h2>
+            <p class="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
+                Giải pháp công nghệ minh bạch từ quy trình kiểm duyệt F03, ghi nhận Delta F04 cho đến điều phối giao dịch an toàn F06.
+            </p>
+        </div>
+
+        <div class="mt-14 grid items-center gap-10 md:grid-cols-[1fr_1.2fr_1fr]">
+            <div class="flex flex-col gap-14">
+                <div class="flex gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-primary">
+                        <i data-lucide="cpu" class="size-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-primary">Công nghệ AI & Thẩm định</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-muted-foreground">Tự động phát hiện vi phạm từ khóa và tư vấn kiểm duyệt chuẩn mực.</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-primary">
+                        <i data-lucide="shield-check" class="size-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-primary">100% Xác thực thực tế</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-muted-foreground">Kiểm tra sổ đỏ, pháp lý và số nhà chính xác trước khi cho phép xuất bản.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative mx-auto aspect-square w-full max-w-sm">
+                <img src="/images/offer-house.png" alt="Kiến trúc Tudor" class="size-full object-contain mix-blend-multiply" />
+            </div>
+
+            <div class="flex flex-col gap-14 md:items-end text-left md:text-right">
+                <div class="flex md:flex-row-reverse gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-primary">
+                        <i data-lucide="layout-template" class="size-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-primary">Bố cục hiển thị thông minh</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-muted-foreground">Định dạng hình ảnh sắc nét, bản đồ vị trí trực quan và lọc nhanh tức thì.</p>
+                    </div>
+                </div>
+                <div class="flex md:flex-row-reverse gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-primary">
+                        <i data-lucide="clock" class="size-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-semibold text-primary">Điều phối giao dịch tức thì</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-muted-foreground">Tự động trừ tiền và bồi hoàn bảo vệ ví người bán qua MassTransit Saga.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Section 6: Team Section -->
+<section id="team" class="mx-auto max-w-5xl scroll-mt-24 px-4 py-20 md:px-8 md:py-28">
+    <div class="text-center space-y-2">
+        <p class="text-xs uppercase font-bold tracking-widest text-primary">Đội ngũ chuyên gia</p>
+        <h2 class="font-display text-4xl font-bold text-neutral-900">
+            Người đồng hành <em class="font-medium text-primary">Tin cậy</em>
+        </h2>
+    </div>
+    <div class="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+        <div class="flex flex-col items-center rounded-2xl border border-border bg-card px-4 py-8 text-center shadow-xs">
+            <div class="relative size-16 overflow-hidden rounded-full border border-border bg-primary/10">
+                <img src="/images/avatar-1.png" alt="Minh Nguyen" class="size-full object-cover" />
+            </div>
+            <p class="mt-4 text-sm font-semibold text-neutral-900">Nguyễn Văn Minh</p>
+            <p class="text-xs text-muted-foreground">Giám đốc Khối BĐS Cao cấp</p>
+        </div>
+        <div class="flex flex-col items-center rounded-2xl border border-border bg-card px-4 py-8 text-center shadow-xs">
+            <div class="relative size-16 overflow-hidden rounded-full border border-border bg-primary/10">
+                <img src="/images/avatar-2.png" alt="Thao Tran" class="size-full object-cover" />
+            </div>
+            <p class="mt-4 text-sm font-semibold text-neutral-900">Trần Thị Thu Thảo</p>
+            <p class="text-xs text-muted-foreground">Chuyên gia Thẩm định & Pháp lý</p>
+        </div>
+        <div class="flex flex-col items-center rounded-2xl border border-border bg-card px-4 py-8 text-center shadow-xs">
+            <div class="relative size-16 overflow-hidden rounded-full border border-border bg-primary/10">
+                <img src="/images/avatar-3.png" alt="Hai Yen" class="size-full object-cover" />
+            </div>
+            <p class="mt-4 text-sm font-semibold text-neutral-900">Hoàng Hải Yến</p>
+            <p class="text-xs text-muted-foreground">Trưởng bộ phận Phát triển Đối tác</p>
+        </div>
+    </div>
+</section>
+
+<!-- Section 7: FAQ Section -->
+<section class="mx-auto max-w-3xl px-4 pb-20 md:px-8 md:pb-28">
+    <div class="text-center space-y-2">
+        <p class="text-xs uppercase font-bold tracking-widest text-primary">Hỏi đáp</p>
+        <h2 class="font-display text-4xl font-bold text-neutral-900">
+            Câu hỏi <em class="font-medium text-primary">Thường gặp</em>
+        </h2>
+    </div>
+    <div class="mt-10 flex flex-col gap-3">
+        <details class="group rounded-2xl border border-border bg-card p-5" open>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-neutral-900">
+                <span>PropNest cung cấp những dịch vụ gì?</span>
+                <i data-lucide="plus" class="size-4 shrink-0 transition-transform group-open:rotate-45"></i>
+            </summary>
+            <p class="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Chúng tôi kết nối người mua, người thuê và chủ sở hữu bất động sản thông qua nền tảng công nghệ kiểm duyệt minh bạch, hỗ trợ mua bán, ký gửi và tư vấn pháp lý trọn gói.
+            </p>
+        </details>
+        <details class="group rounded-2xl border border-border bg-card p-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-neutral-900">
+                <span>Tin đăng trên PropNest có được kiểm duyệt thực tế không?</span>
+                <i data-lucide="plus" class="size-4 shrink-0 transition-transform group-open:rotate-45"></i>
+            </summary>
+            <p class="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Có. Toàn bộ tin đăng bắt buộc trải qua quy trình thẩm định bởi đội ngũ quản trị viên và công nghệ AME AI nhằm đảm bảo không có tin ảo, sai lệch vị trí hay giá không đúng thực tế.
+            </p>
+        </details>
+        <details class="group rounded-2xl border border-border bg-card p-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-neutral-900">
+                <span>Làm thế nào để đăng tin bán nhà lên PropNest?</span>
+                <i data-lucide="plus" class="size-4 shrink-0 transition-transform group-open:rotate-45"></i>
+            </summary>
+            <p class="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Bạn chỉ cần truy cập vào Cổng Người bán (Seller Portal), điền thông tin theo Trình hướng dẫn 5 bước (Listing Wizard) và chọn gói dịch vụ hiển thị phù hợp.
+            </p>
+        </details>
+    </div>
+</section>
+
+<!-- Section 8: Testimonials -->
+<section class="bg-surface py-20 md:py-28 border-t border-border">
+    <div class="mx-auto max-w-6xl px-4 md:px-8">
+        <div class="text-center space-y-2">
+            <p class="text-xs uppercase font-bold tracking-widest text-primary">Cảm nhận khách hàng</p>
+            <h2 class="font-display text-4xl font-bold text-neutral-900">
+                Đánh giá từ <em class="font-medium text-primary">Khách hàng</em>
+            </h2>
+        </div>
+        <div class="mt-10 grid gap-6 md:grid-cols-3">
+            <div class="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+                <p class="text-xs leading-relaxed text-muted-foreground italic">
+                    “Tôi đã tìm được căn biệt thự Thảo Điền ưng ý chỉ sau 1 tuần tìm kiếm trên PropNest. Thông tin vị trí cực kỳ chính xác và người bán hỗ trợ rất nhiệt tình.”
+                </p>
+                <div class="mt-6 flex items-center gap-3 pt-4 border-t border-border/60">
+                    <div class="size-9 rounded-full bg-primary/10 text-primary grid place-items-center font-bold text-xs">LH</div>
+                    <div>
+                        <p class="text-xs font-bold text-neutral-900">Lê Hoàng Nam</p>
+                        <p class="text-[10px] text-muted-foreground">Nhà đầu tư cá nhân - TP.HCM</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+                <p class="text-xs leading-relaxed text-muted-foreground italic">
+                    “Giao diện hiện đại, tốc độ tải nhanh và bộ lọc chi tiết theo m², số phòng ngủ rất tiện lợi. Đội ngũ tư vấn pháp lý cũng rất chuyên nghiệp.”
+                </p>
+                <div class="mt-6 flex items-center gap-3 pt-4 border-t border-border/60">
+                    <div class="size-9 rounded-full bg-primary/10 text-primary grid place-items-center font-bold text-xs">MA</div>
+                    <div>
+                        <p class="text-xs font-bold text-neutral-900">Nguyễn Mai Anh</p>
+                        <p class="text-[10px] text-muted-foreground">Khách hàng mua nhà - Hà Nội</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+                <p class="text-xs leading-relaxed text-muted-foreground italic">
+                    “Là môi giới kỳ cựu, tôi đánh giá rất cao tính năng kiểm toán lịch sử Delta F04 và bồi hoàn ví Saga F06 của PropNest. Minh bạch và uy tín số 1.”
+                </p>
+                <div class="mt-6 flex items-center gap-3 pt-4 border-t border-border/60">
+                    <div class="size-9 rounded-full bg-primary/10 text-primary grid place-items-center font-bold text-xs">TD</div>
+                    <div>
+                        <p class="text-xs font-bold text-neutral-900">Trần Đình Dũng</p>
+                        <p class="text-[10px] text-muted-foreground">Chủ sàn giao dịch BĐS</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        function setHeroMode(mode) {
+            document.getElementById('heroSearchType').value = mode;
+            const tabSale = document.getElementById('heroTabSale');
+            const tabRent = document.getElementById('heroTabRent');
+
+            if (mode === 'sale') {
+                tabSale.className = 'rounded-full border border-primary bg-primary text-white px-5 py-2 text-sm font-semibold shadow-xs transition-colors';
+                tabRent.className = 'rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-sm font-medium transition-colors';
+            } else {
+                tabRent.className = 'rounded-full border border-primary bg-primary text-white px-5 py-2 text-sm font-semibold shadow-xs transition-colors';
+                tabSale.className = 'rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-sm font-medium transition-colors';
+            }
+        }
+
+        function showLatestCategory(cat) {
+            ['Residential', 'Commercial', 'Apartments'].forEach(c => {
+                const el = document.getElementById(`latest-${c}`);
+                const btn = document.getElementById(`catTab${c}`);
+                if (c === cat) {
+                    el.classList.remove('hidden');
+                    btn.className = 'rounded-full border border-primary bg-primary text-white px-5 py-2 text-xs font-semibold shadow-xs transition-colors';
+                } else {
+                    el.classList.add('hidden');
+                    btn.className = 'rounded-full border border-border bg-card text-neutral-800 hover:border-primary hover:text-primary px-5 py-2 text-xs font-medium transition-colors';
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,101 @@
+@model List<PropNest.Web.Seller.Models.ViewModels.HistoryDeltaViewModel>
+
+@{
+    var property = ViewData["Property"] as PropNest.Web.Seller.Models.ViewModels.SellerPropertyItemViewModel;
+    ViewData["Title"] = $"Lịch sử Delta: {property?.Id}";
+}
+
+<div class="mx-auto max-w-4xl space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-2 text-primary font-semibold text-xs mb-1">
+                <i data-lucide="history" class="size-4"></i>
+                <span>Thuật toán DeltaEngine & Snapshot (Blueprint F04)</span>
+            </div>
+            <h1 class="font-display text-3xl font-bold text-neutral-900">
+                Lịch Sử Thay Đổi: <span class="text-primary font-mono">@property?.Id</span>
+            </h1>
+            <p class="text-xs text-muted-foreground mt-1">
+                @property?.Title — Lưu trữ vết kiểm toán (Audit Trail) và độ lệch trường thông tin (Delta Changes).
+            </p>
+        </div>
+        <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-neutral-900 transition-colors">
+            <i data-lucide="arrow-left" class="size-4"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <!-- Timeline Container -->
+    <div class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs">
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="text-center py-12 text-xs text-muted-foreground">
+                <i data-lucide="clock" class="size-8 mx-auto mb-2 text-muted-foreground/60"></i>
+                <p class="font-semibold text-sm text-neutral-800">Chưa có bản ghi lịch sử thay đổi nào</p>
+                <p class="mt-1">Mọi hành động tạo mới, cập nhật giá hoặc sửa đổi thông tin sẽ được tự động ghi vết tại đây.</p>
+            </div>
+        }
+        else
+        {
+            <div class="relative border-l-2 border-border/80 pl-6 ml-3 space-y-6">
+                @foreach (var h in Model)
+                {
+                    <div class="relative group">
+                        <!-- Timeline Bullet -->
+                        <div class="absolute -left-[31px] top-1.5 size-3 rounded-full border-2 border-primary bg-background"></div>
+
+                        <div class="flex flex-col gap-2 rounded-xl border border-border bg-surface/50 p-4 shadow-2xs">
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                                        @h.ActionType
+                                    </span>
+                                    <span class="text-xs font-medium text-neutral-900 flex items-center gap-1">
+                                        <i data-lucide="user" class="size-3 text-muted-foreground"></i> @h.Actor
+                                    </span>
+                                </div>
+                                <span class="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
+                                    <i data-lucide="clock" class="size-3"></i> @h.ActionDate.ToString("dd/MM/yyyy HH:mm:ss")
+                                </span>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(h.Note))
+                            {
+                                <p class="text-xs text-muted-foreground italic">@h.Note</p>
+                            }
+
+                            <!-- Delta Changes Table -->
+                            @if (h.DeltaChanges != null && h.DeltaChanges.Count > 0)
+                            {
+                                <div class="mt-2 overflow-x-auto rounded-lg border border-border/60 bg-card text-xs">
+                                    <table class="w-full text-left">
+                                        <thead class="border-b border-border/60 text-muted-foreground bg-surface/80">
+                                            <tr>
+                                                <th class="px-3.5 py-2 font-medium">Trường (Field)</th>
+                                                <th class="px-3.5 py-2 font-medium text-rose-600">Giá trị trước</th>
+                                                <th class="px-3.5 py-2 font-medium text-emerald-600">Giá trị sau (New)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-border/40 font-mono text-[11px]">
+                                            @foreach (var d in h.DeltaChanges)
+                                            {
+                                                <tr class="hover:bg-surface/30">
+                                                    <td class="px-3.5 py-2 font-semibold text-neutral-900">@d.Field</td>
+                                                    <td class="px-3.5 py-2 text-muted-foreground">
+                                                        @(d.OldValue ?? "null")
+                                                    </td>
+                                                    <td class="px-3.5 py-2 text-emerald-700 font-semibold">
+                                                        @d.NewValue
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

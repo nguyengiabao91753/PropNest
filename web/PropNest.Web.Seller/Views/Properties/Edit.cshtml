@@ -1,0 +1,135 @@
+@model PropNest.Web.Seller.Models.InputModels.CreatePropertyInputModel
+
+@{
+    var id = ViewData["ListingId"]?.ToString() ?? "";
+    ViewData["Title"] = $"Chỉnh sửa tin: {id}";
+}
+
+<div class="mx-auto max-w-4xl space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="font-display text-3xl font-bold text-neutral-900">Chỉnh Sửa Tin Đăng: <span class="font-mono text-primary">@id</span></h1>
+            <p class="text-xs text-muted-foreground mt-1">
+                Lưu ý theo quy tắc Blueprint: Sửa đổi các trường dữ liệu quan trọng sẽ tự động chuyển tin về trạng thái Chờ duyệt lại.
+            </p>
+        </div>
+        <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-neutral-900 transition-colors">
+            <i data-lucide="arrow-left" class="size-4"></i> Quay lại
+        </a>
+    </div>
+
+    <form asp-action="Edit" asp-route-id="@id" method="post" class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs space-y-8">
+        @Html.AntiForgeryToken()
+
+        <!-- Section 1: Basic Info -->
+        <div class="space-y-4">
+            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
+                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
+                Thông tin chung
+            </h3>
+
+            <div>
+                <label asp-for="Title" class="block text-xs font-semibold text-neutral-800 mb-1.5">Tiêu đề tin đăng *</label>
+                <input asp-for="Title" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                <span asp-validation-for="Title" class="text-[11px] text-destructive mt-1 block"></span>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="PropertyType" class="block text-xs font-semibold text-neutral-800 mb-1.5">Loại bất động sản *</label>
+                    <select asp-for="PropertyType" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                        <option value="Apartment">Căn hộ / Chung cư (Apartment)</option>
+                        <option value="House">Nhà riêng / Nhà phố (House)</option>
+                        <option value="Villa">Biệt thự đơn lập / song lập (Villa)</option>
+                        <option value="Townhouse">Nhà liền kề (Townhouse)</option>
+                        <option value="Commercial">Mặt bằng kinh doanh / Văn phòng (Commercial)</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="ListingType" class="block text-xs font-semibold text-neutral-800 mb-1.5">Hình thức giao dịch *</label>
+                    <select asp-for="ListingType" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
+                        <option value="sale">Cần bán (Sale)</option>
+                        <option value="rent">Cho thuê (Rent)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="Description" class="block text-xs font-semibold text-neutral-800 mb-1.5">Mô tả chi tiết *</label>
+                <textarea asp-for="Description" rows="4" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900"></textarea>
+                <span asp-validation-for="Description" class="text-[11px] text-destructive mt-1 block"></span>
+            </div>
+        </div>
+
+        <!-- Section 2: Pricing & Specs -->
+        <div class="space-y-4">
+            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
+                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
+                Giá & Thông số kỹ thuật
+            </h3>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Price" class="block text-xs font-semibold text-neutral-800 mb-1.5">Mức giá đề xuất (VNĐ) *</label>
+                    <input asp-for="Price" type="number" step="1000000" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
+                </div>
+                <div>
+                    <label asp-for="Area" class="block text-xs font-semibold text-neutral-800 mb-1.5">Diện tích sử dụng (m²) *</label>
+                    <input asp-for="Area" type="number" step="1" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="Beds" class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng ngủ</label>
+                    <input asp-for="Beds" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+                <div>
+                    <label asp-for="Baths" class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng tắm</label>
+                    <input asp-for="Baths" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+                <div>
+                    <label asp-for="Carports" class="block text-xs font-semibold text-neutral-800 mb-1.5">Chỗ đỗ ô tô</label>
+                    <input asp-for="Carports" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Location -->
+        <div class="space-y-4">
+            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
+                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
+                Địa chỉ
+            </h3>
+
+            <div class="grid sm:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="City" class="block text-xs font-semibold text-neutral-800 mb-1.5">Tỉnh / Thành phố *</label>
+                    <input asp-for="City" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+                <div>
+                    <label asp-for="District" class="block text-xs font-semibold text-neutral-800 mb-1.5">Quận / Huyện *</label>
+                    <input asp-for="District" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+                <div>
+                    <label asp-for="Ward" class="block text-xs font-semibold text-neutral-800 mb-1.5">Phường / Xã</label>
+                    <input asp-for="Ward" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="Address" class="block text-xs font-semibold text-neutral-800 mb-1.5">Địa chỉ chi tiết *</label>
+                <input asp-for="Address" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <a asp-action="Index" class="rounded-xl border border-border px-5 py-2.5 text-xs font-medium text-muted-foreground hover:bg-surface hover:text-neutral-900 transition-colors">
+                Hủy bỏ
+            </a>
+            <button type="submit" class="rounded-xl bg-primary px-6 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                <i data-lucide="save" class="size-4 inline mr-1"></i> Lưu thay đổi (Ghi nhận Delta)
+            </button>
+        </div>
+    </form>
+</div>

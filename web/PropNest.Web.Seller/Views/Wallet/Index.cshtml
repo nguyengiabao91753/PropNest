@@ -1,0 +1,202 @@
+@model PropNest.Web.Seller.Models.ViewModels.WalletViewModel
+
+@{
+    ViewData["Title"] = "Ví & Giao dịch (F05)";
+}
+
+<div class="mx-auto max-w-7xl space-y-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="font-display text-3xl font-bold text-neutral-900">Ví Tài Khoản & Giao Dịch (F05)</h1>
+            <p class="text-xs text-muted-foreground mt-1">
+                Quản lý số dư, theo dõi lịch sử thanh toán mua gói VIP và kiểm toán bồi hoàn (Saga Refund).
+            </p>
+        </div>
+        <div>
+            <button type="button" onclick="openTopUpModal()"
+                    class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                <i data-lucide="plus" class="size-4"></i> Nạp tiền vào ví
+            </button>
+        </div>
+    </div>
+
+    <!-- 3 Balance Cards -->
+    <div class="grid gap-6 md:grid-cols-3">
+        <!-- Total Balance -->
+        <div class="rounded-2xl border border-primary/30 bg-brand-soft/60 p-6 shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Tổng số dư khả dụng</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-primary text-white shadow-xs">
+                    <i data-lucide="wallet" class="size-5"></i>
+                </div>
+            </div>
+            <p class="font-display text-3xl font-extrabold text-neutral-900">@FormatHelper.FormatVnd(Model.TotalBalance)</p>
+            <p class="text-xs text-muted-foreground mt-2">Dùng để thanh toán gói VIP và đẩy tin tự động</p>
+        </div>
+
+        <!-- Main Balance -->
+        <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư chính (Main Balance)</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
+                    <i data-lucide="credit-card" class="size-5"></i>
+                </div>
+            </div>
+            <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.MainBalance)</p>
+            <p class="text-xs text-muted-foreground mt-2">Nạp từ thẻ ngân hàng, tiền mặt hoặc chuyển khoản</p>
+        </div>
+
+        <!-- Promo Balance -->
+        <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư khuyến mãi (Promo)</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-amber-500/15 text-amber-600">
+                    <i data-lucide="shield-check" class="size-5"></i>
+                </div>
+            </div>
+            <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.PromoBalance)</p>
+            <p class="text-xs text-muted-foreground mt-2">Ưu tiên trừ trước khi thanh toán gói tin</p>
+        </div>
+    </div>
+
+    <!-- Optimistic Concurrency & Policy Info -->
+    <div class="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-muted-foreground shadow-xs">
+        <div class="flex items-center gap-2">
+            <span class="font-semibold text-neutral-900">Optimistic Concurrency:</span>
+            <code class="rounded bg-surface border border-border px-2 py-0.5 font-mono text-[11px] text-neutral-800">@Model.RowVersion</code>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="font-semibold text-neutral-900">Quy tắc trừ tiền:</span>
+            <span>Khuyến mãi (Promo) trừ trước → Số dư chính (Main) trừ sau → Hoàn tiền bồi hoàn đúng số tiền đã trừ.</span>
+        </div>
+    </div>
+
+    <!-- Transaction Ledger Table -->
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+        <div class="border-b border-border px-6 py-4 flex items-center justify-between bg-surface/40">
+            <div class="flex items-center gap-2">
+                <i data-lucide="history" class="size-4 text-primary"></i>
+                <h2 class="text-base font-semibold text-neutral-900">Sổ cái giao dịch (Immutable Ledger)</h2>
+            </div>
+            <span class="text-xs text-muted-foreground">@Model.Transactions.Count giao dịch đã ghi nhận</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-border text-xs text-muted-foreground bg-surface/70 uppercase">
+                    <tr>
+                        <th class="px-5 py-3 font-semibold">Mã GD</th>
+                        <th class="px-4 py-3 font-semibold">Loại</th>
+                        <th class="px-4 py-3 font-semibold">Số tiền</th>
+                        <th class="px-4 py-3 font-semibold">Số dư sau GD</th>
+                        <th class="px-5 py-3 font-semibold">Nội dung</th>
+                        <th class="px-4 py-3 font-semibold">Thời gian</th>
+                        <th class="px-4 py-3 font-semibold text-right">Correlation ID</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                    @foreach (var t in Model.Transactions)
+                    {
+                        var isPositive = t.Amount > 0;
+                        <tr class="hover:bg-surface/50 transition-colors">
+                            <td class="px-5 py-3.5 font-mono text-xs text-muted-foreground font-semibold">@t.Id</td>
+                            <td class="px-4 py-3.5">
+                                @if (t.Type == "TopUp")
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                        Nạp tiền
+                                    </span>
+                                }
+                                else if (t.Type == "Charge")
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300">
+                                        Thanh toán
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300">
+                                        Bồi hoàn Saga
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-4 py-3.5 font-semibold font-display @(isPositive ? "text-emerald-600" : "text-destructive")">
+                                @(isPositive ? "+" : "")@FormatHelper.FormatVnd(t.Amount)
+                            </td>
+                            <td class="px-4 py-3.5 text-xs text-neutral-800 font-mono">
+                                @FormatHelper.FormatVnd(t.BalanceAfter)
+                            </td>
+                            <td class="px-5 py-3.5 text-xs text-neutral-800 max-w-xs">
+                                <p class="truncate" title="@t.Description">@t.Description</p>
+                                @if (!string.IsNullOrWhiteSpace(t.ListingId))
+                                {
+                                    <span class="text-[10px] text-muted-foreground font-mono">Tin: @t.ListingId</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3.5 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                                @t.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="px-4 py-3.5 text-right font-mono text-[11px] text-muted-foreground">
+                                <span class="truncate block max-w-28 ml-auto" title="@t.CorrelationId">@t.CorrelationId</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Top-up Modal -->
+<div id="topUpModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-5">
+        <div class="flex items-center justify-between border-b border-border/80 pb-3">
+            <h3 class="font-display text-lg font-bold text-neutral-900 flex items-center gap-2">
+                <i data-lucide="wallet" class="size-5 text-primary"></i> Nạp tiền vào ví
+            </h3>
+            <button type="button" onclick="closeTopUpModal()" class="text-muted-foreground hover:text-neutral-900">
+                <i data-lucide="x" class="size-5"></i>
+            </button>
+        </div>
+
+        <form asp-action="TopUp" method="post" class="space-y-4">
+            @Html.AntiForgeryToken()
+
+            <div>
+                <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Số tiền cần nạp (VNĐ) *</label>
+                <input id="topUpAmountInput" name="Amount" type="number" step="50000" min="50000" value="1000000" required
+                       class="w-full rounded-xl border border-border bg-surface p-3 text-sm font-mono outline-none focus:border-primary transition-colors text-neutral-900" />
+            </div>
+
+            <!-- Quick pick buttons -->
+            <div>
+                <span class="text-[11px] text-muted-foreground block mb-2">Chọn nhanh số tiền:</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setTopUpAmount(500000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
+                        500.000 ₫
+                    </button>
+                    <button type="button" onclick="setTopUpAmount(1000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
+                        1.000.000 ₫
+                    </button>
+                    <button type="button" onclick="setTopUpAmount(2000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
+                        2.000.000 ₫
+                    </button>
+                    <button type="button" onclick="setTopUpAmount(5000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
+                        5.000.000 ₫
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-border">
+                <button type="button" onclick="closeTopUpModal()"
+                        class="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-surface transition-colors">
+                    Hủy bỏ
+                </button>
+                <button type="submit"
+                        class="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-colors shadow-xs">
+                    Xác nhận nạp tiền
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
