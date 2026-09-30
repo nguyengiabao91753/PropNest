@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -8,6 +7,9 @@ using PropNest.Api.Services;
 using PropNest.Application.Abstractions;
 using PropNest.Application.DependencyInjection;
 using PropNest.Infrastructure.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using PropNest.Infrastructure.Persistence;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,6 +83,25 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+// chỗ này migrate database
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<PropNestDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        LogApplyingMigrations(logger);
+        await dbContext.Database.MigrateAsync();
+        LogMigrationsApplied(logger);
+    }
+    catch (Exception ex)
+    {
+        LogMigrationError(logger, ex);
+        throw;
+    }
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseHttpsRedirection();
@@ -94,4 +115,14 @@ app.MapHealthChecks("/health");
 
 app.Run();
 
-public partial class Program;
+public partial class Program
+{
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Đang kiểm tra và áp dụng Database Migrations còn thiếu...")]
+    private static partial void LogApplyingMigrations(ILogger logger);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Database đã được đồng bộ thành công!")]
+    private static partial void LogMigrationsApplied(ILogger logger);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Có lỗi xảy ra khi tự động migrate database.")]
+    private static partial void LogMigrationError(ILogger logger, Exception ex);
+}

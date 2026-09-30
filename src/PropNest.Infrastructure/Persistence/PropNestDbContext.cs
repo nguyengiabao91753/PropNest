@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Abstractions;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Packages;
 using PropNest.Domain.Users;
 using PropNest.Domain.Wallets;
 using PropNest.Domain.Workflows;
@@ -21,7 +22,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<WorkflowStep> WorkflowSteps => Set<WorkflowStep>();
     public DbSet<IdempotencyRequest> IdempotencyRequests => Set<IdempotencyRequest>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-
+    public DbSet<PackageDefinitions> PackageDefinitions => Set<PackageDefinitions>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
