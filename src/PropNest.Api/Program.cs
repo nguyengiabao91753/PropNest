@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using PropNest.Api;
 using PropNest.Api.Middleware;
 using PropNest.Api.Services;
 using PropNest.Application.Abstractions;
@@ -70,6 +69,7 @@ builder.Services
             ValidIssuer = jwt.Issuer,
             ValidateAudience = true,
             ValidAudience = jwt.Audience,
+            RoleClaimType = "role",
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
             ValidateLifetime = true,
