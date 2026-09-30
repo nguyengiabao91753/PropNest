@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropNest.Api.Contracts.Listings;
 using PropNest.Application.Abstractions;
+using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
 
@@ -105,6 +106,16 @@ public sealed class ListingsController(
 
         return AcceptedAtAction(nameof(WorkflowsController.GetByCorrelationId), "Workflows", new { correlationId = workflow.CorrelationId }, workflow);
     }
+
+    [HttpGet]
+    [Route("/api/v1/listings/")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PagedResult<ListingSummaryDto>>> GetPublicListings([FromQuery] GetPublicListingsQuery request, CancellationToken cancellationToken)
+    {
+        var result = await listingService.GetPublicListingsAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
 
     private long GetRequiredUserId() => currentUser.UserId
         ?? throw new UnauthorizedAccessException("A valid user identifier claim is required.");
