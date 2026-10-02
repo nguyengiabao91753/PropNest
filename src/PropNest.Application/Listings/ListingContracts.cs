@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using PropNest.Application.Common;
 using PropNest.Domain.Listings;
 
@@ -91,6 +92,8 @@ public interface IListingService
     Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 
     Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default);
+
+    Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 }
 
 public sealed record GetPublicListingsQuery(
@@ -99,6 +102,7 @@ public sealed record GetPublicListingsQuery(
     string? Ward = null,
     string? PropertyType = null,
     string? ListingType = null,
+    [FromQuery(Name ="page")] int? Page = null,
     int PageNumber = 1,
     int PageSize = 20
     );

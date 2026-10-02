@@ -55,7 +55,7 @@ public sealed class ListingsController(
         {
             return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [nameof(request.RowVersion)] = ["RowVersion must be base64 encoded."] }));
         }
-
+        
         var listing = await listingService.UpdateAsync(new UpdateListingCommand(
             listingId,
             GetRequiredUserId(),
@@ -108,7 +108,6 @@ public sealed class ListingsController(
     }
 
     [HttpGet]
-    [Route("/api/v1/listings/")]
     [AllowAnonymous]
     public async Task<ActionResult<PagedResult<ListingSummaryDto>>> GetPublicListings([FromQuery] GetPublicListingsQuery request, CancellationToken cancellationToken)
     {
@@ -116,6 +115,14 @@ public sealed class ListingsController(
         return Ok(result);
     }
 
+    [HttpPost("{listingId:long}/hide")]
+    [Authorize(Roles = "Seller")]
+    public async Task<IActionResult> Hide(long listingId, CancellationToken cancellationToken)
+    {
+        var ownerUserId = GetRequiredUserId();
+        await listingService.HideAsync(listingId, ownerUserId, cancellationToken);
+        return Ok(new { message = "Listing has been hidden successfully." });
+    }
 
     private long GetRequiredUserId() => currentUser.UserId
         ?? throw new UnauthorizedAccessException("A valid user identifier claim is required.");

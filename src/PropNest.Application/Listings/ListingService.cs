@@ -1,11 +1,12 @@
 using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
+using PropNest.Application.Extensions;
 using PropNest.Domain.Listings;
 
 namespace PropNest.Application.Listings;
 
-public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork) : IListingService
+public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork, ICurrentUser currentUser) : IListingService
 {
     public async Task<ListingDto> CreateAsync(CreateListingCommand command, CancellationToken cancellationToken = default)
     {
@@ -85,11 +86,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing {listingId} was not found.");
 
-        if (listing.OwnerUserId != ownerUserId)
-        {
-            throw new UnauthorizedAccessException("The current user does not own this listing.");
-        }
 
+        currentUser.EnsureOwner(listing.OwnerUserId);
         return listing;
     }
 
@@ -154,5 +152,28 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         };
 
         return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);
+    }
+
+    public async Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        var listing = await GetOwnedListingAsync(listingId, ownerUserId, cancellationToken);
+        if (listing is null)
+        {
+            throw new KeyNotFoundException($"Listing {listingId} was not found or does not belong to the user {ownerUserId}.");
+        }
+
+        if (listing.OwnerUserId != ownerUserId)
+        {
+            throw new UnauthorizedAccessException($"User {ownerUserId} does not have permission to hide listing {listingId}.");
+        }
+
+        if (listing.Status != ListingStatus.Published)
+        {
+            throw new ArgumentException("Only a published listing can be hidden.");
+        }
+
+        listing.Hide();
+        listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Hide"));
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
