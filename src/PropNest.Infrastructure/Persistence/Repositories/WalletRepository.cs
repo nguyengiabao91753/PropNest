@@ -16,6 +16,11 @@ namespace PropNest.Infrastructure.Persistence.Repositories
             return  dbContext.Wallets.AddAsync(wallet, cancellationToken).AsTask();
         }
 
+        public Task AddTransactionAsync(WalletTransaction transaction, CancellationToken cancellationToken = default)
+        {
+            return dbContext.WalletTransactions.AddAsync(transaction, cancellationToken).AsTask();
+        }
+
         public Task<bool> ExistsByUserIdAsync(long userId, CancellationToken cancellationToken = default)
         {
             return dbContext.Wallets.AnyAsync(x => x.UserId == userId, cancellationToken);

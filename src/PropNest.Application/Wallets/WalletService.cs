@@ -33,5 +33,31 @@ namespace PropNest.Application.Wallets
             var wallet = await walletRepository.GetByUserIdAsync(userId, cancellationToken) ?? new Wallet(userId);
             return WalletMappingExtensions.ToDto(wallet);
         }
+
+        public async Task<WalletDto> TopUpAsync(TopUpWalletCommand command, CancellationToken cancellationToken = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(command.Amount);
+
+            var wallet = await walletRepository.GetByUserIdAsync(command.UserId, cancellationToken) ?? throw new InvalidOperationException($"Wallet for user {command.UserId} not found.");
+
+            var balanceBefore = wallet.MainBalance;
+            wallet.CreditMain(command.Amount);
+            var balanceAfter = wallet.MainBalance;
+
+            var transaction = new WalletTransaction(
+                walletId: wallet.WalletId,
+                correlationId: command.CorrelationId ?? Guid.NewGuid(),
+                type: WalletTransactionType.TopUp,
+                amount: command.Amount,
+                balanceBefore: balanceBefore,
+                balanceAfter: balanceAfter,
+                description: command.Description ?? "Nạp tiền vào ví"
+                );
+
+            await walletRepository.AddTransactionAsync(transaction, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return WalletMappingExtensions.ToDto(wallet);
+        }
     }
 }
