@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListingRepository, ListingRepository>();
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IOutboxDispatchService, OutboxDispatchService>();
+        services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IOutboxMessagePublisher, LoggingOutboxMessagePublisher>();
         services.AddHealthChecks().AddDbContextCheck<PropNestDbContext>("sqlserver");
 
