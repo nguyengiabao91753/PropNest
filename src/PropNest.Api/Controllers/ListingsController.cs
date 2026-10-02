@@ -2,7 +2,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropNest.Api.Contracts.Listings;
+using PropNest.Api.Extensions;
 using PropNest.Application.Abstractions;
+using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
 
@@ -54,10 +56,12 @@ public sealed class ListingsController(
         {
             return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [nameof(request.RowVersion)] = ["RowVersion must be base64 encoded."] }));
         }
+        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+        currentUser.EnsureOwner(listing.OwnerUserId);
 
-        var listing = await listingService.UpdateAsync(new UpdateListingCommand(
+        var updatedListing = await listingService.UpdateAsync(new UpdateListingCommand(
             listingId,
-            GetRequiredUserId(),
+            listing.OwnerUserId,
             request.Title,
             request.Description,
             request.PropertyType,
@@ -70,13 +74,16 @@ public sealed class ListingsController(
             request.Address,
             rowVersion), cancellationToken);
 
-        return Ok(listing);
+        return Ok(updatedListing);
     }
 
     [HttpPost("{listingId:long}/submit")]
     public async Task<IActionResult> Submit(long listingId, CancellationToken cancellationToken)
     {
-        await listingService.SubmitAsync(listingId, GetRequiredUserId(), cancellationToken);
+        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+        currentUser.EnsureOwner(listing.OwnerUserId);
+
+        await listingService.SubmitAsync(listingId, listing.OwnerUserId, cancellationToken);
         return Accepted();
     }
 
@@ -104,6 +111,26 @@ public sealed class ListingsController(
             requestHash), cancellationToken);
 
         return AcceptedAtAction(nameof(WorkflowsController.GetByCorrelationId), "Workflows", new { correlationId = workflow.CorrelationId }, workflow);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<ActionResult<PagedResult<ListingSummaryDto>>> GetPublicListings([FromQuery] GetPublicListingsQuery request, CancellationToken cancellationToken)
+    {
+        var result = await listingService.GetPublicListingsAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{listingId:long}/hide")]
+    [Authorize(Roles = "Seller")]
+    public async Task<IActionResult> Hide(long listingId, CancellationToken cancellationToken)
+    {
+        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+        currentUser.EnsureOwner(listing.OwnerUserId);
+
+
+        await listingService.HideAsync(listingId, listing.OwnerUserId, cancellationToken);
+        return Ok(new { message = "Listing has been hidden successfully." });
     }
 
     private long GetRequiredUserId() => currentUser.UserId

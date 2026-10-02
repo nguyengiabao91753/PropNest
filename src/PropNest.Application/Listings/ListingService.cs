@@ -1,5 +1,6 @@
 using System.Text.Json;
 using PropNest.Application.Abstractions;
+using PropNest.Application.Common;
 using PropNest.Domain.Listings;
 
 namespace PropNest.Application.Listings;
@@ -136,5 +137,45 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         {
             deltas.Add(new ListingDelta(fieldName, oldValue, newValue));
         }
+    }
+
+    public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query, nameof(query));
+
+        var PageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+        var PageSize = query.PageSize < 1 ? 1 :
+                       query.PageSize > 50 ? 50 : query.PageSize;
+
+        var normalizedQuery = query with
+        {
+            PageNumber = PageNumber,
+            PageSize = PageSize
+        };
+
+        return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);
+    }
+
+    public async Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        var listing = await GetOwnedListingAsync(listingId, ownerUserId, cancellationToken);
+        if (listing is null)
+        {
+            throw new KeyNotFoundException($"Listing {listingId} was not found or does not belong to the user {ownerUserId}.");
+        }
+
+        if (listing.OwnerUserId != ownerUserId)
+        {
+            throw new UnauthorizedAccessException($"User {ownerUserId} does not have permission to hide listing {listingId}.");
+        }
+
+        if (listing.Status != ListingStatus.Published)
+        {
+            throw new ArgumentException("Only a published listing can be hidden.");
+        }
+
+        listing.Hide();
+        listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Hide"));
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
