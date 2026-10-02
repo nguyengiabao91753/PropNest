@@ -1,12 +1,11 @@
 using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
-using PropNest.Application.Extensions;
 using PropNest.Domain.Listings;
 
 namespace PropNest.Application.Listings;
 
-public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork, ICurrentUser currentUser) : IListingService
+public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork) : IListingService
 {
     public async Task<ListingDto> CreateAsync(CreateListingCommand command, CancellationToken cancellationToken = default)
     {
@@ -86,8 +85,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing {listingId} was not found.");
 
+        if (listing.OwnerUserId != ownerUserId)
+        {
+            throw new UnauthorizedAccessException("The current user does not own this listing.");
+        }
 
-        currentUser.EnsureOwner(listing.OwnerUserId);
         return listing;
     }
 
