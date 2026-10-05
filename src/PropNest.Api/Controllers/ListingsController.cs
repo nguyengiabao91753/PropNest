@@ -133,6 +133,18 @@ public sealed class ListingsController(
         return Ok(new { message = "Listing has been hidden successfully." });
     }
 
+    [HttpGet("{listingId:long}/histories")]
+    [Authorize(Roles ="Seller, Moderator, Admin")]
+    public async Task<ActionResult<IReadOnlyList<ListingHistoryDto>>> GetHistories(long listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            var isOwner = currentUser.UserId.HasValue && currentUser.UserId.Value == listing.OwnerUserId;
+            var histories = await listingService.GetHistoriesAsync(listingId, cancellationToken);
+        }
+    }
+
     private long GetRequiredUserId() => currentUser.UserId
         ?? throw new UnauthorizedAccessException("A valid user identifier claim is required.");
 }
