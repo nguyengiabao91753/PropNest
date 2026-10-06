@@ -177,6 +177,7 @@ public sealed class ListingsController(
             return this.HandleException(ex);
         }
     }
+        
 
     private long GetRequiredUserId() => currentUser.UserId
         ?? throw new UnauthorizedAccessException("A valid user identifier claim is required.");
