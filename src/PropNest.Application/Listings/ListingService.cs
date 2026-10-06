@@ -178,4 +178,12 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Hide"));
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default)
+    {
+        var histories = await listingRepository.GetHistoriesByListingIdAsync(listingId, cancellationToken);
+
+        return histories;
+
+    }
 }

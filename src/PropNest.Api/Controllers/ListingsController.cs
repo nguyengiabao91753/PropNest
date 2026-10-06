@@ -12,7 +12,7 @@ using System.Text.Json;
 namespace PropNest.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Seller")]
+[Authorize]
 [Route("api/v1/listings")]
 public sealed class ListingsController(
     ICurrentUser currentUser,
@@ -27,6 +27,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost]
+    [Authorize(Roles ="Seller")]
     public async Task<ActionResult<ListingDto>> Create(CreateListingRequest request, CancellationToken cancellationToken)
     {
         var listing = await listingService.CreateAsync(new CreateListingCommand(
@@ -46,6 +47,7 @@ public sealed class ListingsController(
     }
 
     [HttpPut("{listingId:long}")]
+    [Authorize(Roles ="Seller")]
     public async Task<ActionResult<ListingDto>> Update(long listingId, UpdateListingRequest request, CancellationToken cancellationToken)
     {
         try
@@ -89,6 +91,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost("{listingId:long}/submit")]
+    [Authorize(Roles ="Seller")]
     public async Task<IActionResult> Submit(long listingId, CancellationToken cancellationToken)
     {
         try
@@ -105,6 +108,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost("{listingId:long}/purchase-package")]
+    [Authorize(Roles = "Seller")]
     public async Task<ActionResult<WorkflowDto>> PurchasePackage(
         long listingId,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
@@ -150,6 +154,24 @@ public sealed class ListingsController(
 
             await listingService.HideAsync(listingId, listing.OwnerUserId, cancellationToken);
             return Ok(new { message = "Listing has been hidden successfully." });
+        } catch(Exception ex)
+        {
+            return this.HandleException(ex);
+        }
+    }
+        
+
+    [HttpGet("{listingId:long}/history")]
+    [Authorize(Roles ="Seller, Moderator, Admin")]
+    public async Task<ActionResult<IReadOnlyList<ListingHistoryDto>>> GetHistories(long listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureCanViewHistory(listing.OwnerUserId);
+
+            var histories = await listingService.GetHistoriesAsync(listingId, cancellationToken);
+            return Ok(histories);
         } catch(Exception ex)
         {
             return this.HandleException(ex);
