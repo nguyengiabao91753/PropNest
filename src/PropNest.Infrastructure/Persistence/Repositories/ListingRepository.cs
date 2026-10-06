@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Packages;
+using PropNest.Domain.Workflows;
 
 namespace PropNest.Infrastructure.Persistence.Repositories;
 
@@ -10,10 +12,31 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default) =>
         dbContext.Listings.SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
 
+    public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
+        await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.OwnerUserId == ownerUserId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) =>
+        await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Status == ListingStatus.PendingModeration)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public Task AddAsync(Listing listing, CancellationToken cancellationToken = default) =>
         dbContext.Listings.AddAsync(listing, cancellationToken).AsTask();
 
     public void AddHistory(ListingHistory history) => dbContext.ListingHistories.Add(history);
+
+    public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) =>
+        dbContext.PackageDefinitions.SingleOrDefaultAsync(x => x.PackageCode == packageCode && x.IsActive, cancellationToken);
+
+    public void AddModerationReview(ListingModerationReview review) => dbContext.ListingModerationReviews.Add(review);
+
+    public void AddOutboxMessage(OutboxMessage message) => dbContext.OutboxMessages.Add(message);
 
     public void SetOriginalRowVersion(Listing listing, byte[] rowVersion)
     {

@@ -26,6 +26,15 @@ public sealed class ListingsController(
         return listing is null ? NotFound() : Ok(listing);
     }
 
+    [HttpGet("mine")]
+    [Authorize(Roles = "Seller")]
+    public async Task<ActionResult<ListingCollectionDto>> GetMyListings(CancellationToken cancellationToken)
+    {
+        return Ok(await listingService.GetByOwnerAsync(
+            GetRequiredUserId(),
+            cancellationToken));
+    }
+
     [HttpPost]
     [Authorize(Roles ="Seller")]
     public async Task<ActionResult<ListingDto>> Create(CreateListingRequest request, CancellationToken cancellationToken)

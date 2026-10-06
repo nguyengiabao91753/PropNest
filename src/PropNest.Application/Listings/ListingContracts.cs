@@ -68,9 +68,17 @@ public sealed record ListingSummaryDto(
     DateTimeOffset CreatedDate,
     ModerationDecision ModerationDecision);
 
+public sealed record ListingCollectionDto(
+    int Total,
+    IReadOnlyList<ListingDto> Items);
+
 public interface IListingRepository
 {
     Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default);
 
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
 
@@ -81,6 +89,12 @@ public interface IListingRepository
     Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<PropNest.Domain.Packages.PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default);
+
+    void AddModerationReview(ListingModerationReview review);
+
+    void AddOutboxMessage(PropNest.Domain.Workflows.OutboxMessage message);
 }
 
 public interface IListingService
@@ -89,6 +103,10 @@ public interface IListingService
 
     Task<ListingDto?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default);
 
+    Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default);
+
+    Task<ListingCollectionDto> GetPendingModerationAsync(CancellationToken cancellationToken = default);
+
     Task<ListingDto> UpdateAsync(UpdateListingCommand command, CancellationToken cancellationToken = default);
 
     Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
@@ -96,6 +114,10 @@ public interface IListingService
     Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default);
 
     Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
+
+    Task<ListingDto> ApproveAsync(long listingId, long moderatorUserId, CancellationToken cancellationToken = default);
+
+    Task<ListingDto> RejectAsync(long listingId, long moderatorUserId, string reasonsJson, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default);
 }
