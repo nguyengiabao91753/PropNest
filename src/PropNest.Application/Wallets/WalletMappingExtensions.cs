@@ -19,5 +19,19 @@ namespace PropNest.Application.Wallets
                 wallet.PromoBalance
             );
         }
+
+        public static TransactionDto ToDto(this WalletTransaction transaction)
+        {
+            return new TransactionDto(
+                transaction.TransactionId,
+                transaction.CorrelationId,
+                transaction.TransactionType,
+                transaction.Amount,
+                transaction.BalanceBefore,
+                transaction.BalanceAfter,
+                transaction.Description,
+                transaction.CreatedAt.UtcDateTime
+            );
+        }
     }
 }
