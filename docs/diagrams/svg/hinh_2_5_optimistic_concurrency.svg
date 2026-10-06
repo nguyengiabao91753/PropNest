@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="Arial, Helvetica, sans-serif">
+
+  <defs>
+    <!-- Arrowhead markers -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#232F3E" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3F8624" />
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#DD344C" />
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF9900" />
+    </marker>
+    
+    <!-- Drop shadow -->
+    <filter id="drop-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="600" fill="#FFFFFF" />
+  
+  <rect x="0" y="0" width="1000" height="50" fill="#232F3E" />
+  <text x="500" y="32" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle">CƠ CHẾ KIỂM SOÁT XUNG ĐỘT ĐỒNG THỜI (OCC) VỚI TRƯỜNG ROWVERSION</text>
+
+  <!-- Client A -->
+  <rect x="50" y="80" width="250" height="80" rx="8" ry="8" fill="#E8F8F5" stroke="#1A8C8C" stroke-width="2" filter="url(#drop-shadow)" />
+  <text x="175" y="105" font-size="16" font-weight="bold" fill="#1A8C8C" text-anchor="middle">Môi giới A (Client A)</text>
+  <text x="175" y="130" font-size="14" fill="#232F3E" text-anchor="middle">Đọc tin: Giá = 3 tỷ</text>
+  <text x="175" y="150" font-size="14" fill="#232F3E" text-anchor="middle">RowVersion = 0x0001 (v1)</text>
+
+  <!-- Client B -->
+  <rect x="700" y="80" width="250" height="80" rx="8" ry="8" fill="#FDEDEC" stroke="#DD344C" stroke-width="2" filter="url(#drop-shadow)" />
+  <text x="825" y="105" font-size="16" font-weight="bold" fill="#DD344C" text-anchor="middle">Môi giới B (Client B)</text>
+  <text x="825" y="130" font-size="14" fill="#232F3E" text-anchor="middle">Đọc tin: Giá = 3 tỷ</text>
+  <text x="825" y="150" font-size="14" fill="#232F3E" text-anchor="middle">RowVersion = 0x0001 (v1)</text>
+
+  <!-- Database Area -->
+  <rect x="250" y="200" width="500" height="360" rx="8" ry="8" fill="#F2F3F4" stroke="#232F3E" stroke-width="2" />
+  <rect x="250" y="200" width="500" height="40" rx="8" ry="8" fill="#232F3E" />
+  <rect x="250" y="220" width="500" height="20" fill="#232F3E" />
+  <text x="500" y="226" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">CƠ SỞ DỮ LIỆU SQL SERVER</text>
+
+  <!-- State 0 -->
+  <rect x="350" y="260" width="300" height="50" rx="6" ry="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2" />
+  <text x="500" y="280" font-size="14" font-weight="bold" fill="#232F3E" text-anchor="middle">Trạng thái ban đầu</text>
+  <text x="500" y="300" font-size="14" fill="#666666" text-anchor="middle">Giá: 3 tỷ | RowVersion: v1</text>
+
+  <!-- Step 1 (A updates) -->
+  <path d="M 175 160 Q 175 350 340 350" fill="none" stroke="#3F8624" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrow-green)" />
+  <rect x="120" y="250" width="160" height="50" fill="#FFFFFF" stroke="#3F8624" rx="4" />
+  <text x="200" y="270" font-size="12" font-weight="bold" fill="#3F8624" text-anchor="middle">Step 1: A Update</text>
+  <text x="200" y="290" font-size="12" fill="#232F3E" text-anchor="middle">Giá = 3.2 tỷ, kèm RowVersion: v1</text>
+
+  <rect x="350" y="330" width="380" height="80" rx="6" ry="6" fill="#EAFAF1" stroke="#3F8624" stroke-width="2" filter="url(#drop-shadow)" />
+  <text x="540" y="355" font-size="14" font-weight="bold" fill="#3F8624" text-anchor="middle">CẬP NHẬT THÀNH CÔNG!</text>
+  <text x="540" y="375" font-size="13" fill="#232F3E" text-anchor="middle">WHERE RowVersion == v1 (Khớp)</text>
+  <text x="540" y="395" font-size="14" font-weight="bold" fill="#232F3E" text-anchor="middle">Giá: 3.2 tỷ | RowVersion -&gt; v2</text>
+
+  <!-- Step 2 (B updates) -->
+  <path d="M 825 160 Q 825 460 740 460" fill="none" stroke="#DD344C" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrow-red)" />
+  <rect x="730" y="300" width="160" height="50" fill="#FFFFFF" stroke="#DD344C" rx="4" />
+  <text x="810" y="320" font-size="12" font-weight="bold" fill="#DD344C" text-anchor="middle">Step 2: B Update slower</text>
+  <text x="810" y="340" font-size="12" fill="#232F3E" text-anchor="middle">Giá = 3.5 tỷ, kèm RowVersion: v1</text>
+
+  <rect x="300" y="440" width="430" height="100" rx="6" ry="6" fill="#FDEDEC" stroke="#DD344C" stroke-width="2" filter="url(#drop-shadow)" />
+  <text x="515" y="465" font-size="14" font-weight="bold" fill="#DD344C" text-anchor="middle">TỪ CHỐI CẬP NHẬT (CONFLICT)</text>
+  <text x="515" y="485" font-size="13" fill="#232F3E" text-anchor="middle">WHERE RowVersion == v1 (Hiện tại là v2 -&gt; 0 dòng thay đổi)</text>
+  <text x="515" y="505" font-size="13" font-weight="bold" fill="#DD344C" text-anchor="middle">EF Core ném DbUpdateConcurrencyException</text>
+  <text x="515" y="525" font-size="13" fill="#232F3E" text-anchor="middle">HTTP 409 Conflict (Yêu cầu tải lại dữ liệu)</text>
+
+</svg>

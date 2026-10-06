@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="100%" height="100%">
+  <!-- Definitions -->
+  <defs>
+    <style>
+      .bg { fill: #FAFAFA; }
+      .header-rect { fill: #232F3E; rx: 8; ry: 8; }
+      .header-text { fill: #FFFFFF; font-family: 'Arial, Helvetica, sans-serif'; font-size: 20px; font-weight: bold; }
+      .table-bg { fill: #FFFFFF; stroke: #D5DBDB; stroke-width: 1.5; rx: 8; ry: 8; }
+      
+      .th-user { fill: #1B2631; } /* Dark blue */
+      .th-listing { fill: #3F8624; } /* Green */
+      .th-saga { fill: #EC7211; } /* Orange */
+      .th-ai { fill: #8C4FFF; } /* Purple */
+      
+      .table-title { fill: #FFFFFF; font-family: 'Arial, Helvetica, sans-serif'; font-size: 14px; font-weight: bold; }
+      .row-text { fill: #333333; font-family: 'Arial, Helvetica, sans-serif'; font-size: 12px; }
+      .pk-text { fill: #DD344C; font-weight: bold; }
+      .fk-text { fill: #0073BB; }
+      
+      .line { stroke: #545B64; stroke-width: 2; fill: none; }
+      .arrow { fill: #545B64; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" class="arrow"/>
+    </marker>
+    <marker id="crows-foot" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">
+      <path d="M 10 5 L 0 5 M 0 0 L 10 5 L 0 10 M 5 0 L 5 10" stroke="#545B64" stroke-width="1.5" fill="none"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" class="bg"/>
+
+  <!-- Title Header -->
+  <rect x="20" y="20" width="1160" height="60" class="header-rect" filter="url(#shadow)"/>
+  <text x="600" y="58" class="header-text" text-anchor="middle">SƠ ĐỒ THỰC THỂ LIÊN KẾT (ERD) HỆ THỐNG PROPNEST VÀ PHÂN HỆ AI MODERATION</text>
+
+  <!-- Group: Users/Wallets (Left) -->
+  <!-- Users -->
+  <g transform="translate(50, 120)">
+    <rect width="250" height="170" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h234 a8 8 0 0 1 8 8 v24 h-250 v-24" class="th-user"/>
+    <text x="125" y="22" class="table-title" text-anchor="middle">Users (Tài khoản)</text>
+    <text x="10" y="50" class="row-text pk-text">PK UserId (BIGINT)</text>
+    <text x="10" y="70" class="row-text">Email (UQ, NVARCHAR)</text>
+    <text x="10" y="90" class="row-text">PasswordHash (NVARCHAR)</text>
+    <text x="10" y="110" class="row-text">FullName (NVARCHAR)</text>
+    <text x="10" y="130" class="row-text">Role (Seller/Mod/Admin)</text>
+    <text x="10" y="150" class="row-text">RowVersion (BYTE[])</text>
+  </g>
+
+  <!-- Wallets -->
+  <g transform="translate(50, 320)">
+    <rect width="250" height="150" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h234 a8 8 0 0 1 8 8 v24 h-250 v-24" class="th-user"/>
+    <text x="125" y="22" class="table-title" text-anchor="middle">Wallets (Ví người bán)</text>
+    <text x="10" y="50" class="row-text pk-text">PK WalletId (BIGINT)</text>
+    <text x="10" y="70" class="row-text fk-text">FK UserId -&amp;gt; Users</text>
+    <text x="10" y="90" class="row-text">MainBalance (DECIMAL)</text>
+    <text x="10" y="110" class="row-text">PromoBalance (DECIMAL)</text>
+    <text x="10" y="130" class="row-text">RowVersion (BYTE[])</text>
+  </g>
+  
+  <!-- WalletTransactions -->
+  <g transform="translate(50, 500)">
+    <rect width="250" height="150" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h234 a8 8 0 0 1 8 8 v24 h-250 v-24" class="th-user"/>
+    <text x="125" y="22" class="table-title" text-anchor="middle">WalletTransactions (Sổ cái)</text>
+    <text x="10" y="50" class="row-text pk-text">PK TransactionId</text>
+    <text x="10" y="70" class="row-text fk-text">FK WalletId</text>
+    <text x="10" y="90" class="row-text">CorrelationId (GUID)</text>
+    <text x="10" y="110" class="row-text">Type (Charge/Refund)</text>
+    <text x="10" y="130" class="row-text">Amount (DECIMAL)</text>
+  </g>
+
+  <!-- Group: Listings (Middle) -->
+  <!-- Listings -->
+  <g transform="translate(400, 120)">
+    <rect width="300" height="230" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h284 a8 8 0 0 1 8 8 v24 h-300 v-24" class="th-listing"/>
+    <text x="150" y="22" class="table-title" text-anchor="middle">Listings (Tin đăng chính)</text>
+    <text x="10" y="50" class="row-text pk-text">PK ListingId (BIGINT)</text>
+    <text x="10" y="70" class="row-text fk-text">FK OwnerUserId -&amp;gt; Users</text>
+    <text x="10" y="90" class="row-text">Title (NVARCHAR)</text>
+    <text x="10" y="110" class="row-text">Price (DECIMAL)</text>
+    <text x="10" y="130" class="row-text">Area (DECIMAL)</text>
+    <text x="10" y="150" class="row-text">City/District (NVARCHAR)</text>
+    <text x="10" y="170" class="row-text">Status (Draft/Pending/Pub)</text>
+    <text x="10" y="190" class="row-text">PackageCode (NVARCHAR)</text>
+    <text x="10" y="210" class="row-text">RowVersion (BYTE[])</text>
+  </g>
+
+  <!-- ListingHistories -->
+  <g transform="translate(400, 380)">
+    <rect width="300" height="170" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h284 a8 8 0 0 1 8 8 v24 h-300 v-24" class="th-listing"/>
+    <text x="150" y="22" class="table-title" text-anchor="middle">ListingHistories (Lịch sử)</text>
+    <text x="10" y="50" class="row-text pk-text">PK HistoryId (BIGINT)</text>
+    <text x="10" y="70" class="row-text fk-text">FK ListingId -&amp;gt; Listings</text>
+    <text x="10" y="90" class="row-text">ActionType (Create/Update)</text>
+    <text x="10" y="110" class="row-text">IsSnapshot (BIT)</text>
+    <text x="10" y="130" class="row-text">DeltaChangesJson (JSON)</text>
+    <text x="10" y="150" class="row-text">ActionDate (DATETIME)</text>
+  </g>
+  
+  <!-- MarketPriceBenchmarks -->
+  <g transform="translate(400, 580)">
+    <rect width="300" height="130" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h284 a8 8 0 0 1 8 8 v24 h-300 v-24" fill="#3F8624"/>
+    <text x="150" y="22" class="table-title" text-anchor="middle">MarketPriceBenchmarks (Giá)</text>
+    <text x="10" y="50" class="row-text pk-text">PK BenchmarkId</text>
+    <text x="10" y="70" class="row-text">City</text>
+    <text x="10" y="90" class="row-text">District</text>
+    <text x="10" y="110" class="row-text">AvgPrice</text>
+  </g>
+
+  <!-- Group: Saga/Outbox &amp; AI (Right) -->
+  <!-- AmeModerationResults -->
+  <g transform="translate(780, 120)">
+    <rect width="350" height="190" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h334 a8 8 0 0 1 8 8 v24 h-350 v-24" class="th-ai"/>
+    <text x="175" y="22" class="table-title" text-anchor="middle">AmeModerationResults (AI)</text>
+    <text x="10" y="50" class="row-text pk-text">PK ResultId (BIGINT)</text>
+    <text x="10" y="70" class="row-text fk-text">FK ListingId -&amp;gt; Listings</text>
+    <text x="10" y="90" class="row-text">CorrelationId (GUID)</text>
+    <text x="10" y="110" class="row-text">Decision (Approved/Review/Reject)</text>
+    <text x="10" y="130" class="row-text">ConfidenceScore (DECIMAL)</text>
+    <text x="10" y="150" class="row-text">ReasonsJson (JSON)</text>
+    <text x="10" y="170" class="row-text">ModelInfo (Ollama/LLaVA)</text>
+  </g>
+
+  <!-- SagaListingStates -->
+  <g transform="translate(780, 340)">
+    <rect width="350" height="190" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h334 a8 8 0 0 1 8 8 v24 h-350 v-24" class="th-saga"/>
+    <text x="175" y="22" class="table-title" text-anchor="middle">SagaListingStates (Saga)</text>
+    <text x="10" y="50" class="row-text pk-text">PK CorrelationId (GUID)</text>
+    <text x="10" y="70" class="row-text">ListingId (BIGINT)</text>
+    <text x="10" y="90" class="row-text">UserId (BIGINT)</text>
+    <text x="10" y="110" class="row-text">PackageCode (NVARCHAR)</text>
+    <text x="10" y="130" class="row-text">Status (Started/Done/...)</text>
+    <text x="10" y="150" class="row-text">ChargeAmount (DECIMAL)</text>
+    <text x="10" y="170" class="row-text">UpdatedAt (DATETIME)</text>
+  </g>
+  
+  <!-- OutboxMessages -->
+  <g transform="translate(780, 560)">
+    <rect width="350" height="170" class="table-bg" filter="url(#shadow)"/>
+    <path d="M0 8 a8 8 0 0 1 8 -8 h334 a8 8 0 0 1 8 8 v24 h-350 v-24" class="th-saga"/>
+    <text x="175" y="22" class="table-title" text-anchor="middle">OutboxMessages (Sự kiện)</text>
+    <text x="10" y="50" class="row-text pk-text">PK OutboxId (BIGINT)</text>
+    <text x="10" y="70" class="row-text">Type (NVARCHAR)</text>
+    <text x="10" y="90" class="row-text">PayloadJson (NVARCHAR)</text>
+    <text x="10" y="110" class="row-text">CorrelationId (GUID)</text>
+    <text x="10" y="130" class="row-text">ProcessedOn (DATETIME)</text>
+    <text x="10" y="150" class="row-text">RetryCount (INT)</text>
+  </g>
+
+  <!-- Relationships -->
+  <!-- Users to Wallets 1-1 -->
+  <path d="M 175 290 L 175 320" class="line" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <text x="180" y="310" class="row-text" font-size="10">1-1</text>
+  
+  <!-- Wallets to WalletTransactions 1-N -->
+  <path d="M 175 470 L 175 500" class="line" marker-end="url(#crows-foot)"/>
+  
+  <!-- Users to Listings 1-N -->
+  <path d="M 300 205 L 400 205" class="line" marker-end="url(#crows-foot)"/>
+  
+  <!-- Listings to ListingHistories 1-N -->
+  <path d="M 550 350 L 550 380" class="line" marker-end="url(#crows-foot)"/>
+  
+  <!-- Listings to AmeModerationResults 1-N -->
+  <path d="M 700 205 L 780 205" class="line" marker-end="url(#crows-foot)"/>
+  
+  <!-- Outbox to Saga (Implicit, conceptual correlation) -->
+  <path d="M 955 560 L 955 530" class="line" stroke-dasharray="2,2"/>
+  <path d="M 780 435 L 700 435 L 700 350" class="line" stroke-dasharray="2,2" stroke="#EC7211"/>
+
+</svg>
