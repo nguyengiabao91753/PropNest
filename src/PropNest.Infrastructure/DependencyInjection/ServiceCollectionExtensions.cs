@@ -9,6 +9,7 @@ using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
 using MassTransit;
+using PropNest.Infrastructure.Workflows;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -38,9 +39,9 @@ public static class ServiceCollectionExtensions
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
         services.AddMassTransit(busConfig =>
         {
-           
+
             busConfig.SetKebabCaseEndpointNameFormatter();
-           
+
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
@@ -53,9 +54,18 @@ public static class ServiceCollectionExtensions
                     h.Username(username);
                     h.Password(password);
                 });
-               
+
                 cfg.ConfigureEndpoints(context);
             });
+
+            // đăng ký saga
+            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
+                .EntityFrameworkRepository(r =>
+                {
+                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                    r.ExistingDbContext<PropNestDbContext>();
+                    r.UseSqlServer();
+                });
         });
        
         services.AddHealthChecks()
