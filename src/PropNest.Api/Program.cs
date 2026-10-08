@@ -69,7 +69,7 @@ builder.Services
             ValidIssuer = jwt.Issuer,
             ValidateAudience = true,
             ValidAudience = jwt.Audience,
-            RoleClaimType = "role",
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
             ValidateLifetime = true,

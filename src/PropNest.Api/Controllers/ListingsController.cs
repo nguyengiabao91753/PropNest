@@ -1,17 +1,18 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PropNest.Api.Contracts.Listings;
 using PropNest.Api.Extensions;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
+using System.Text.Json;
 
 namespace PropNest.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Seller")]
+[Authorize]
 [Route("api/v1/listings")]
 public sealed class ListingsController(
     ICurrentUser currentUser,
@@ -26,6 +27,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost]
+    [Authorize(Roles ="Seller")]
     public async Task<ActionResult<ListingDto>> Create(CreateListingRequest request, CancellationToken cancellationToken)
     {
         var listing = await listingService.CreateAsync(new CreateListingCommand(
@@ -45,49 +47,68 @@ public sealed class ListingsController(
     }
 
     [HttpPut("{listingId:long}")]
+    [Authorize(Roles ="Seller")]
     public async Task<ActionResult<ListingDto>> Update(long listingId, UpdateListingRequest request, CancellationToken cancellationToken)
     {
-        byte[] rowVersion;
         try
         {
+            byte[] rowVersion;
             rowVersion = Convert.FromBase64String(request.RowVersion);
+            
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken)
+                ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureOwner(listing.OwnerUserId);
+            
+            var updatedListing = await listingService.UpdateAsync(new UpdateListingCommand(
+                listingId,
+                listing.OwnerUserId,
+                request.Title,
+                request.Description,
+                request.PropertyType,
+                request.ListingType,
+                request.Price,
+                request.Area,
+                request.City,
+                request.District,
+                request.Ward,
+                request.Address,
+                rowVersion), cancellationToken);
+            return Ok(updatedListing);
         }
         catch (FormatException)
         {
-            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [nameof(request.RowVersion)] = ["RowVersion must be base64 encoded."] }));
+            
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                [nameof(request.RowVersion)] = ["RowVersion must be base64 encoded."]
+            }));
         }
-        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
-        currentUser.EnsureOwner(listing.OwnerUserId);
-
-        var updatedListing = await listingService.UpdateAsync(new UpdateListingCommand(
-            listingId,
-            listing.OwnerUserId,
-            request.Title,
-            request.Description,
-            request.PropertyType,
-            request.ListingType,
-            request.Price,
-            request.Area,
-            request.City,
-            request.District,
-            request.Ward,
-            request.Address,
-            rowVersion), cancellationToken);
-
-        return Ok(updatedListing);
+        catch (Exception ex)
+        {
+            
+            return this.HandleException(ex);
+        }
     }
 
     [HttpPost("{listingId:long}/submit")]
+    [Authorize(Roles ="Seller")]
     public async Task<IActionResult> Submit(long listingId, CancellationToken cancellationToken)
     {
-        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
-        currentUser.EnsureOwner(listing.OwnerUserId);
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureOwner(listing.OwnerUserId);
 
-        await listingService.SubmitAsync(listingId, listing.OwnerUserId, cancellationToken);
-        return Accepted();
+            await listingService.SubmitAsync(listingId, listing.OwnerUserId, cancellationToken);
+            return Accepted();
+        } catch(Exception ex)
+        {
+            return this.HandleException(ex);
+        }
     }
 
     [HttpPost("{listingId:long}/purchase-package")]
+    [Authorize(Roles = "Seller")]
     public async Task<ActionResult<WorkflowDto>> PurchasePackage(
         long listingId,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
@@ -125,12 +146,36 @@ public sealed class ListingsController(
     [Authorize(Roles = "Seller")]
     public async Task<IActionResult> Hide(long listingId, CancellationToken cancellationToken)
     {
-        var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
-        currentUser.EnsureOwner(listing.OwnerUserId);
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureOwner(listing.OwnerUserId);
 
 
-        await listingService.HideAsync(listingId, listing.OwnerUserId, cancellationToken);
-        return Ok(new { message = "Listing has been hidden successfully." });
+            await listingService.HideAsync(listingId, listing.OwnerUserId, cancellationToken);
+            return Ok(new { message = "Listing has been hidden successfully." });
+        } catch(Exception ex)
+        {
+            return this.HandleException(ex);
+        }
+    }
+        
+
+    [HttpGet("{listingId:long}/history")]
+    [Authorize(Roles ="Seller, Moderator, Admin")]
+    public async Task<ActionResult<IReadOnlyList<ListingHistoryDto>>> GetHistories(long listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureCanViewHistory(listing.OwnerUserId);
+
+            var histories = await listingService.GetHistoriesAsync(listingId, cancellationToken);
+            return Ok(histories);
+        } catch(Exception ex)
+        {
+            return this.HandleException(ex);
+        }
     }
 
     private long GetRequiredUserId() => currentUser.UserId

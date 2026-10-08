@@ -61,4 +61,22 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
         return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);
     }
+
+    public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default)
+    {
+        var histories = await dbContext.ListingHistories.AsNoTracking()
+                        .Where(x=>x.ListingId == listingId)
+                        .OrderByDescending(x=>x.ActionDate)
+                        .Select(x=> new ListingHistoryDto
+                        (
+                            x.ActionType,
+                            x.ActionDate,
+                            x.ActorUserId,
+                            x.SnapshotJson,
+                            x.DeltasJson,
+                            x.Note
+                        ))
+                        .ToListAsync(cancellationToken);
+        return histories;
+    }
 }

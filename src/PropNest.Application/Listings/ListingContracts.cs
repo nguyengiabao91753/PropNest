@@ -79,6 +79,8 @@ public interface IListingRepository
     void SetOriginalRowVersion(Listing listing, byte[] rowVersion);
 
     Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public interface IListingService
@@ -94,6 +96,8 @@ public interface IListingService
     Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default);
 
     Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public sealed record GetPublicListingsQuery(
@@ -105,4 +109,14 @@ public sealed record GetPublicListingsQuery(
     [FromQuery(Name ="page")] int? Page = null,
     int PageNumber = 1,
     int PageSize = 20
+    );
+
+//Listing History DTO
+public sealed record ListingHistoryDto(
+    string ActionType,
+    DateTimeOffset ActionDate,
+    long? ActorUserId,
+    string? SnapshotJson,
+    string? DeltasJson,
+    string? Note
     );
