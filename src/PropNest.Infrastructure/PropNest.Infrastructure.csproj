@@ -14,5 +14,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+	<PackageReference Include="MassTransit.RabbitMQ" />
+	<PackageReference Include="MassTransit.EntityFrameworkCore" />
   </ItemGroup>
 </Project>
