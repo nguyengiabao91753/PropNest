@@ -10,6 +10,7 @@ using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
 using MassTransit;
 using PropNest.Infrastructure.Workflows;
+using PropNest.Infrastructure.Consumers;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -42,6 +43,18 @@ public static class ServiceCollectionExtensions
 
             busConfig.SetKebabCaseEndpointNameFormatter();
 
+            // đăng ký saga
+            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
+                .EntityFrameworkRepository(r =>
+                {
+                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                    r.ExistingDbContext<PropNestDbContext>();
+                    r.UseSqlServer();
+                });
+
+            // đăng ký consumers
+            busConfig.AddConsumer<DeductWalletConsumer>();
+
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
@@ -58,14 +71,7 @@ public static class ServiceCollectionExtensions
                 cfg.ConfigureEndpoints(context);
             });
 
-            // đăng ký saga
-            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
-                .EntityFrameworkRepository(r =>
-                {
-                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-                    r.ExistingDbContext<PropNestDbContext>();
-                    r.UseSqlServer();
-                });
+           
         });
        
         services.AddHealthChecks()
