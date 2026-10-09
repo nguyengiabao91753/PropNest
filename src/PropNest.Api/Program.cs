@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PropNest.Api.Middleware;
@@ -6,6 +7,7 @@ using PropNest.Api.Services;
 using PropNest.Application.Abstractions;
 using PropNest.Application.DependencyInjection;
 using PropNest.Infrastructure.DependencyInjection;
+using PropNest.Api.Serialization;
 using Microsoft.EntityFrameworkCore;
 using PropNest.Infrastructure.Persistence;
 using System.Text;
@@ -35,7 +37,12 @@ builder.Services.AddIdentityCore<PropNest.Domain.Users.ApplicationUser>(options 
 })
 .AddRoles<Microsoft.AspNetCore.Identity.IdentityRole<long>>()
 .AddEntityFrameworkStores<PropNest.Infrastructure.Persistence.PropNestDbContext>();
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new VietnamDateTimeOffsetJsonConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -102,6 +109,8 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+await SeedRolesAsync(app.Services);
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseHttpsRedirection();
@@ -117,6 +126,31 @@ app.Run();
 
 public partial class Program
 {
+    private static async Task SeedRolesAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<long>>>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+        foreach (var roleName in new[] { "Seller", "Moderator", "Admin" })
+        {
+            if (await roleManager.RoleExistsAsync(roleName))
+            {
+                LogRoleAlreadyExists(logger, roleName);
+                continue;
+            }
+
+            var result = await roleManager.CreateAsync(new IdentityRole<long>(roleName));
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(error => error.Description));
+                throw new InvalidOperationException($"Could not seed role '{roleName}': {errors}");
+            }
+
+            LogRoleSeeded(logger, roleName);
+        }
+    }
+
     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Đang kiểm tra và áp dụng Database Migrations còn thiếu...")]
     private static partial void LogApplyingMigrations(ILogger logger);
 
@@ -125,4 +159,10 @@ public partial class Program
 
     [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Có lỗi xảy ra khi tự động migrate database.")]
     private static partial void LogMigrationError(ILogger logger, Exception ex);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Seeded role: {RoleName}")]
+    private static partial void LogRoleSeeded(ILogger logger, string roleName);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Role already exists: {RoleName}")]
+    private static partial void LogRoleAlreadyExists(ILogger logger, string roleName);
 }

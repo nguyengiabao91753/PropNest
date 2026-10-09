@@ -2,6 +2,7 @@ using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Workflows;
 
 namespace PropNest.Application.Listings;
 
@@ -39,6 +40,20 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     {
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken);
         return listing is null ? null : ToDto(listing);
+    }
+
+    public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        var listings = await listingRepository.GetByOwnerUserIdAsync(ownerUserId, cancellationToken);
+        var items = listings.Select(ToDto).ToList();
+        return new ListingCollectionDto(items.Count, items);
+    }
+
+    public async Task<ListingCollectionDto> GetPendingModerationAsync(CancellationToken cancellationToken = default)
+    {
+        var listings = await listingRepository.GetPendingModerationAsync(cancellationToken);
+        var items = listings.Select(ToDto).ToList();
+        return new ListingCollectionDto(items.Count, items);
     }
 
     public async Task<ListingDto> UpdateAsync(UpdateListingCommand command, CancellationToken cancellationToken = default)
@@ -151,6 +166,77 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.Hide();
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Hide"));
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<ListingDto> ApproveAsync(long listingId, long moderatorUserId, CancellationToken cancellationToken = default)
+    {
+        var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Listing {listingId} was not found.");
+        var package = await listingRepository.GetPackageByCodeAsync(listing.PackageCode, cancellationToken)
+            ?? throw new InvalidOperationException($"Package '{listing.PackageCode}' was not found.");
+
+        var startDate = DateTimeOffset.UtcNow;
+        var endDate = startDate.AddDays(package.DurationDays);
+        listing.Approve(startDate, endDate);
+
+        listingRepository.AddModerationReview(new ListingModerationReview(
+            listing.ListingId,
+            "Manual",
+            ModerationDecision.Approved,
+            null,
+            moderatorUserId));
+        listingRepository.AddHistory(ListingHistory.CreateEvent(
+            listing.ListingId,
+            moderatorUserId,
+            "Approve"));
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            listing.ListingId,
+            listing.OwnerUserId,
+            listing.PackageCode,
+            listing.StartDate,
+            listing.EndDate
+        });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingPublished", payload));
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToDto(listing);
+    }
+
+    public async Task<ListingDto> RejectAsync(long listingId, long moderatorUserId, string reasonsJson, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(reasonsJson))
+        {
+            throw new ArgumentException("Rejection reasons are required.", nameof(reasonsJson));
+        }
+
+        var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Listing {listingId} was not found.");
+
+        listing.Reject();
+        listingRepository.AddModerationReview(new ListingModerationReview(
+            listing.ListingId,
+            "Manual",
+            ModerationDecision.Rejected,
+            reasonsJson,
+            moderatorUserId));
+        listingRepository.AddHistory(ListingHistory.CreateEvent(
+            listing.ListingId,
+            moderatorUserId,
+            "Reject",
+            reasonsJson));
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            listing.ListingId,
+            listing.OwnerUserId,
+            ReasonsJson = reasonsJson
+        });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingRejected", payload));
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToDto(listing);
     }
 
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default)
