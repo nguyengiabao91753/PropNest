@@ -12,6 +12,10 @@ namespace PropNest.Application.Wallets
         Task<WalletDto> CreateWalletAsync(long userId, CancellationToken cancellationToken = default);
         Task<WalletDto> GetBalanceByUserIdAsync(long userId, CancellationToken cancellationToken = default);
         Task<WalletDto> TopUpAsync(TopUpWalletCommand command, CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<TransactionDto>> GetTransactionsByUserIdAsync(long userId, int? page = 1, WalletTransactionType? type = null, CancellationToken cancellationToken = default);
+
+
     }
 
     public interface IWalletRepository
@@ -21,6 +25,7 @@ namespace PropNest.Application.Wallets
         Task<bool> ExistsByUserIdAsync(long userId, CancellationToken cancellationToken = default);
         Task AddTransactionAsync(WalletTransaction transaction, CancellationToken cancellationToken = default);
 
+        Task<IEnumerable<WalletTransaction>> GetTransactionsByUserIdAsync(long userId, int? page = 1, WalletTransactionType? type = null, CancellationToken cancellationToken = default);
     }
 
     public sealed record WalletDto
@@ -34,6 +39,18 @@ namespace PropNest.Application.Wallets
     {
         public decimal TotalBalance => MainBalance + PromoBalance;
     };
+
+    public sealed record TransactionDto
+    (
+        long TransactionId,
+        Guid CorrelationId,
+        WalletTransactionType Type,
+        decimal Amount,
+        decimal BalanceBefore,
+        decimal BalanceAfter,
+        string Description,
+        DateTime CreatedAt
+    );
 
     public sealed record TopUpWalletCommand(
         long UserId,
