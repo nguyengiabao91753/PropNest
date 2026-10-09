@@ -13,7 +13,7 @@ namespace PropNest.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<PurchasePackageSagaState> builder)
         {
-            builder.ToTable("SagaListingStates");
+            builder.ToTable("PurchasePackageSagaStates");
             builder.HasKey(x => x.CorrelationId);
             builder.Property(x => x.CorrelationId).ValueGeneratedNever();
             builder.Property(x => x.CurrentState)

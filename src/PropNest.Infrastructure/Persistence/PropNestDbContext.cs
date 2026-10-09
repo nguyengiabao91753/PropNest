@@ -25,7 +25,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<PackageDefinitions> PackageDefinitions => Set<PackageDefinitions>();
 
-    public DbSet<PurchasePackageSagaState> SagaListingStates => Set<PurchasePackageSagaState>();
+    public DbSet<PurchasePackageSagaState> PurchasePackageSagaStates => Set<PurchasePackageSagaState>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
