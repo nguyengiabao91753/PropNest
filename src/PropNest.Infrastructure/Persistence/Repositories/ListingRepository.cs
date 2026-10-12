@@ -50,14 +50,29 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
+        var targetType = query.ListingType ?? query.Type;
+        if (!string.IsNullOrWhiteSpace(targetType))
+        {
+            targetType = targetType.Trim().ToLowerInvariant() switch
+            {
+                "rent" => "Rent",
+                "sale" => "Sale",
+                _ => targetType
+            };
+        }
+
         var queryable = dbContext.Listings.AsNoTracking()
                            .Where(x => x.Status == ListingStatus.Published)
+                           .Where(x => string.IsNullOrWhiteSpace(query.Q) || x.Title.Contains(query.Q) || x.Address.Contains(query.Q))
                            .Where(x => query.District == null || x.District == query.District)
                            .Where(x => query.City == null || x.City == query.City)
                            .Where(x => query.Ward == null || x.Ward == query.Ward)
                            .Where(x => query.PropertyType == null || x.PropertyType == query.PropertyType)
-                           .Where(x => query.ListingType == null || x.ListingType == query.ListingType);
-                          
+                           .Where(x => targetType == null || x.ListingType == targetType)
+                           .Where(x => query.MinPrice == null || x.Price >= query.MinPrice)
+                           .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice);
+
+
         var totalCount = await queryable.CountAsync(cancellationToken);
 
         var items = await queryable

@@ -5,17 +5,16 @@ public sealed class ListingsViewModel
     // Filter criteria
     public string? Query { get; set; }
     public string Type { get; set; } = "all"; // 'all' | 'sale' | 'rent'
-    public string? HomeType { get; set; }
+    public string? PropertyType { get; set; }
+    public string? City { get; set; }
+    public string? District { get; set; }
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
-    public int Beds { get; set; }
-    public int Baths { get; set; }
-    public List<string> SelectedFacilities { get; set; } = new();
-    public bool SavedOnly { get; set; }
-    public string Sort { get; set; } = "newest"; // 'newest' | 'price-asc' | 'price-desc' | 'rating'
     public string Layout { get; set; } = "grid"; // 'grid' | 'list'
-
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 12;
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
     // Result items
     public List<ClientPropertyItemViewModel> Properties { get; set; } = new();
-    public int TotalCount => Properties.Count;
+    public int TotalCount { get; set; }
 }

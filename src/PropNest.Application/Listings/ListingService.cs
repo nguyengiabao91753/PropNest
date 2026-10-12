@@ -132,14 +132,15 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     {
         ArgumentNullException.ThrowIfNull(query, nameof(query));
 
-        var PageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
-        var PageSize = query.PageSize < 1 ? 1 :
+        var pageNumber = query.Page ?? query.PageNumber;
+        if (pageNumber < 1) pageNumber = 1;
+        var pageSize = query.PageSize < 1 ? 1 :
                        query.PageSize > 50 ? 50 : query.PageSize;
 
         var normalizedQuery = query with
         {
-            PageNumber = PageNumber,
-            PageSize = PageSize
+            PageNumber = pageNumber,
+            PageSize = pageSize
         };
 
         return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);

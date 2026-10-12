@@ -128,6 +128,10 @@ public sealed record GetPublicListingsQuery(
     string? Ward = null,
     string? PropertyType = null,
     string? ListingType = null,
+    string? Type = null,
+    string? Q = null,
+    decimal? MinPrice = null,
+    decimal? MaxPrice = null,
     [FromQuery(Name ="page")] int? Page = null,
     int PageNumber = 1,
     int PageSize = 20
