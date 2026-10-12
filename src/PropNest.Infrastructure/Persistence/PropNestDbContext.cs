@@ -15,6 +15,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>(options), IUnitOfWork
 {
     public DbSet<Listing> Listings => Set<Listing>();
+    public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<ListingHistory> ListingHistories => Set<ListingHistory>();
     public DbSet<ListingModerationReview> ListingModerationReviews => Set<ListingModerationReview>();
     public DbSet<Wallet> Wallets => Set<Wallet>();

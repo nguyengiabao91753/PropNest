@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\PropNest.Application\PropNest.Application.csproj" />
     <ProjectReference Include="..\PropNest.Domain\PropNest.Domain.csproj" />
@@ -16,5 +16,6 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	<PackageReference Include="MassTransit.RabbitMQ" />
 	<PackageReference Include="MassTransit.EntityFrameworkCore" />
+	<PackageReference Include="CloudinaryDotNet" />
   </ItemGroup>
 </Project>

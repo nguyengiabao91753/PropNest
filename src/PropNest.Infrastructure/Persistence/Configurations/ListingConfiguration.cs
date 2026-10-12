@@ -30,5 +30,6 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.HasIndex(x => new { x.City, x.District, x.PropertyType });
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Histories).WithOne().HasForeignKey(x => x.ListingId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.Images).WithOne().HasForeignKey(x => x.ListingId).OnDelete(DeleteBehavior.Cascade);
     }
 }
