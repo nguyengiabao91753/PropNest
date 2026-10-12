@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOutboxDispatchService, OutboxDispatchService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IOutboxMessagePublisher, LoggingOutboxMessagePublisher>();
+        services.AddScoped<IPhotoService, CloudinaryPhotoService>();
 
         //bao
         services.AddScoped<IWalletRepository, WalletRepository>();
