@@ -4,12 +4,17 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\PropNest.Domain\PropNest.Domain.csproj" />
+    <ProjectReference Include="..\..\src\PropNest.Application\PropNest.Application.csproj" />
+    <ProjectReference Include="..\..\src\PropNest.Api\PropNest.Api.csproj" />
+    <ProjectReference Include="..\..\src\PropNest.Workflow.Worker\PropNest.Workflow.Worker.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>

@@ -19,6 +19,8 @@ public static class ServiceCollectionExtensions
 
 
         //tai
+        services.AddScoped<IListingExpirationService, ListingExpirationService>();
+
         return services;
     }
 }

@@ -5,3 +5,4 @@ TestResults/
 .env
 appsettings.Local.json
 *.user
+logs/

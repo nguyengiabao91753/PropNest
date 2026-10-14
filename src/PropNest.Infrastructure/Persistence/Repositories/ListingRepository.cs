@@ -26,6 +26,47 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default)
+    {
+        var query = from l in dbContext.Listings.AsNoTracking()
+                    where l.Status == ListingStatus.PendingModeration
+                    join u in dbContext.Users.AsNoTracking() on l.OwnerUserId equals u.Id into userGroup
+                    from user in userGroup.DefaultIfEmpty()
+                    orderby l.CreatedAt ascending
+                    select new ListingDto(
+                        l.ListingId,
+                        l.OwnerUserId,
+                        l.Title,
+                        l.Description,
+                        l.PropertyType,
+                        l.ListingType,
+                        l.Price,
+                        l.Area,
+                        l.City,
+                        l.District,
+                        l.Ward,
+                        l.Address,
+                        l.Status,
+                        l.ModerationDecision,
+                        l.PackageCode,
+                        l.StartDate,
+                        l.EndDate,
+                        l.RowVersion,
+                        user != null ? (user.FullName ?? user.UserName) : null,
+                        user != null ? user.Email : null,
+                        user != null ? user.PhoneNumber : null,
+                        l.CreatedAt);
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default) =>
+        await dbContext.Listings
+            .Where(x => x.Status == ListingStatus.Published && x.EndDate <= now)
+            .OrderBy(x => x.EndDate)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+
     public Task AddAsync(Listing listing, CancellationToken cancellationToken = default) =>
         dbContext.Listings.AddAsync(listing, cancellationToken).AsTask();
 
