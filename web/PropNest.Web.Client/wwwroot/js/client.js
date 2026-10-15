@@ -99,6 +99,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateFavoritesUI();
 
+    // Global Back to Top Button
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    if (backToTopBtn) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.remove('hidden');
+                backToTopBtn.classList.add('grid');
+            } else {
+                backToTopBtn.classList.add('hidden');
+                backToTopBtn.classList.remove('grid');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
     // Auto dismiss flash alerts
     setTimeout(() => {
         document.querySelectorAll('.flash-alert').forEach(el => {

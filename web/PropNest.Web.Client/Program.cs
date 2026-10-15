@@ -1,10 +1,15 @@
 using PropNest.Web.Client.Services;
+using PropNest.Web.Client.Services.IServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddSingleton<IClientListingService, MockClientListingService>();
+builder.Services.AddHttpClient<IClientListingService, ApiClientListingServices>(client =>
+{
+    var baseUrl = builder.Configuration["ServiceUrls:BackendApi"] ?? "https://localhost:65147";
+    client.BaseAddress = new Uri(baseUrl);
+});
 
 var app = builder.Build();
 
