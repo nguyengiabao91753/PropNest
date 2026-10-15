@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IOutboxDispatchService, OutboxDispatchService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
-        services.AddSingleton<IOutboxMessagePublisher, LoggingOutboxMessagePublisher>();
+        services.AddScoped<IOutboxMessagePublisher, MassTransitOutboxPublisher>();
         services.AddScoped<IPhotoService, CloudinaryPhotoService>();
 
         //bao
