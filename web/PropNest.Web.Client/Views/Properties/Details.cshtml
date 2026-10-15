@@ -1,264 +1,279 @@
-@* @model PropNest.Web.Client.Models.ViewModels.PropertyDetailViewModel
+@model PropNest.Web.Client.Models.ViewModels.PropertyDetailViewModel
 
 @{
     var p = Model.Property;
     ViewData["Title"] = p.Title;
-
-    // Split title into lead and accent
-    var words = p.Title.Split(' ');
-    var lead = words.Length > 2 ? string.Join(" ", words.Take(words.Length - 1)) : p.Title;
-    var accent = words.Length > 2 ? words.Last() : "";
+    var isRent = string.Equals(p.ListingType, "rent", StringComparison.OrdinalIgnoreCase);
 }
 
-<div class="space-y-12 pb-20">
-    <!-- SECTION 1: Detail Hero Banner -->
-    <section class="relative border-b border-border bg-card">
-        <div class="mx-auto grid max-w-7xl border-x border-border md:grid-cols-2">
-            <!-- Left Header -->
-            <div class="flex flex-col justify-between gap-8 border-b border-border p-6 md:p-12">
-                <div class="space-y-3">
-                    <p class="text-xs uppercase font-bold tracking-wider text-primary">
-                        @p.PropertyType · @(p.ListingType == "rent" ? "Cho thuê" : "Cần bán")
-                    </p>
-                    <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight text-neutral-900">
-                        @lead <br />
-                        <em class="font-medium text-primary">@accent</em>
-                    </h1>
-                </div>
+<div class="mx-auto max-w-7xl px-4 py-6 md:px-8 space-y-8 pb-20">
 
-                <div class="flex items-center gap-3">
-                    <a href="#inquiryForm"
-                       class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-semibold text-white shadow-lg shadow-primary/25 hover:bg-primary-hover transition-colors">
-                        <span>Liên hệ người bán</span>
-                        <i data-lucide="arrow-up-right" class="size-4"></i>
-                    </a>
-                    <button type="button"
-                            data-fav-id="@p.Id"
-                            onclick="toggleFavorite('@p.Id')"
-                            class="grid size-11 place-items-center rounded-full border border-border bg-surface text-muted-foreground hover:text-primary transition-colors">
-                        <i data-lucide="heart" class="size-5"></i>
+    <!-- ================= BREADCRUMB NAVIGATION & BACK BUTTON ================= -->
+    <!-- Mobile Header Bar: Nút Quay lại + Nút Lưu tin & Chia sẻ -->
+    <div class="flex items-center justify-between gap-3 sm:hidden">
+        <a href="javascript:void(0)" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/listings'"
+           class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-primary hover:text-primary shadow-2xs transition-colors">
+            <i data-lucide="arrow-left" class="size-3.5"></i>
+            <span>Quay lại</span>
+        </a>
+        <div class="flex items-center gap-2">
+            <button type="button"
+                    data-fav-id="@p.Id"
+                    onclick="toggleFavorite('@p.Id')"
+                    class="grid size-8 place-items-center rounded-xl border border-border bg-card text-neutral-700 shadow-2xs hover:border-primary hover:text-primary transition-colors"
+                    title="Lưu tin">
+                <i data-lucide="heart" class="size-4"></i>
+            </button>
+            <button type="button" onclick="copyShareLink()"
+                    class="grid size-8 place-items-center rounded-xl border border-border bg-card text-primary shadow-2xs hover:border-primary transition-colors"
+                    title="Chia sẻ">
+                <i data-lucide="share-2" class="size-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Desktop / Tablet Header: Breadcrumb đầy đủ + Nút Quay lại -->
+    <div class="hidden sm:flex items-center justify-between gap-4">
+        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+            <a asp-controller="Home" asp-action="Index" class="hover:text-primary transition-colors">Trang chủ</a>
+            <i data-lucide="chevron-right" class="size-3.5 text-neutral-400"></i>
+            <a asp-controller="Listings" asp-action="Index" class="hover:text-primary transition-colors">Khám phá BĐS</a>
+            @if (!string.IsNullOrWhiteSpace(p.City))
+            {
+                <i data-lucide="chevron-right" class="size-3.5 text-neutral-400"></i>
+                <a asp-controller="Listings" asp-action="Index" asp-route-city="@p.City" class="hover:text-primary transition-colors">@p.City</a>
+            }
+            <i data-lucide="chevron-right" class="size-3.5 text-neutral-400"></i>
+            <span class="text-neutral-900 font-semibold truncate max-w-xs md:max-w-md">@p.Title</span>
+        </nav>
+
+        <!-- Nút Quay lại danh sách tin đăng -->
+        <a href="javascript:void(0)" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/listings'"
+           class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-neutral-700 hover:border-primary hover:text-primary shadow-2xs transition-colors shrink-0">
+            <i data-lucide="arrow-left" class="size-3.5"></i>
+            <span>Quay lại</span>
+        </a>
+    </div>
+
+    <!-- ================= HEADER SECTION: TITLE, BADGES & ACTION BUTTONS ================= -->
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-border">
+        <div class="space-y-2.5 sm:space-y-3 max-w-3xl">
+            <!-- Badges -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold">
+                    @(isRent ? "Cho thuê" : "Cần bán")
+                </span>
+                <span class="inline-flex items-center rounded-full bg-neutral-100 text-neutral-800 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-semibold">
+                    @p.PropertyType
+                </span>
+                @if (p.PackageCode == "VIP")
+                {
+                    <span class="inline-flex items-center rounded-full bg-amber-500 text-white px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-bold shadow-2xs">
+                        VIP Nổi Bật
+                    </span>
+                }
+                else if (p.PackageCode == "Boost")
+                {
+                    <span class="inline-flex items-center rounded-full bg-purple-600 text-white px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-bold shadow-2xs">
+                        Ưu Tiên Đẩy Tin
+                    </span>
+                }
+            </div>
+
+            <!-- Title: Font rõ ràng, không bị ngắt chữ hay in nghiêng lộn xộn -->
+            <h1 class="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-neutral-900 leading-snug">
+                @p.Title
+            </h1>
+
+            <!-- Address -->
+            <p class="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="size-3.5 sm:size-4 text-primary shrink-0"></i>
+                <span>@p.Address, @p.District, @p.City</span>
+            </p>
+        </div>
+
+        <!-- Action Buttons (Lưu tin & Chia sẻ) - hiển thị trên sm:flex -->
+        <div class="hidden sm:flex items-center gap-3 shrink-0">
+            <button type="button"
+                    data-fav-id="@p.Id"
+                    onclick="toggleFavorite('@p.Id')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-neutral-800 shadow-xs hover:border-primary hover:text-primary transition-colors">
+                <i data-lucide="heart" class="size-4"></i>
+                <span>Lưu tin</span>
+            </button>
+            <button type="button" onclick="copyShareLink()"
+                    class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-neutral-800 shadow-xs hover:border-primary hover:text-primary transition-colors">
+                <i data-lucide="share-2" class="size-4 text-primary"></i>
+                <span>Chia sẻ</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= HERO SLIDESHOW GALLERY (TỰ ĐỘNG CHUYỂN MỖI 5 GIÂY) ================= -->
+    <section class="space-y-3 sm:space-y-4">
+        <!-- Main Big Image Container -->
+        <div id="slideshowContainer" class="group relative aspect-[16/10] sm:aspect-[16/9] md:h-[480px] w-full overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-neutral-900 shadow-md">
+            <img id="mainHeroImg" src="@p.PrimaryImage" alt="@p.Title"
+                 class="size-full object-cover transition-opacity duration-500 ease-in-out opacity-100" />
+
+            <!-- Prev / Next Navigation Arrows -->
+            <button type="button" onclick="prevHeroImage()"
+                    class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 grid size-8 sm:size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md opacity-90 sm:opacity-80 group-hover:opacity-100 hover:bg-black/70 hover:scale-105 transition-all shadow-md"
+                    title="Ảnh trước">
+                <i data-lucide="chevron-left" class="size-4 sm:size-6"></i>
+            </button>
+            <button type="button" onclick="nextHeroImage()"
+                    class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 grid size-8 sm:size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md opacity-90 sm:opacity-80 group-hover:opacity-100 hover:bg-black/70 hover:scale-105 transition-all shadow-md"
+                    title="Ảnh tiếp theo">
+                <i data-lucide="chevron-right" class="size-4 sm:size-6"></i>
+            </button>
+
+            <!-- Image Index Badge & Slideshow Indicator -->
+            <div class="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 rounded-full bg-black/60 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-white backdrop-blur-md shadow-md">
+                <i data-lucide="image" class="size-3 sm:size-3.5 text-amber-400"></i>
+                <span id="imageCounter">1 / @(p.ImageUrls.Count > 0 ? p.ImageUrls.Count : 1)</span>
+            </div>
+        </div>
+
+        <!-- Thumbnail Selector Row -->
+        @if (p.ImageUrls.Count > 1)
+        {
+            <div class="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-none" role="group" aria-label="Thư viện ảnh">
+                @for (var i = 0; i < p.ImageUrls.Count; i++)
+                {
+                    var img = p.ImageUrls[i];
+                    var idx = i;
+                    <button type="button" onclick="selectHeroImage('@img', @idx)"
+                            class="hero-thumb relative h-14 w-20 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border-2 transition-all duration-200 hover:opacity-100 @(i == 0 ? "border-primary ring-2 ring-primary/30 opacity-100 shadow-sm" : "border-border opacity-70 hover:scale-105")"
+                            data-thumb-idx="@idx">
+                        <img src="@img" alt="Ảnh @(idx+1)" class="size-full object-cover" />
                     </button>
-                </div>
+                }
             </div>
-
-            <!-- Right Seller & Price -->
-            <div class="flex flex-col justify-between gap-8 border-b border-border p-6 text-right md:border-l md:p-12">
-                <div class="flex items-center justify-end gap-3">
-                    <div>
-                        <div class="flex justify-end gap-0.5 text-amber-500 text-xs">
-                            @for (var i = 0; i < 5; i++)
-                            {
-                                <i data-lucide="star" class="size-4 fill-amber-500 text-amber-500"></i>
-                            }
-                        </div>
-                        <p class="mt-1 text-xs font-semibold text-neutral-900">@p.SellerName</p>
-                        <p class="text-[10px] text-muted-foreground">Người đăng tin (Chính chủ/Môi giới)</p>
-                    </div>
-                    <div class="relative size-12 overflow-hidden rounded-full border border-border bg-primary/10 shrink-0">
-                        <img src="@p.SellerAvatar" alt="@p.SellerName" class="size-full object-cover" />
-                    </div>
-                </div>
-
-                <dl class="flex justify-end gap-8 text-left">
-                    <div>
-                        <dt class="text-xs text-muted-foreground mb-1">
-                            @(p.ListingType == "rent" ? "Giá thuê / tháng" : "Giá niêm yết")
-                        </dt>
-                        <dd class="font-display text-3xl font-extrabold text-primary">
-                            @FormatHelper.FormatPrice(p.Price, p.ListingType)
-                        </dd>
-                    </div>
-                    <div class="border-l border-border/80 pl-8">
-                        <dt class="text-xs text-muted-foreground mb-1">Diện tích sử dụng</dt>
-                        <dd class="font-display text-3xl font-extrabold text-neutral-900">
-                            @FormatHelper.FormatArea(p.Area)
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-
-            <!-- Bottom Left: Address & Thumbnails -->
-            <div class="flex flex-col justify-between gap-6 p-6 md:p-12">
-                <p class="max-w-md text-xs leading-relaxed text-muted-foreground">
-                    📍 @p.PublicAddress
-                </p>
-
-                <!-- Small Round Image Switcher -->
-                <div class="flex items-center -space-x-2" role="group" aria-label="Thư viện ảnh">
-                    @for (var i = 0; i < p.Images.Count; i++)
-                    {
-                        var img = p.Images[i];
-                        var idx = i;
-                        <button type="button" onclick="setHeroActiveImage('@img', @idx)"
-                                class="hero-thumb relative size-12 overflow-hidden rounded-full border-2 border-card shadow-sm hover:z-10 hover:scale-110 transition-transform @(i == 0 ? "border-primary ring-2 ring-primary/40 z-10" : "")">
-                            <img src="@img" alt="Ảnh thu nhỏ" class="size-full object-cover" />
-                        </button>
-                    }
-                </div>
-            </div>
-
-            <!-- Bottom Right: Share & Scroll Button -->
-            <div class="flex items-center justify-end gap-4 p-6 md:border-l md:border-border md:p-12">
-                <a href="#detailsSection" class="p-3 rounded-full border border-border bg-surface text-muted-foreground hover:text-primary transition-colors" title="Cuộn xuống xem chi tiết">
-                    <i data-lucide="arrow-down" class="size-5"></i>
-                </a>
-                <button type="button" onclick="copyShareLink()"
-                        class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-neutral-800 hover:border-primary hover:text-primary shadow-xs transition-colors"
-                        title="Sao chép liên kết chia sẻ">
-                    <i data-lucide="share-2" class="size-4 text-primary"></i>
-                    <span>Chia sẻ tin</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Center Round Featured Image Showcase (Desktop) -->
-        <div class="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-center md:flex">
-            <div class="pointer-events-auto relative h-[30rem] w-[22rem]">
-                <div class="relative size-full overflow-hidden rounded-full border-4 border-card shadow-2xl bg-neutral-100">
-                    <img id="mainHeroImg" src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover transition-opacity duration-300" />
-                </div>
-                <button type="button" onclick="nextHeroImage()"
-                        class="absolute -right-6 bottom-20 grid size-16 place-items-center rounded-full bg-primary text-white shadow-xl hover:scale-110 hover:rotate-45 transition-all">
-                    <i data-lucide="arrow-up-right" class="size-7"></i>
-                </button>
-            </div>
-        </div>
+        }
     </section>
 
-    <!-- SECTION 2: Body Details & Inquiry Form -->
-    <div id="detailsSection" class="mx-auto max-w-7xl px-4 md:px-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <!-- Left Column: Specs, Desc, Facilities, Gallery, Map -->
-        <div class="space-y-10">
-            <!-- 8 Key Specs Grid -->
-            <section class="space-y-4">
-                <h2 class="font-display text-2xl font-bold text-neutral-900">Tổng quan bất động sản</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                            <i data-lucide="bed-double" class="size-4"></i>
-                        </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Phòng ngủ</p>
-                            <p class="text-xs font-bold text-neutral-900">@p.Beds PN</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                            <i data-lucide="bath" class="size-4"></i>
-                        </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Phòng tắm</p>
-                            <p class="text-xs font-bold text-neutral-900">@p.Baths WC</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                            <i data-lucide="car" class="size-4"></i>
-                        </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Chỗ đỗ xe</p>
-                            <p class="text-xs font-bold text-neutral-900">@p.Carports chỗ</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+    <!-- ================= PRICE & QUICK ACTION BANNER ================= -->
+    <div class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+        <!-- Price & Area -->
+        <div class="flex items-center justify-between sm:justify-start gap-4 sm:gap-8 divide-x divide-border/80">
+            <div class="pr-3 sm:pr-0">
+                <span class="block text-[11px] sm:text-xs text-muted-foreground font-medium mb-0.5 sm:mb-1">
+                    @(isRent ? "Giá thuê niêm yết" : "Giá bán niêm yết")
+                </span>
+                <span class="font-display text-xl sm:text-2xl md:text-3xl font-extrabold text-primary">
+                    @FormatHelper.FormatPrice(p.Price, p.ListingType)
+                </span>
+            </div>
+            <div class="pl-4 sm:pl-8">
+                <span class="block text-[11px] sm:text-xs text-muted-foreground font-medium mb-0.5 sm:mb-1">Diện tích sử dụng</span>
+                <span class="font-display text-xl sm:text-2xl md:text-3xl font-bold text-neutral-900">
+                    @FormatHelper.FormatArea(p.Area)
+                </span>
+            </div>
+        </div>
+
+        <!-- Call & Message Buttons -->
+        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:flex md:w-auto">
+            @if (!string.IsNullOrWhiteSpace(p.OwnerPhone))
+            {
+                <a href="tel:@p.OwnerPhone"
+                   class="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-primary px-3 sm:px-6 py-2.5 sm:py-3.5 text-xs font-bold text-white shadow-md shadow-primary/20 hover:bg-primary-hover transition-colors text-center">
+                    <i data-lucide="phone-call" class="size-3.5 sm:size-4 shrink-0"></i>
+                    <span class="sm:hidden">Gọi ngay</span>
+                    <span class="hidden sm:inline">Gọi điện (@p.OwnerPhone)</span>
+                </a>
+            }
+            <a href="#inquiryForm"
+               class="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-surface px-3 sm:px-5 py-2.5 sm:py-3.5 text-xs font-semibold text-neutral-800 hover:border-primary hover:text-primary transition-colors text-center">
+                <i data-lucide="message-square" class="size-3.5 sm:size-4 shrink-0"></i>
+                <span>Gửi lời nhắn</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ================= BODY CONTENT: 2 COLUMNS ================= -->
+    <div id="detailsSection" class="grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
+        
+        <!-- ================= CỘT TRÁI: SPECS, MÔ TẢ, BẢN ĐỒ ================= -->
+        <div class="space-y-6 sm:space-y-10 min-w-0">
+            
+            <!-- 1. Thông số tổng quan -->
+            <section class="space-y-3 sm:space-y-4">
+                <h2 class="font-display text-lg sm:text-xl md:text-2xl font-bold text-neutral-900">
+                    Tổng quan bất động sản
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                    <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                        <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
                             <i data-lucide="ruler" class="size-4"></i>
                         </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Diện tích SD</p>
-                            <p class="text-xs font-bold text-neutral-900">@FormatHelper.FormatArea(p.Area)</p>
+                        <div class="min-w-0">
+                            <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Diện tích</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@FormatHelper.FormatArea(p.Area)</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                            <i data-lucide="trees" class="size-4"></i>
-                        </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Diện tích đất</p>
-                            <p class="text-xs font-bold text-neutral-900">@FormatHelper.FormatArea(p.LandSize)</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                    <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                        <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
                             <i data-lucide="home" class="size-4"></i>
                         </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Loại hình BĐS</p>
-                            <p class="text-xs font-bold text-neutral-900">@p.PropertyType</p>
+                        <div class="min-w-0">
+                            <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Loại hình</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@p.PropertyType</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                            <i data-lucide="sparkles" class="size-4"></i>
+                    <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                        <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                            <i data-lucide="tag" class="size-4"></i>
                         </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Tình trạng</p>
-                            <p class="text-xs font-bold text-neutral-900 truncate">@p.Condition</p>
+                        <div class="min-w-0">
+                            <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Hình thức</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@(isRent ? "Cho thuê" : "Cần bán")</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
-                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                    <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                        <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
                             <i data-lucide="calendar" class="size-4"></i>
                         </span>
-                        <div>
-                            <p class="text-[11px] text-muted-foreground">Ngày đăng</p>
-                            <p class="text-xs font-bold text-neutral-900">@p.CreatedAt.ToString("dd/MM/yyyy")</p>
+                        <div class="min-w-0">
+                            <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Ngày đăng</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@p.CreatedAt.ToString("dd/MM/yyyy")</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Detailed Description -->
-            <section class="space-y-3">
-                <h2 class="font-display text-2xl font-bold text-neutral-900">Mô tả chi tiết</h2>
-                <div class="rounded-2xl border border-border bg-card p-6 text-xs text-neutral-800 leading-relaxed shadow-xs space-y-3">
-                    <p class="whitespace-pre-line">@p.Description</p>
-                </div>
-            </section>
-
-            <!-- Facilities Checklist -->
-            @if (p.Facilities.Count > 0)
-            {
-                <section class="space-y-3">
-                    <h2 class="font-display text-2xl font-bold text-neutral-900">Tiện ích nổi bật</h2>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach (var f in p.Facilities)
-                        {
-                            <span class="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-neutral-800 shadow-2xs">
-                                <i data-lucide="check" class="size-3.5 text-primary"></i>
-                                <span>@f</span>
-                            </span>
-                        }
-                    </div>
-                </section>
-            }
-
-            <!-- Real Photos Gallery Grid -->
-            <section class="space-y-3">
-                <h2 class="font-display text-2xl font-bold text-neutral-900">Hình ảnh thực tế</h2>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    @for (var i = 0; i < p.Images.Count; i++)
+            <!-- 2. Mô tả chi tiết -->
+            <section class="space-y-3 sm:space-y-4">
+                <h2 class="font-display text-lg sm:text-xl md:text-2xl font-bold text-neutral-900">
+                    Mô tả chi tiết
+                </h2>
+                <div class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 text-xs sm:text-sm text-neutral-800 leading-relaxed shadow-xs">
+                    @if (!string.IsNullOrWhiteSpace(p.Description))
                     {
-                        var img = p.Images[i];
-                        <div class="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border bg-neutral-100 shadow-2xs">
-                            <img src="@img" alt="Ảnh thực tế @(i+1)" class="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                        </div>
+                        <p class="whitespace-pre-line">@p.Description</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted-foreground italic">Chưa có thông tin mô tả chi tiết cho tin đăng này.</p>
                     }
                 </div>
             </section>
 
-            <!-- Location Map -->
-            <section class="space-y-3">
-                <h2 class="font-display text-2xl font-bold text-neutral-900">Vị trí bất động sản</h2>
-                <div class="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
-                    <div class="relative h-64 w-full bg-neutral-100 flex items-center justify-center overflow-hidden">
-                        <img src="/images/categories-bg.png" alt="Bản đồ vị trí" class="size-full object-cover opacity-30 filter grayscale" />
-                        <div class="absolute flex flex-col items-center">
-                            <div class="grid size-12 place-items-center rounded-full bg-primary text-white shadow-xl animate-bounce">
-                                <i data-lucide="map-pin" class="size-6"></i>
+            <!-- 3. Bản đồ vị trí -->
+            <section class="space-y-3 sm:space-y-4">
+                <h2 class="font-display text-lg sm:text-xl md:text-2xl font-bold text-neutral-900">
+                    Vị trí trên bản đồ
+                </h2>
+                <div class="rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
+                    <div class="relative h-48 sm:h-64 w-full bg-neutral-100 flex items-center justify-center overflow-hidden">
+                        <img src="/images/categories-bg.png" alt="Bản đồ vị trí" class="size-full object-cover opacity-25 filter grayscale" />
+                        <div class="absolute flex flex-col items-center text-center px-3">
+                            <div class="grid size-10 sm:size-12 place-items-center rounded-full bg-primary text-white shadow-xl animate-bounce">
+                                <i data-lucide="map-pin" class="size-5 sm:size-6"></i>
                             </div>
-                            <span class="mt-2 rounded-full bg-neutral-900 text-white px-3 py-1 text-xs font-bold shadow-md">
-                                @p.PublicAddress
+                            <span class="mt-2 rounded-full bg-neutral-900 text-white px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold shadow-md max-w-[90vw] truncate">
+                                @p.Address, @p.District, @p.City
                             </span>
                         </div>
                     </div>
@@ -266,49 +281,62 @@
             </section>
         </div>
 
-        <!-- Right Aside: Inquiry Form -->
-        <aside class="space-y-6 lg:sticky lg:top-24 self-start">
-            <div id="inquiryForm" class="rounded-2xl border border-border bg-card p-6 shadow-md space-y-5">
-                <div class="flex items-center gap-3 pb-4 border-b border-border/80">
-                    <div class="relative size-12 overflow-hidden rounded-full border border-border bg-primary/10 shrink-0">
-                        <img src="@p.SellerAvatar" alt="@p.SellerName" class="size-full object-cover" />
+        <!-- ================= CỘT PHẢI: THÔNG TIN OWNER & FORM LIÊN HỆ ================= -->
+        <aside class="space-y-6 lg:sticky lg:top-24">
+            
+            <!-- Card Người bán / Chủ nhà -->
+            <div id="inquiryForm" class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-md space-y-4 sm:space-y-5">
+                <div class="flex items-center gap-3 sm:gap-3.5 pb-3 sm:pb-4 border-b border-border/80">
+                    <div class="grid size-10 sm:size-12 place-items-center rounded-full bg-primary/10 text-primary font-bold text-base sm:text-lg shrink-0">
+                        <i data-lucide="user" class="size-5 sm:size-6"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-neutral-900">@p.SellerName</h3>
-                        <p class="text-[11px] text-muted-foreground">Người đăng tin (Chính chủ / Môi giới)</p>
+                        <h3 class="text-xs sm:text-sm font-bold text-neutral-900">@p.OwnerName</h3>
+                        <p class="text-[10px] sm:text-[11px] text-muted-foreground">Người đăng tin (Chính chủ / Môi giới)</p>
                     </div>
                 </div>
 
-                <form asp-action="Inquiry" method="post" class="space-y-4 text-xs">
+                <!-- Nút Gọi điện thoại trực tiếp -->
+                @if (!string.IsNullOrWhiteSpace(p.OwnerPhone))
+                {
+                    <a href="tel:@p.OwnerPhone"
+                       class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 sm:py-3 text-xs font-bold text-white shadow-sm hover:bg-primary-hover transition-colors">
+                        <i data-lucide="phone-call" class="size-4"></i>
+                        <span>Gọi điện thoại (@p.OwnerPhone)</span>
+                    </a>
+                }
+
+                <!-- Form Gửi Lời Nhắn -->
+                <form asp-action="Inquiry" method="post" class="space-y-3 sm:space-y-3.5 text-xs">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="ListingId" value="@p.Id" />
 
                     <div>
                         <label class="block font-semibold text-neutral-800 mb-1">Họ và tên của bạn *</label>
                         <input name="Name" required placeholder="Nhập họ và tên"
-                               class="w-full rounded-xl border border-border bg-surface p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
+                               class="w-full rounded-xl border border-border bg-surface p-2.5 sm:p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
                     </div>
 
                     <div>
                         <label class="block font-semibold text-neutral-800 mb-1">Số điện thoại hoặc Email *</label>
                         <input name="Contact" required placeholder="0908xxxxxx hoặc you@example.com"
-                               class="w-full rounded-xl border border-border bg-surface p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
+                               class="w-full rounded-xl border border-border bg-surface p-2.5 sm:p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
                     </div>
 
                     <div>
                         <label class="block font-semibold text-neutral-800 mb-1">Lời nhắn tư vấn *</label>
                         <textarea name="Message" rows="3" required
-                                  class="w-full rounded-xl border border-border bg-surface p-3 outline-none focus:border-primary transition-colors text-neutral-900">Chào bạn, tôi quan tâm đến bất động sản "@p.Title". Bạn có thể tư vấn và đặt lịch xem nhà giúp tôi được không?</textarea>
+                                  class="w-full rounded-xl border border-border bg-surface p-2.5 sm:p-3 outline-none focus:border-primary transition-colors text-neutral-900">Chào bạn, tôi quan tâm đến bất động sản "@p.Title". Bạn có thể tư vấn và đặt lịch xem nhà giúp tôi được không?</textarea>
                     </div>
 
                     <button type="submit"
-                            class="w-full rounded-xl bg-primary py-3 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors">
-                        Gửi yêu cầu liên hệ xem nhà
+                            class="w-full rounded-xl border border-primary bg-surface py-2.5 sm:py-3 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-colors">
+                        Gửi lời nhắn yêu cầu tư vấn
                     </button>
                 </form>
             </div>
 
-            <!-- Guarantee Box -->
+            <!-- Cam kết an toàn PropNest -->
             <div class="rounded-xl border border-border bg-surface p-4 text-xs text-muted-foreground space-y-2">
                 <div class="flex items-center gap-2 font-semibold text-neutral-900">
                     <i data-lucide="shield-check" class="size-4 text-primary"></i>
@@ -324,32 +352,99 @@
 
 @section Scripts {
     <script>
-        const heroImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(p.Images));
+        const heroImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(p.ImageUrls));
         let activeImgIdx = 0;
+        let slideshowTimer = null;
+        const SLIDESHOW_INTERVAL = 5000; // 5 giây tự động đổi ảnh
 
-        function setHeroActiveImage(src, idx) {
+        function updateGalleryUI(idx) {
             activeImgIdx = idx;
             const mainImg = document.getElementById('mainHeroImg');
-            if (mainImg) mainImg.src = src;
+            const counter = document.getElementById('imageCounter');
 
-            document.querySelectorAll('.hero-thumb').forEach((thumb, i) => {
-                if (i === idx) {
-                    thumb.className = 'hero-thumb relative size-12 overflow-hidden rounded-full border-2 border-primary ring-2 ring-primary/40 z-10 shadow-sm';
+            if (mainImg && heroImages.length > 0) {
+                // Hiệu ứng mờ chuyển tiếp êm ái
+                mainImg.classList.add('opacity-0');
+                setTimeout(() => {
+                    mainImg.src = heroImages[idx];
+                    mainImg.classList.remove('opacity-0');
+                }, 150);
+            }
+
+            if (counter && heroImages.length > 0) {
+                counter.innerText = (idx + 1) + ' / ' + heroImages.length;
+            }
+
+            // Highlight thumbnail tương ứng
+            document.querySelectorAll('.hero-thumb').forEach((thumb) => {
+                const thumbIdx = parseInt(thumb.getAttribute('data-thumb-idx'), 10);
+                if (thumbIdx === idx) {
+                    thumb.className = 'hero-thumb relative h-14 w-20 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border-2 border-primary ring-2 ring-primary/30 opacity-100 shadow-sm transition-all duration-200';
                 } else {
-                    thumb.className = 'hero-thumb relative size-12 overflow-hidden rounded-full border-2 border-card shadow-sm hover:z-10 hover:scale-110 transition-transform';
+                    thumb.className = 'hero-thumb relative h-14 w-20 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border-2 border-border opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-200';
                 }
             });
         }
 
         function nextHeroImage() {
-            if (!heroImages || heroImages.length === 0) return;
-            activeImgIdx = (activeImgIdx + 1) % heroImages.length;
-            setHeroActiveImage(heroImages[activeImgIdx], activeImgIdx);
+            if (!heroImages || heroImages.length <= 1) return;
+            const nextIdx = (activeImgIdx + 1) % heroImages.length;
+            updateGalleryUI(nextIdx);
         }
+
+        function prevHeroImage() {
+            if (!heroImages || heroImages.length <= 1) return;
+            const prevIdx = (activeImgIdx - 1 + heroImages.length) % heroImages.length;
+            updateGalleryUI(prevIdx);
+        }
+
+        function selectHeroImage(src, idx) {
+            updateGalleryUI(idx);
+            resetSlideshowTimer();
+        }
+
+        function startSlideshow() {
+            if (heroImages && heroImages.length > 1) {
+                slideshowTimer = setInterval(nextHeroImage, SLIDESHOW_INTERVAL);
+            }
+        }
+
+        function pauseSlideshow() {
+            if (slideshowTimer) {
+                clearInterval(slideshowTimer);
+                slideshowTimer = null;
+            }
+        }
+
+        function resetSlideshowTimer() {
+            pauseSlideshow();
+            startSlideshow();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Render Lucide icons cho các nút mới
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            // Khởi động Slideshow tự động 5s
+            startSlideshow();
+
+            // Tạm dừng khi rê chuột vào khung ảnh và chạy tiếp khi rê chuột ra ngoài
+            const container = document.getElementById('slideshowContainer');
+            if (container) {
+                container.addEventListener('mouseenter', pauseSlideshow);
+                container.addEventListener('mouseleave', startSlideshow);
+            }
+        });
 
         function copyShareLink() {
             navigator.clipboard.writeText(window.location.href);
-            showToast('Đã sao chép liên kết!', 'Đường dẫn bất động sản đã được lưu vào bộ nhớ tạm.');
+            if (typeof showToast === 'function') {
+                showToast('Đã sao chép liên kết!', 'Đường dẫn bất động sản đã được lưu vào bộ nhớ tạm.');
+            } else {
+                alert('Đã sao chép liên kết vào bộ nhớ tạm!');
+            }
         }
     </script>
-} *@
+}

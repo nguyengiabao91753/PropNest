@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
@@ -9,8 +9,26 @@ namespace PropNest.Infrastructure.Persistence.Repositories;
 
 public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRepository
 {
-    public Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default) =>
-        dbContext.Listings.SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+    public async Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Listings
+        .Include(x => x.Images.OrderBy(img => img.SortOrder)) // Load kèm danh sách ảnh (sắp xếp theo thứ tự)
+        .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+    }
+
+    public async Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == ownerUserId)
+            .Select(u => new ListingOwnerContactDto(
+                u.Id,
+                u.FullName,
+                u.PhoneNumber ?? string.Empty,
+                u.Email ?? string.Empty))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
 
     public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
         await dbContext.Listings

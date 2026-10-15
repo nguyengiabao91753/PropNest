@@ -20,6 +20,7 @@ public sealed class ListingsController(
     IWorkflowService workflowService) : ControllerBase
 {
     [HttpGet("{listingId:long}")]
+    [AllowAnonymous]
     public async Task<ActionResult<ListingDto>> GetById(long listingId, CancellationToken cancellationToken)
     {
         var listing = await listingService.GetByIdAsync(listingId, cancellationToken);
