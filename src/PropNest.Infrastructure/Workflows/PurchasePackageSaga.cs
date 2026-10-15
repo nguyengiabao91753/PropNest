@@ -87,7 +87,7 @@ namespace PropNest.Infrastructure.Workflows
                     .TransitionTo(UpgradingListing)
                     .Publish(context => new UpgradeListingCommand(
                         context.Saga.CorrelationId,
-                        context.Saga.UserId,
+                        context.Saga.ListingId,
                         context.Saga.PackageCode
                     )),
                 When(WalletDeductionFailedEvent)

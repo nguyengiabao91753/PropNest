@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
 
             // đăng ký consumers
             busConfig.AddConsumer<DeductWalletConsumer>();
-
+            busConfig.AddConsumer<UpgradeListingConsumer>();
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
