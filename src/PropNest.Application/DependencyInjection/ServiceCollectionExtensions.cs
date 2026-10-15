@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IListingService, ListingService>();
+        services.AddScoped<IListingImageService, ListingImageService>();
         services.AddScoped<IWorkflowService, WorkflowService>();
 
         //bao

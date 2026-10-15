@@ -34,6 +34,12 @@ namespace PropNest.Application.Wallets
             return WalletMappingExtensions.ToDto(wallet);
         }
 
+        public async Task<IEnumerable<TransactionDto>> GetTransactionsByUserIdAsync(long userId, int? page = 1, WalletTransactionType? type = null, CancellationToken cancellationToken = default)
+        {
+            var transactions = await walletRepository.GetTransactionsByUserIdAsync(userId, page, type, cancellationToken);
+            return transactions.Select(WalletMappingExtensions.ToDto);
+        }
+
         public async Task<WalletDto> TopUpAsync(TopUpWalletCommand command, CancellationToken cancellationToken = default)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(command.Amount);

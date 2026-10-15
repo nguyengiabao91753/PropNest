@@ -30,5 +30,30 @@ namespace PropNest.Infrastructure.Persistence.Repositories
         {
             return dbContext.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
         }
+
+        public async Task<IEnumerable<WalletTransaction>> GetTransactionsByUserIdAsync(long userId, int? page = 1, WalletTransactionType? type = null, CancellationToken cancellationToken = default)
+        {
+            var wallet = await dbContext.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if(wallet == null)
+            {
+                return Enumerable.Empty<WalletTransaction>();
+            }
+            const int pageSize = 10;
+            var currentPage =Math.Max(1, page ?? 1);
+
+            var transactions = dbContext.WalletTransactions
+                .AsNoTracking()
+                .Where(t => t.WalletId == wallet.WalletId);
+            if (type.HasValue)
+            {
+                transactions = transactions.Where(t => t.TransactionType == type.Value);
+            }
+
+            return await transactions
+                .OrderByDescending(t => t.CreatedAt)
+                .Skip((currentPage - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
     }
 }
