@@ -66,6 +66,7 @@ public sealed class Listing : AuditableEntity
     public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     public ICollection<ListingHistory> Histories { get; private set; } = new List<ListingHistory>();
+    public ICollection<ListingImage> Images { get; private set; } = new List<ListingImage>();
 
     public void UpdateContent(
         string title,

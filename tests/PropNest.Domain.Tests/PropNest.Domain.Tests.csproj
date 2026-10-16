@@ -3,6 +3,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\PropNest.Application\PropNest.Application.csproj" />
     <ProjectReference Include="..\..\src\PropNest.Domain\PropNest.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
