@@ -50,7 +50,18 @@ public sealed record ListingDto(
     string PackageCode,
     DateTimeOffset? StartDate,
     DateTimeOffset? EndDate,
-    byte[] RowVersion);
+    byte[] RowVersion,
+    string? OwnerName = null,
+    string? OwnerPhoneNumber = null,
+    string? OwnerEmail = null,
+    IReadOnlyList<string>? Images = null
+    );
+
+public sealed record ListingOwnerContactDto(
+    long UserId,
+    string FullName,
+    string PhoneNumber,
+    string Email);
 
 public sealed record ListingSummaryDto(
     long ListingId,
@@ -75,6 +86,7 @@ public sealed record ListingCollectionDto(
 public interface IListingRepository
 {
     Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default);
+    Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default);
 
@@ -138,6 +150,10 @@ public sealed record GetPublicListingsQuery(
     string? Ward = null,
     string? PropertyType = null,
     string? ListingType = null,
+    string? Type = null,
+    string? Q = null,
+    decimal? MinPrice = null,
+    decimal? MaxPrice = null,
     [FromQuery(Name ="page")] int? Page = null,
     int PageNumber = 1,
     int PageSize = 20

@@ -28,7 +28,10 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenSer
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString(CultureInfo.InvariantCulture)),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty)
+            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new(JwtRegisteredClaimNames.Name, user.FullName ?? string.Empty),
+            new("phone_number", user.PhoneNumber ?? string.Empty),
+            new("status", user.Status ?? "Active")
         };
 
         claims.AddRange(roles

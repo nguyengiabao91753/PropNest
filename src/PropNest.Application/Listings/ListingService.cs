@@ -39,7 +39,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     public async Task<ListingDto?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default)
     {
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken);
-        return listing is null ? null : ToDto(listing);
+        if (listing is null) return null;
+
+        var owner = await listingRepository.GetOwnerContactAsync(listing.OwnerUserId, cancellationToken);
+
+        return ToDto(listing, owner);
     }
 
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
@@ -126,20 +130,46 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.PackageCode,
         listing.StartDate,
         listing.EndDate,
-        listing.RowVersion);
+        listing.RowVersion
+        );
+
+    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null) => new(
+    listing.ListingId,
+    listing.OwnerUserId,
+    listing.Title,
+    listing.Description,
+    listing.PropertyType,
+    listing.ListingType,
+    listing.Price,
+    listing.Area,
+    listing.City,
+    listing.District,
+    listing.Ward,
+    listing.Address,
+    listing.Status,
+    listing.ModerationDecision,
+    listing.PackageCode,
+    listing.StartDate,
+    listing.EndDate,
+    listing.RowVersion,
+    owner?.FullName,
+    owner?.PhoneNumber,
+    owner?.Email,
+    listing.Images.Select(img => img.Url).ToList());
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query, nameof(query));
 
-        var PageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
-        var PageSize = query.PageSize < 1 ? 1 :
+        var pageNumber = query.Page ?? query.PageNumber;
+        if (pageNumber < 1) pageNumber = 1;
+        var pageSize = query.PageSize < 1 ? 1 :
                        query.PageSize > 50 ? 50 : query.PageSize;
 
         var normalizedQuery = query with
         {
-            PageNumber = PageNumber,
-            PageSize = PageSize
+            PageNumber = pageNumber,
+            PageSize = pageSize
         };
 
         return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);

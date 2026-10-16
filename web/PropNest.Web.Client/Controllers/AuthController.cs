@@ -1,11 +1,25 @@
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using PropNest.Web.Client.Helpers;
 using PropNest.Web.Client.Models.ViewModels;
+using PropNest.Web.Client.Services;
+using PropNest.Web.Client.Services.IServices;
 
 namespace PropNest.Web.Client.Controllers;
 
 [Route("")]
 public class AuthController : Controller
 {
+    private readonly IClientAuthService _authService;
+    private readonly ILogger<AuthController> _logger;
+
+    public AuthController(IClientAuthService authService, ILogger<AuthController> logger)
+    {
+        _authService = authService;
+        _logger = logger;
+    }
+
     [HttpGet("login")]
     public IActionResult Login([FromQuery] string? returnUrl = null)
     {
@@ -14,32 +28,33 @@ public class AuthController : Controller
 
     [HttpPost("login")]
     [ValidateAntiForgeryToken]
-    public IActionResult Login([FromForm] LoginViewModel model)
+    public async Task<IActionResult> Login([FromForm] LoginViewModel model)
     {
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        var email = model.Email.Trim().ToLowerInvariant();
-
-        // Tự động nhận diện vai trò dựa trên tài khoản người dùng theo nghiệp vụ hệ thống
-        if (email.Contains("admin", StringComparison.OrdinalIgnoreCase))
+        // 1. Gọi Backend API đăng nhập
+        var result = await _authService.LoginAsync(model);
+        if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Token))
         {
-            TempData["SuccessMessage"] = "Đăng nhập thành công với vai trò Quản trị viên (Admin)!";
-            return Redirect("https://localhost:7215/");
-        }
-        
-        if (email.Contains("seller", StringComparison.OrdinalIgnoreCase) || 
-            email.Contains("minh.nguyen", StringComparison.OrdinalIgnoreCase))
-        {
-            TempData["SuccessMessage"] = "Đăng nhập thành công vào Cổng Người bán (Seller Portal)!";
-            return Redirect("https://localhost:7006/");
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Đăng nhập không thành công.");
+            return View(model);
         }
 
-        // Mặc định là tài khoản khách hàng thông thường
-        TempData["SuccessMessage"] = $"Đăng nhập thành công! Chào mừng bạn trở lại PropNest.";
+        // 2. Lưu JWT vào HttpOnly Cookie bảo mật
+        Response.Cookies.Append(AuthHeaderHandler.TokenCookieName, result.Token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Expires = model.RememberMe == true ? DateTimeOffset.UtcNow.AddDays(7) : null
+        });
 
+        TempData["SuccessMessage"] = "Đăng nhập thành công! Chào mừng bạn trở lại PropNest.";
+
+        // Quay lại trang xem dở hoặc Trang chủ
         if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
         {
             return Redirect(model.ReturnUrl);
@@ -56,20 +71,113 @@ public class AuthController : Controller
 
     [HttpPost("signup")]
     [ValidateAntiForgeryToken]
-    public IActionResult Signup([FromForm] SignupViewModel model)
+    public async Task<IActionResult> Signup([FromForm] SignupViewModel model)
     {
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        TempData["SuccessMessage"] = $"Chào mừng {model.Name}! Tài khoản của bạn đã được khởi tạo thành công.";
-
-        if (string.Equals(model.Role, "seller", StringComparison.OrdinalIgnoreCase))
+        // 1. Gọi Backend API đăng ký tài khoản
+        var result = await _authService.RegisterAsync(model);
+        if (!result.Succeeded)
         {
-            return Redirect("https://localhost:7006/");
+            // Map lỗi chi tiết từ API vào ModelState (trùng email, mật khẩu yếu...)
+            foreach (var (field, messages) in result.Errors)
+            {
+                foreach (var msg in messages)
+                {
+                    ModelState.AddModelError(field, msg);
+                }
+            }
+
+            if (result.Errors.Count == 0 && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
+                ModelState.AddModelError(string.Empty, result.ErrorMessage);
+            }
+
+            return View(model);
         }
 
+        TempData["SuccessMessage"] = $"Đăng ký thành công tài khoản {model.FullName}! Vui lòng đăng nhập để tiếp tục.";
+        return RedirectToAction(nameof(Login));
+    }
+
+    [HttpGet("logout")]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        // Xóa Cookie JWT
+        Response.Cookies.Delete(AuthHeaderHandler.TokenCookieName);
+        TempData["SuccessMessage"] = "Bạn đã đăng xuất thành công.";
         return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var token = Request.Cookies[AuthHeaderHandler.TokenCookieName];
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Unauthorized(new { message = "Chưa đăng nhập." });
+        }
+
+        // Ưu tiên lấy từ Backend API
+        var profile = await _authService.GetUserProfileAsync();
+        // Fallback đọc trực tiếp từ JWT
+        profile ??= JwtUserHelper.GetProfileFromToken(token);
+
+        if (profile == null)
+        {
+            return NotFound(new { message = "Không tìm thấy hồ sơ người dùng." });
+        }
+
+        return Json(profile);
+    }
+
+    /// <summary>
+    /// Trích xuất danh sách roles từ Payload của JWT Token
+    /// </summary>
+    private static List<string> GetRolesFromJwt(string jwt)
+    {
+        var roles = new List<string>();
+        try
+        {
+            var parts = jwt.Split('.');
+            if (parts.Length < 2) return roles;
+
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+            using var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("role", out var roleProp))
+            {
+                if (roleProp.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in roleProp.EnumerateArray())
+                    {
+                        var r = el.GetString();
+                        if (!string.IsNullOrWhiteSpace(r)) roles.Add(r);
+                    }
+                }
+                else if (roleProp.ValueKind == JsonValueKind.String)
+                {
+                    var r = roleProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(r)) roles.Add(r);
+                }
+            }
+        }
+        catch
+        {
+            // Bỏ qua lỗi parse nếu token không đúng định dạng
+        }
+
+        return roles;
     }
 }
