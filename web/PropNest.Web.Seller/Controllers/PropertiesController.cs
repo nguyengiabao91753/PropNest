@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using PropNest.Web.Seller.Filters;
 using PropNest.Web.Seller.Models.InputModels;
-using PropNest.Web.Seller.Services;
+using PropNest.Web.Seller.Services.IServices;
 
 namespace PropNest.Web.Seller.Controllers;
 
+[SellerAuthorize]
 [Route("")]
 [Route("Properties")]
 [Route("seller/properties")]
@@ -18,164 +20,83 @@ public class PropertiesController : Controller
 
     [HttpGet("")]
     [HttpGet("Index")]
-    public async Task<IActionResult> Index([FromQuery] string? status = "all", [FromQuery] string? q = null, [FromQuery] string layout = "table")
+    public async Task<IActionResult> Index(
+        [FromQuery] string? status = "all",
+        [FromQuery] string? q = null,
+        [FromQuery] string layout = "table",
+        [FromQuery] int page = 1,
+        CancellationToken cancellationToken = default)
     {
         ViewData["ActiveNav"] = "Properties";
-        var model = await _sellerService.GetMyPropertiesAsync(status, q, layout);
+        var model = await _sellerService.GetMyPropertiesAsync(status, q, layout, page, 8, cancellationToken);
         return View(model);
     }
-
-    [HttpGet("New")]
-    [HttpGet("Create")]
-    [Route("seller/properties/new")]
-    public IActionResult Create()
-    {
-        ViewData["ActiveNav"] = "Create";
-        return View(new CreatePropertyInputModel());
-    }
-
-    [HttpPost("Create")]
+    [HttpPost("Submit/{id}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([FromForm] CreatePropertyInputModel input)
+    public async Task<IActionResult> Submit(
+        string id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
     {
-        if (!ModelState.IsValid)
-        {
-            ViewData["ActiveNav"] = "Create";
-            return View(input);
-        }
-
-        var newId = await _sellerService.CreatePropertyAsync(input);
-
-        if (input.IsDraft)
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {newId} đã được lưu vào danh sách Bản nháp (Draft).";
-        }
-        else
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {newId} đã được gửi thành công vào hàng đợi kiểm duyệt (F03)!";
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpGet("Edit/{id}")]
-    public async Task<IActionResult> Edit(string id)
-    {
-        ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
-        var model = new CreatePropertyInputModel
-        {
-            Title = item.Title,
-            Description = item.Description,
-            PropertyType = item.PropertyType,
-            ListingType = item.ListingType,
-            Price = item.Price,
-            Area = item.Area,
-            Beds = item.Beds,
-            Baths = item.Baths,
-            Carports = item.Carports,
-            City = item.City,
-            District = item.District,
-            Ward = item.Ward,
-            Address = item.Address,
-            PackageCode = item.PackageCode,
-            ImageUrl = item.PrimaryImage
-        };
-
-        ViewData["ListingId"] = id;
-        return View(model);
-    }
-
-    [HttpPost("Edit/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(string id, [FromForm] CreatePropertyInputModel input)
-    {
-        if (!ModelState.IsValid)
-        {
-            ViewData["ActiveNav"] = "Properties";
-            ViewData["ListingId"] = id;
-            return View(input);
-        }
-
-        var success = await _sellerService.UpdatePropertyAsync(id, input);
+        var success = await _sellerService.SubmitForModerationAsync(id, cancellationToken);
         if (success)
         {
-            TempData["SuccessMessage"] = $"Cập nhật tin đăng {id} thành công! Lịch sử thay đổi đã được ghi nhận vào Delta Engine (F04).";
+            TempData["SuccessMessage"] = $"Tin đăng #{id} đã được gửi vào hàng đợi duyệt thành công!";
         }
         else
         {
-            TempData["ErrorMessage"] = $"Không tìm thấy tin đăng {id}.";
+            TempData["ErrorMessage"] = $"Không thể gửi duyệt tin đăng #{id}. Vui lòng thử lại sau.";
         }
-
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { status });
+    }
+    [HttpPost("ToggleHide/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleHide(
+        string id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
+    {
+        var success = await _sellerService.ToggleHideAsync(id, cancellationToken);
+        if (success)
+        {
+            TempData["SuccessMessage"] = $"Đã cập nhật trạng thái hiển thị cho tin #{id}.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"Không thể thay đổi trạng thái ẩn/hiện cho tin #{id}.";
+        }
+        return RedirectToAction(nameof(Index), new { status });
+    }
+    [HttpPost("Delete/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(
+        string id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
+    {
+        var success = await _sellerService.DeletePropertyAsync(id, cancellationToken);
+        if (success)
+        {
+            TempData["SuccessMessage"] = $"Tin đăng #{id} đã được xóa thành công.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"Không thể xóa tin đăng #{id}. Chỉ tin đăng ở trạng thái Bản nháp (Draft) mới có thể xóa.";
+        }
+        return RedirectToAction(nameof(Index), new { status });
     }
 
     [HttpGet("Details/{id}")]
-    public async Task<IActionResult> Details(string id)
+    public async Task<IActionResult> Details(string id, CancellationToken cancellationToken = default)
     {
         ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
-        var histories = await _sellerService.GetHistoryDeltaAsync(id);
-        ViewData["Histories"] = histories;
+        var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+        if (item == null)
+        {
+            TempData["ErrorMessage"] = $"Không tìm thấy thông tin bất động sản #{id}.";
+            return RedirectToAction(nameof(Index));
+        }
 
         return View(item);
-    }
-
-    [HttpPost("Submit/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(string id)
-    {
-        var success = await _sellerService.SubmitForModerationAsync(id);
-        if (success)
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {id} đã được gửi vào hàng đợi duyệt thành công!";
-        }
-        else
-        {
-            TempData["ErrorMessage"] = $"Không thể gửi duyệt tin đăng {id}.";
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("ToggleHide/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ToggleHide(string id)
-    {
-        var success = await _sellerService.ToggleHideAsync(id);
-        if (success)
-        {
-            TempData["WarningMessage"] = $"Đã cập nhật trạng thái hiển thị cho tin {id}.";
-        }
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("Delete/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(string id)
-    {
-        var success = await _sellerService.DeletePropertyAsync(id);
-        if (success)
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {id} đã được xóa thành công.";
-        }
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpGet("History/{id}")]
-    public async Task<IActionResult> History(string id)
-    {
-        ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
-        var histories = await _sellerService.GetHistoryDeltaAsync(id);
-        ViewData["Property"] = item;
-
-        return View(histories);
     }
 }

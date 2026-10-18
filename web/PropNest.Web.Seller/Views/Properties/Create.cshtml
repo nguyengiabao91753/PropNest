@@ -1,9 +1,10 @@
+@using PropNest.Web.Seller.Services.IServices
 @model PropNest.Web.Seller.Models.InputModels.CreatePropertyInputModel
-@inject PropNest.Web.Seller.Services.ISellerPropertyService SellerService
+@inject ISellerPropertyService SellerService
 
 @{
     ViewData["Title"] = "Đăng tin mới (F02)";
-    var wallet = await SellerService.GetWalletAsync();
+    var wallet = await SellerService.GetMyPropertiesAsync();
 }
 
 <div class="mx-auto max-w-6xl space-y-8">
@@ -349,12 +350,12 @@
                             </div>
                             <div>
                                 <p class="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Số dư ví của bạn</p>
-                                <div class="flex items-baseline gap-2">
+                                @* <div class="flex items-baseline gap-2">
                                     <span class="text-xl font-bold font-display text-neutral-900">@FormatHelper.FormatVnd(wallet.TotalBalance)</span>
                                     <span class="text-xs text-muted-foreground">
                                         (Chính: @FormatHelper.FormatVnd(wallet.MainBalance) · KM: @FormatHelper.FormatVnd(wallet.PromoBalance))
                                     </span>
-                                </div>
+                                </div> *@
                             </div>
                         </div>
                         <a asp-controller="Wallet" asp-action="Index" target="_blank"

@@ -4,15 +4,25 @@ document.addEventListener("DOMContentLoaded", function () {
         window.lucide.createIcons();
     }
 
-    // Auto dismiss flash alerts
+    // Auto dismiss toast popups
     setTimeout(function () {
-        const alerts = document.querySelectorAll(".flash-alert");
-        alerts.forEach(function (el) {
+        const toasts = document.querySelectorAll(".toast-item");
+        toasts.forEach(function (el) {
             el.style.opacity = "0";
+            el.style.transform = "translateX(20px)";
             setTimeout(function () { el.remove(); }, 300);
         });
     }, 4500);
 });
+
+function dismissToast(btn) {
+    const toast = btn.closest(".toast-item");
+    if (toast) {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(20px)";
+        setTimeout(function () { toast.remove(); }, 300);
+    }
+}
 
 // Top-up modal helpers
 function openTopUpModal() {

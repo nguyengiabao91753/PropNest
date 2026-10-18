@@ -276,4 +276,28 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         return histories;
 
     }
+
+    public async Task DeleteAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        var listing = await GetOwnedListingAsync(listingId, ownerUserId, cancellationToken);
+        if (listing is null)
+        {
+            throw new KeyNotFoundException($"Listing {listingId} was not found or does not belong to the user {ownerUserId}.");
+        }
+
+        if (listing.OwnerUserId != ownerUserId)
+        {
+            throw new UnauthorizedAccessException($"User {ownerUserId} does not have permission to delete listing {listingId}.");
+        }
+
+        if (listing.Status != ListingStatus.Draft)
+        {
+            throw new ArgumentException("Only a draft listing can be deleted.");
+        }
+
+        listing.Delete();
+        listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Delete"));
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+    }
 }
