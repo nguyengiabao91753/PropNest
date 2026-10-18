@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
@@ -32,6 +32,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
         await dbContext.Listings
+            .Include(x => x.Images.OrderBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.OwnerUserId == ownerUserId)
             .OrderByDescending(x => x.CreatedAt)
@@ -39,6 +40,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) =>
         await dbContext.Listings
+            .Include(x => x.Images.OrderBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.Status == ListingStatus.PendingModeration)
             .OrderBy(x => x.CreatedAt)

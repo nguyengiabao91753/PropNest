@@ -42,5 +42,5 @@ public sealed class SellerPropertyItemViewModel
         string.Join(", ", new[] { Address, Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
     public string PrimaryImage =>
-        Images.Count > 0 ? Images[0] : "/images/p1.png";
+        Images.Count > 0 ? Images[0] : string.Empty;
 }

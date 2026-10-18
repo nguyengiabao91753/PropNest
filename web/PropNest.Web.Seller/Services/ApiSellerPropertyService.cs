@@ -16,6 +16,9 @@ namespace PropNest.Web.Seller.Services
         [LoggerMessage(Level = LogLevel.Error, Message = "Không thể kết nối tới Backend API tại {Url}")]
         private static partial void LogApiConnectionError(ILogger logger, Exception ex, string url);
 
+        [LoggerMessage(Level = LogLevel.Error, Message = "UploadPropertyImages thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
+        private static partial void LogUploadImagesFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
+
         public ApiSellerPropertyService(HttpClient httpClient, ILogger<ApiSellerPropertyService> logger, IConfiguration configuration)
         {
             _httpClient = httpClient;
@@ -85,7 +88,7 @@ namespace PropNest.Web.Seller.Services
                         SellerName = x.OwnerName ?? "Người bán",
                         Images = (x.Images != null && x.Images.Count > 0)
                             ? x.Images
-                            : new List<string> { GetFallbackImage(x.PropertyType) },
+                            : new List<string>(),
                         CreatedAt = x.StartDate ?? DateTimeOffset.UtcNow,
                         RowVersion = x.RowVersion != null ? Convert.ToBase64String(x.RowVersion) : string.Empty
                     }).ToList();
@@ -142,7 +145,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public async Task<bool> SubmitForModerationAsync(string id, CancellationToken cancellationToken = default)
+        public async Task<bool> SubmitForModerationAsync(long id, CancellationToken cancellationToken = default)
         {
             var url = $"/api/v1/listings/{id}/submit";
             try
@@ -157,7 +160,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public async Task<bool> ToggleHideAsync(string id, CancellationToken cancellationToken = default)
+        public async Task<bool> ToggleHideAsync(long id, CancellationToken cancellationToken = default)
         {
             var url = $"/api/v1/listings/{id}/hide";
             try
@@ -172,7 +175,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public async Task<bool> DeletePropertyAsync(string id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeletePropertyAsync(long id, CancellationToken cancellationToken = default)
         {
             var url = $"/api/v1/listings/{id}";
             try
@@ -187,7 +190,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public async Task<SellerPropertyItemViewModel?> GetPropertyByIdAsync(string id, CancellationToken cancellationToken = default)
+        public async Task<SellerPropertyItemViewModel?> GetPropertyByIdAsync(long id, CancellationToken cancellationToken = default)
         {
             var url = $"/api/v1/listings/{id}";
             try
@@ -213,7 +216,7 @@ namespace PropNest.Web.Seller.Services
                     SellerName = dto.OwnerName ?? "Người bán",
                     Images = (dto.Images != null && dto.Images.Count > 0)
                         ? dto.Images
-                        : new List<string> { GetFallbackImage(dto.PropertyType) },
+                        : new List<string>(),
                     CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
                     RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty
                 };
@@ -225,17 +228,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public Task<string> CreatePropertyAsync(CreatePropertyInputModel input, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Guid.NewGuid().ToString());
-        }
-
-        public Task<bool> UpdatePropertyAsync(string id, CreatePropertyInputModel input, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(true);
-        }
-
-        public Task<List<HistoryDeltaViewModel>> GetHistoryDeltaAsync(string id, CancellationToken cancellationToken = default)
+        public Task<List<HistoryDeltaViewModel>> GetHistoryDeltaAsync(long id, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new List<HistoryDeltaViewModel>());
         }
@@ -250,19 +243,109 @@ namespace PropNest.Web.Seller.Services
             return Task.FromResult(true);
         }
 
+        public async Task<long?> CreatePropertyAsync(CreatePropertyInputModel input, CancellationToken cancellationToken = default)
+        {
+            var url = "/api/v1/listings";
+            try
+            {
+                var request = new ApiCreateListingRequest(
+                    input.Title,
+                    input.Description,
+                    input.PropertyType,
+                    input.ListingType,
+                    input.Price ?? 0m,
+                    input.Area ?? 0m,
+                    input.City,
+                    input.District,
+                    input.Ward,
+                    input.Address
+                );
+                var response = await _httpClient.PostAsJsonAsync(url, request, _jsonOptions, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+                var created = await response.Content.ReadFromJsonAsync<ApiListingDto>(_jsonOptions, cancellationToken);
+                if (created == null) return null;
+                var listingId = created.ListingId;
+                // Upload ảnh nếu có
+                if (input.ImageFiles != null && input.ImageFiles.Count > 0)
+                {
+                    await UploadPropertyImagesAsync(listingId, input.ImageFiles, cancellationToken);
+                }
+                return listingId;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
+            }
+        }
+
+        public async Task<UpdatePropertyStatus> UpdatePropertyAsync(long id, CreatePropertyInputModel input, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{id}";
+            try
+            {
+                var request = new ApiUpdateListingRequest(
+                    input.Title,
+                    input.Description,
+                    input.PropertyType,
+                    input.ListingType,
+                    input.Price ?? 0m,
+                    input.Area ?? 0m,
+                    input.City,
+                    input.District,
+                    input.Ward,
+                    input.Address,
+                    input.RowVersion ?? string.Empty
+                );
+                var response = await _httpClient.PutAsJsonAsync(url, request, _jsonOptions, cancellationToken);
+                // Bắt mã 409 Conflict (Optimistic Concurrency)
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    return UpdatePropertyStatus.ConcurrencyConflict;
+                }
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return UpdatePropertyStatus.NotFound;
+                }
+                if (!response.IsSuccessStatusCode)
+                {
+                    return UpdatePropertyStatus.Failed;
+                }
+                // Upload thêm ảnh mới nếu có
+                if (input.ImageFiles != null && input.ImageFiles.Count > 0)
+                {
+                    await UploadPropertyImagesAsync(id, input.ImageFiles, cancellationToken);
+                }
+                return UpdatePropertyStatus.Success;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return UpdatePropertyStatus.Failed;
+            }
+        }
+
         // ==========================================
         // DTOs & Helper Methods
         // ==========================================
-        private sealed record ApiListingCollectionDto(
-            int Total,
-            List<ApiListingDto> Items
-        );
-
-        private sealed record ApiListingDto(
-            long ListingId,
-            long OwnerUserId,
+        private sealed record ApiCreateListingRequest(
             string Title,
-            string? Description,
+            string Description,
+            string PropertyType,
+            string ListingType,
+            decimal Price,
+            decimal Area,
+            string City,
+            string District,
+            string? Ward,
+            string Address
+        );
+        private sealed record ApiUpdateListingRequest(
+            string Title,
+            string Description,
             string PropertyType,
             string ListingType,
             decimal Price,
@@ -271,14 +354,36 @@ namespace PropNest.Web.Seller.Services
             string District,
             string? Ward,
             string Address,
-            ListingStatus Status,
-            string PackageCode,
-            DateTimeOffset? StartDate,
-            DateTimeOffset? EndDate,
-            byte[]? RowVersion,
-            string? OwnerName = null,
-            List<string>? Images = null
+            string RowVersion
         );
+        private sealed class ApiListingCollectionDto
+        {
+            public int Total { get; set; }
+            public List<ApiListingDto> Items { get; set; } = new();
+        }
+
+        private sealed class ApiListingDto
+        {
+            public long ListingId { get; set; }
+            public long OwnerUserId { get; set; }
+            public string Title { get; set; } = string.Empty;
+            public string? Description { get; set; }
+            public string PropertyType { get; set; } = string.Empty;
+            public string ListingType { get; set; } = string.Empty;
+            public decimal Price { get; set; }
+            public decimal Area { get; set; }
+            public string City { get; set; } = string.Empty;
+            public string District { get; set; } = string.Empty;
+            public string? Ward { get; set; }
+            public string Address { get; set; } = string.Empty;
+            public ListingStatus Status { get; set; }
+            public string? PackageCode { get; set; }
+            public DateTimeOffset? StartDate { get; set; }
+            public DateTimeOffset? EndDate { get; set; }
+            public byte[]? RowVersion { get; set; }
+            public string? OwnerName { get; set; }
+            public List<string>? Images { get; set; }
+        }
 
         private static string GetFallbackImage(string propertyType) => propertyType switch
         {
@@ -287,5 +392,37 @@ namespace PropNest.Web.Seller.Services
             "Villa" => "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
             _ => "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
         };
+
+        public async Task<bool> UploadPropertyImagesAsync(long listingId, List<IFormFile> files, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{listingId}/images";
+            try
+            {
+                using var formData = new MultipartFormDataContent();
+                foreach (var file in files)
+                {
+                    if (file.Length == 0) continue;
+                    var streamContent = new StreamContent(file.OpenReadStream());
+                    if (!string.IsNullOrWhiteSpace(file.ContentType))
+                    {
+                        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                    }
+                    formData.Add(streamContent, "files", file.FileName);
+                }
+                var response = await _httpClient.PostAsync(url, formData, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogUploadImagesFailed(_logger, listingId, response.StatusCode, errorBody);
+                    return false;
+                }
+                return true;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return false;
+            }
+        }
     }
 }

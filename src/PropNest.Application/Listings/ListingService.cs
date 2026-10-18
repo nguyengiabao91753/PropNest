@@ -130,7 +130,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.PackageCode,
         listing.StartDate,
         listing.EndDate,
-        listing.RowVersion
+        listing.RowVersion,
+        null,
+        null,
+        null,
+        listing.Images?.Select(img => img.Url).ToList() ?? new List<string>()
         );
 
     private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null) => new(
@@ -155,7 +159,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     owner?.FullName,
     owner?.PhoneNumber,
     owner?.Email,
-    listing.Images.Select(img => img.Url).ToList());
+    listing.Images?.Select(img => img.Url).ToList() ?? new List<string>());
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {

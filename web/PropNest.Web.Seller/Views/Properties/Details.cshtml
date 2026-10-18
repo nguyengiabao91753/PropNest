@@ -113,9 +113,19 @@
     <!-- ================= HERO SLIDESHOW GALLERY ================= -->
     <section class="space-y-3">
         <!-- Main Big Image Container -->
-        <div id="slideshowContainer" class="group relative aspect-[16/10] sm:aspect-[16/9] md:h-[460px] w-full overflow-hidden rounded-2xl border border-border bg-neutral-900 shadow-md">
-            <img id="mainHeroImg" src="@Model.PrimaryImage" alt="@Model.Title"
-                 class="size-full object-cover transition-opacity duration-300 ease-in-out opacity-100" />
+        <div id="slideshowContainer" class="group relative aspect-[16/10] sm:aspect-[16/9] md:h-[460px] w-full overflow-hidden rounded-2xl border border-border bg-neutral-900 shadow-md flex items-center justify-center">
+            @if (!string.IsNullOrEmpty(Model.PrimaryImage))
+            {
+                <img id="mainHeroImg" src="@Model.PrimaryImage" alt="@Model.Title"
+                     class="size-full object-cover transition-opacity duration-300 ease-in-out opacity-100" />
+            }
+            else
+            {
+                <div class="size-full flex flex-col items-center justify-center text-neutral-400 space-y-2 bg-neutral-900">
+                    <i data-lucide="image-off" class="size-12 text-neutral-500"></i>
+                    <span class="text-xs font-medium">Tin đăng chưa có hình ảnh</span>
+                </div>
+            }
 
             @if (Model.Images.Count > 1)
             {
