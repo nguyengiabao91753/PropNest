@@ -103,6 +103,16 @@ public interface IListingRepository
     void AddModerationReview(ListingModerationReview review);
 
     void AddOutboxMessage(PropNest.Domain.Workflows.OutboxMessage message);
+
+    Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default);
+
+    void AddImage(ListingImage image);
+
+    void RemoveImage(ListingImage image);
 }
 
 public interface IListingService

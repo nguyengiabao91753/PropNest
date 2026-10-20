@@ -8,6 +8,10 @@ using PropNest.Application.Workflows;
 using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
+using MassTransit;
+using PropNest.Infrastructure.Workflows;
+using PropNest.Infrastructure.Consumers;
+using PropNest.Infrastructure.Filters;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -24,14 +28,57 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IOutboxDispatchService, OutboxDispatchService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
-        services.AddSingleton<IOutboxMessagePublisher, LoggingOutboxMessagePublisher>();
-        services.AddHealthChecks().AddDbContextCheck<PropNestDbContext>("sqlserver");
+        services.AddScoped<IOutboxMessagePublisher, MassTransitOutboxPublisher>();
+        services.AddScoped<IPhotoService, CloudinaryPhotoService>();
 
         //bao
         services.AddScoped<IWalletRepository, WalletRepository>();
         //phuc
 
         //tai
+
+
+
+        // CẤU HÌNH MASSTRANSIT + RABBITMQ
+        services.AddMassTransit(busConfig =>
+        {
+
+            busConfig.SetKebabCaseEndpointNameFormatter();
+
+            // đăng ký saga
+            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
+                .EntityFrameworkRepository(r =>
+                {
+                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                    r.ExistingDbContext<PropNestDbContext>();
+                    r.UseSqlServer();
+                });
+
+            // đăng ký consumers
+            busConfig.AddConsumer<DeductWalletConsumer>();
+            busConfig.AddConsumer<UpgradeListingConsumer>();
+            busConfig.AddConsumer<RefundWalletConsumer>();
+            busConfig.UsingRabbitMq((context, cfg) =>
+            {
+                var host = configuration["RabbitMq:Host"] ?? "localhost";
+                var port = ushort.TryParse(configuration["RabbitMq:Port"], out var p) ? p : (ushort)5672;
+                var virtualHost = configuration["RabbitMq:VirtualHost"] ?? "/";
+                var username = configuration["RabbitMq:Username"] ?? "guest";
+                var password = configuration["RabbitMq:Password"] ?? "guest";
+                cfg.Host(host, port, virtualHost, h =>
+                {
+                    h.Username(username);
+                    h.Password(password);
+                });
+                cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
+                cfg.ConfigureEndpoints(context);
+            });
+
+           
+        });
+       
+        services.AddHealthChecks()
+            .AddDbContextCheck<PropNestDbContext>("sqlserver");
         return services;
     }
 }

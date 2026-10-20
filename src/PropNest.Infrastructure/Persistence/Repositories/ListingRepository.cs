@@ -143,4 +143,24 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         .ToListAsync(cancellationToken);
         return histories;
     }
+
+    public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) =>
+        dbContext.Listings
+            .Include(x => x.Images)
+            .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+
+    public async Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) =>
+        await dbContext.ListingImages
+            .AsNoTracking()
+            .Where(x => x.ListingId == listingId)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken);
+
+    public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) =>
+        dbContext.ListingImages
+            .SingleOrDefaultAsync(x => x.ImageId == imageId, cancellationToken);
+
+    public void AddImage(ListingImage image) => dbContext.ListingImages.Add(image);
+
+    public void RemoveImage(ListingImage image) => dbContext.ListingImages.Remove(image);
 }

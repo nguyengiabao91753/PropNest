@@ -296,6 +296,52 @@ namespace PropNest.Infrastructure.Migrations
                     b.ToTable("ListingHistories", (string)null);
                 });
 
+            modelBuilder.Entity("PropNest.Domain.Listings.ListingImage", b =>
+                {
+                    b.Property<long>("ImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ImageId"));
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsCover")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("ListingId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("ImageId");
+
+                    b.HasIndex("ListingId", "SortOrder");
+
+                    b.ToTable("ListingImages", (string)null);
+                });
+
             modelBuilder.Entity("PropNest.Domain.Listings.ListingModerationReview", b =>
                 {
                     b.Property<long>("ReviewId")
@@ -500,41 +546,6 @@ namespace PropNest.Infrastructure.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("PropNest.Domain.Users.RefreshToken", b =>
-                {
-                    b.Property<long>("TokenId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TokenId"));
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("TokenId");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "ExpiresAt");
-
-                    b.ToTable("RefreshTokens", (string)null);
-                });
-
             modelBuilder.Entity("PropNest.Domain.Wallets.Wallet", b =>
                 {
                     b.Property<long>("WalletId")
@@ -682,6 +693,33 @@ namespace PropNest.Infrastructure.Migrations
                     b.ToTable("IdempotencyRequests", (string)null);
                 });
 
+            modelBuilder.Entity("PropNest.Domain.Workflows.InboxMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ConsumerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ProcessedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsumerName", "MessageId")
+                        .IsUnique();
+
+                    b.ToTable("InboxMessages", (string)null);
+                });
+
             modelBuilder.Entity("PropNest.Domain.Workflows.OutboxMessage", b =>
                 {
                     b.Property<Guid>("OutboxId")
@@ -805,6 +843,50 @@ namespace PropNest.Infrastructure.Migrations
                     b.ToTable("WorkflowSteps", (string)null);
                 });
 
+            modelBuilder.Entity("PropNest.Infrastructure.Workflows.PurchasePackageSagaState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("ChargeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("ListingId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PackageCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("CorrelationId");
+
+                    b.ToTable("PurchasePackageSagaStates", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<long>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<long>", null)
@@ -879,6 +961,15 @@ namespace PropNest.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PropNest.Domain.Listings.ListingImage", b =>
+                {
+                    b.HasOne("PropNest.Domain.Listings.Listing", null)
+                        .WithMany("Images")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PropNest.Domain.Listings.ListingModerationReview", b =>
                 {
                     b.HasOne("PropNest.Domain.Listings.Listing", null)
@@ -891,15 +982,6 @@ namespace PropNest.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ReviewerUserId")
                         .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("PropNest.Domain.Users.RefreshToken", b =>
-                {
-                    b.HasOne("PropNest.Domain.Users.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("PropNest.Domain.Wallets.Wallet", b =>
@@ -941,6 +1023,8 @@ namespace PropNest.Infrastructure.Migrations
             modelBuilder.Entity("PropNest.Domain.Listings.Listing", b =>
                 {
                     b.Navigation("Histories");
+
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

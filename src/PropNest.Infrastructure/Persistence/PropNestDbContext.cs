@@ -7,6 +7,7 @@ using PropNest.Domain.Packages;
 using PropNest.Domain.Users;
 using PropNest.Domain.Wallets;
 using PropNest.Domain.Workflows;
+using PropNest.Infrastructure.Workflows;
 
 namespace PropNest.Infrastructure.Persistence;
 
@@ -14,6 +15,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>(options), IUnitOfWork
 {
     public DbSet<Listing> Listings => Set<Listing>();
+    public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<ListingHistory> ListingHistories => Set<ListingHistory>();
     public DbSet<ListingModerationReview> ListingModerationReviews => Set<ListingModerationReview>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
@@ -23,6 +25,9 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<IdempotencyRequest> IdempotencyRequests => Set<IdempotencyRequest>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<PackageDefinitions> PackageDefinitions => Set<PackageDefinitions>();
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
+    public DbSet<PurchasePackageSagaState> PurchasePackageSagaStates => Set<PurchasePackageSagaState>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

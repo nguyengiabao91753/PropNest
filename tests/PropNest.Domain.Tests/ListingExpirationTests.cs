@@ -197,6 +197,11 @@ public sealed class ListingExpirationTests
         public Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingHistoryDto>>([]);
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) => Task.FromResult<PackageDefinitions?>(null);
         public void AddModerationReview(ListingModerationReview review) { }
+        public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
+        public Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingImage>>([]);
+        public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) => Task.FromResult<ListingImage?>(null);
+        public void AddImage(ListingImage image) { }
+        public void RemoveImage(ListingImage image) { }
     }
 
     private sealed class BatchingMockListingRepository(List<List<Listing>> batches) : IListingRepository
@@ -228,6 +233,11 @@ public sealed class ListingExpirationTests
         public Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingHistoryDto>>([]);
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) => Task.FromResult<PackageDefinitions?>(null);
         public void AddModerationReview(ListingModerationReview review) { }
+        public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
+        public Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingImage>>([]);
+        public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) => Task.FromResult<ListingImage?>(null);
+        public void AddImage(ListingImage image) { }
+        public void RemoveImage(ListingImage image) { }
     }
 
     private sealed class MockUnitOfWork : IUnitOfWork

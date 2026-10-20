@@ -16,5 +16,7 @@
     <PackageReference Include="MassTransit" />
     <PackageReference Include="CloudinaryDotNet" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+	<PackageReference Include="MassTransit.RabbitMQ" />
+	<PackageReference Include="MassTransit.EntityFrameworkCore" />
   </ItemGroup>
 </Project>
