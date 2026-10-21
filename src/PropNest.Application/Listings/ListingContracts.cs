@@ -54,17 +54,7 @@ public sealed record ListingDto(
     string? OwnerName = null,
     string? OwnerPhoneNumber = null,
     string? OwnerEmail = null,
-    IReadOnlyList<string>? Images = null
-    );
-
-public sealed record ListingOwnerContactDto(
-    long UserId,
-    string FullName,
-    string PhoneNumber,
-    string Email);
-    string? OwnerEmail = null,
-    string? OwnerPhoneNumber = null,
-    DateTimeOffset? CreatedAt = null,
+    DateTimeOffset createdAt = default,
     IReadOnlyList<string>? Images = null
     );
 
