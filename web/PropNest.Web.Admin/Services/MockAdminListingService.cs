@@ -8,10 +8,117 @@ public sealed class MockAdminListingService : IAdminListingService
 {
     private readonly ConcurrentDictionary<string, PropertyItemViewModel> _listings = new();
     private readonly decimal _totalRevenue = 2_450_000m; // revenue from purchased VIP & Boost packages
+    private static readonly string SharedFilePath = Path.Combine(
+        Directory.Exists(@"d:\PropNest") ? @"d:\PropNest" : Path.GetTempPath(),
+        ".shared_mock_listings.json");
+    private static readonly object SyncLock = new();
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public MockAdminListingService()
     {
         InitializeMockData();
+        SyncFromSharedFile();
+        SaveToSharedFile();
+    }
+
+    private void SyncFromSharedFile()
+    {
+        lock (SyncLock)
+        {
+            try
+            {
+                if (!File.Exists(SharedFilePath)) return;
+                var json = File.ReadAllText(SharedFilePath);
+                var records = System.Text.Json.JsonSerializer.Deserialize<List<SharedPropertyRecord>>(json);
+                if (records is null) return;
+
+                foreach (var r in records)
+                {
+                    if (_listings.TryGetValue(r.Id, out var existing))
+                    {
+                        existing.Status = r.Status;
+                        existing.RejectReason = r.RejectReason;
+                        existing.Title = r.Title;
+                        existing.Price = r.Price;
+                        existing.Address = r.Address;
+                        existing.PackageCode = r.PackageCode;
+                    }
+                    else
+                    {
+                        _listings[r.Id] = new PropertyItemViewModel
+                        {
+                            Id = r.Id,
+                            Title = r.Title,
+                            Description = r.Description,
+                            PropertyType = r.PropertyType,
+                            ListingType = r.ListingType,
+                            Price = r.Price,
+                            Area = r.Area,
+                            Beds = r.Beds,
+                            Baths = r.Baths,
+                            City = r.City,
+                            District = r.District,
+                            Ward = r.Ward,
+                            Address = r.Address,
+                            Status = r.Status,
+                            PackageCode = r.PackageCode,
+                            SellerId = r.SellerId,
+                            SellerName = r.SellerName,
+                            SellerAvatar = r.SellerAvatar ?? "/images/avatar-1.png",
+                            Images = r.Images.Count > 0 ? r.Images : new List<string> { "/images/p1.png" },
+                            CreatedAt = r.CreatedAt,
+                            RejectReason = r.RejectReason,
+                            RowVersion = r.RowVersion,
+                            Histories = new List<PropertyHistoryItemViewModel>
+                            {
+                                new() { ActionType = "Create", ActionDate = r.CreatedAt.AddMinutes(-5), Actor = r.SellerName, Note = "Người bán khởi tạo tin đăng" },
+                                new() { ActionType = "Submit", ActionDate = r.CreatedAt, Actor = r.SellerName, Note = "Gửi vào hàng đợi duyệt F03" }
+                            }
+                        };
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void SaveToSharedFile()
+    {
+        lock (SyncLock)
+        {
+            try
+            {
+                var records = _listings.Values.Select(item => new SharedPropertyRecord
+                {
+                    Id = item.Id,
+                    Title = item.Title,
+                    Description = item.Description,
+                    PropertyType = item.PropertyType,
+                    ListingType = item.ListingType,
+                    Price = item.Price,
+                    Area = item.Area,
+                    Beds = item.Beds,
+                    Baths = item.Baths,
+                    City = item.City,
+                    District = item.District,
+                    Ward = item.Ward,
+                    Address = item.Address,
+                    Status = item.Status,
+                    PackageCode = item.PackageCode,
+                    SellerId = item.SellerId,
+                    SellerName = item.SellerName,
+                    SellerAvatar = item.SellerAvatar,
+                    Images = item.Images,
+                    CreatedAt = item.CreatedAt,
+                    RejectReason = item.RejectReason,
+                    RowVersion = item.RowVersion
+                }).ToList();
+
+                var json = System.Text.Json.JsonSerializer.Serialize(records, JsonOptions);
+                File.WriteAllText(SharedFilePath, json);
+            }
+            catch { }
+        }
     }
 
     public Task<DashboardViewModel> GetDashboardDataAsync()
@@ -65,9 +172,10 @@ public sealed class MockAdminListingService : IAdminListingService
 
     public Task<ModerationQueueViewModel> GetModerationQueueAsync(string? selectedId = null)
     {
+        SyncFromSharedFile();
         var pending = _listings.Values
             .Where(p => p.Status == ListingStatus.PendingModeration)
-            .OrderByDescending(p => p.CreatedAt)
+            .OrderBy(p => p.CreatedAt) // Strictly FIFO: oldest pending listings first
             .ToList();
 
         PropertyItemViewModel? selected = null;
@@ -91,6 +199,7 @@ public sealed class MockAdminListingService : IAdminListingService
 
     public Task<PropertyListViewModel> GetPropertiesAsync(string? filterStatus = null, string? searchTerm = null)
     {
+        SyncFromSharedFile();
         var query = _listings.Values.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(filterStatus) && !string.Equals(filterStatus, "all", StringComparison.OrdinalIgnoreCase))
@@ -127,6 +236,7 @@ public sealed class MockAdminListingService : IAdminListingService
 
     public Task<PropertyItemViewModel?> GetPropertyByIdAsync(string id)
     {
+        SyncFromSharedFile();
         _listings.TryGetValue(id, out var found);
         return Task.FromResult(found);
     }
@@ -137,6 +247,14 @@ public sealed class MockAdminListingService : IAdminListingService
         {
             item.Status = ListingStatus.Published;
             item.RejectReason = null;
+            item.Histories.Add(new PropertyHistoryItemViewModel
+            {
+                ActionType = "Approve",
+                ActionDate = DateTimeOffset.UtcNow,
+                Actor = "Kiểm duyệt viên (Moderator)",
+                Note = "Tin đăng đã được duyệt và xuất bản công khai"
+            });
+            SaveToSharedFile();
             return Task.FromResult(true);
         }
         return Task.FromResult(false);
@@ -148,6 +266,14 @@ public sealed class MockAdminListingService : IAdminListingService
         {
             item.Status = ListingStatus.Rejected;
             item.RejectReason = reason;
+            item.Histories.Add(new PropertyHistoryItemViewModel
+            {
+                ActionType = "Reject",
+                ActionDate = DateTimeOffset.UtcNow,
+                Actor = "Kiểm duyệt viên (Moderator)",
+                Note = $"Từ chối duyệt: {reason}"
+            });
+            SaveToSharedFile();
             return Task.FromResult(true);
         }
         return Task.FromResult(false);
@@ -483,7 +609,42 @@ public sealed class MockAdminListingService : IAdminListingService
 
         foreach (var seed in seeds)
         {
+            if (seed.Histories.Count == 0)
+            {
+                seed.Histories = new List<PropertyHistoryItemViewModel>
+                {
+                    new() { ActionType = "Create", ActionDate = seed.CreatedAt.AddHours(-1), Actor = seed.SellerName, Note = "Khởi tạo tin đăng bản nháp" },
+                    new() { ActionType = "Submit", ActionDate = seed.CreatedAt, Actor = seed.SellerName, Note = "Gửi yêu cầu kiểm duyệt hệ thống" }
+                };
+            }
             _listings[seed.Id] = seed;
         }
     }
+}
+
+public sealed class SharedPropertyRecord
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string PropertyType { get; set; } = "Apartment";
+    public string ListingType { get; set; } = "sale";
+    public decimal Price { get; set; }
+    public decimal Area { get; set; }
+    public int Beds { get; set; }
+    public int Baths { get; set; }
+    public int Carports { get; set; } = 1;
+    public string City { get; set; } = string.Empty;
+    public string District { get; set; } = string.Empty;
+    public string? Ward { get; set; }
+    public string Address { get; set; } = string.Empty;
+    public ListingStatus Status { get; set; } = ListingStatus.Draft;
+    public string PackageCode { get; set; } = "Standard";
+    public string SellerId { get; set; } = "seller-1";
+    public string SellerName { get; set; } = "Nguyễn Văn Minh";
+    public string? SellerAvatar { get; set; }
+    public List<string> Images { get; set; } = new();
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string? RejectReason { get; set; }
+    public string RowVersion { get; set; } = "AAAAAA==";
 }

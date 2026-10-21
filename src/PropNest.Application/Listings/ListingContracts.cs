@@ -52,8 +52,9 @@ public sealed record ListingDto(
     DateTimeOffset? EndDate,
     byte[] RowVersion,
     string? OwnerName = null,
-    string? OwnerPhoneNumber = null,
     string? OwnerEmail = null,
+    string? OwnerPhoneNumber = null,
+    DateTimeOffset? CreatedAt = null,
     IReadOnlyList<string>? Images = null
     );
 
@@ -91,6 +92,10 @@ public interface IListingRepository
     Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
 
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
 

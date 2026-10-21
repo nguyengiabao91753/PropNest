@@ -23,6 +23,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             command.Ward,
             command.Address);
 
+        listing.SubmitForModeration();
+
         await listingRepository.AddAsync(listing, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -55,8 +57,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
 
     public async Task<ListingCollectionDto> GetPendingModerationAsync(CancellationToken cancellationToken = default)
     {
-        var listings = await listingRepository.GetPendingModerationAsync(cancellationToken);
-        var items = listings.Select(ToDto).ToList();
+        var items = await listingRepository.GetPendingModerationWithOwnersAsync(cancellationToken);
         return new ListingCollectionDto(items.Count, items);
     }
 
@@ -157,9 +158,10 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     listing.EndDate,
     listing.RowVersion,
     owner?.FullName,
-    owner?.PhoneNumber,
-    owner?.Email,
-    listing.Images?.Select(img => img.Url).ToList() ?? new List<string>());
+        owner?.Email,
+        owner?.PhoneNumber,
+        listing.CreatedAt,
+    listing.Images.Select(img => img.Url).ToList());
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {

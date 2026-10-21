@@ -24,11 +24,38 @@ public class ModerationController : Controller
         return View(model);
     }
 
+    [HttpGet("/api/v1/moderation/listings")]
+    public async Task<IActionResult> GetPendingListingsApi()
+    {
+        var model = await _listingService.GetModerationQueueAsync();
+        return Json(new { total = model.TotalPending, items = model.PendingProperties });
+    }
+
+    [HttpGet("/api/v1/moderation/listings/{id}")]
+    public async Task<IActionResult> GetListingDetailApi(string id)
+    {
+        var item = await _listingService.GetPropertyByIdAsync(id);
+        return item is null
+            ? NotFound(new { success = false, message = $"Không tìm thấy tin đăng {id}." })
+            : Json(item);
+    }
+
+    [HttpPost("/api/v1/moderation/listings/{id}/approve")]
     [HttpPost("Approve/{id}")]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Approve(string id)
     {
         var success = await _listingService.ApproveListingAsync(id);
+
+        if (Request.Path.Value?.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) == true
+            || Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            if (success)
+            {
+                return Ok(new { success = true, id, message = $"Tin đăng {id} đã được phê duyệt và xuất bản thành công!" });
+            }
+            return NotFound(new { success = false, message = $"Không tìm thấy tin đăng {id} để phê duyệt." });
+        }
+
         if (success)
         {
             TempData["SuccessMessage"] = $"Tin đăng {id} đã được phê duyệt và xuất bản thành công!";
@@ -39,6 +66,25 @@ public class ModerationController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    public sealed record RejectApiPayload(string? Reason, IReadOnlyList<string>? Reasons, string? ReasonsJson);
+
+    [HttpPost("/api/v1/moderation/listings/{id}/reject")]
+    public async Task<IActionResult> RejectApi(string id, [FromBody] RejectApiPayload? payload)
+    {
+        var reason = payload?.Reason
+            ?? (payload?.Reasons is { Count: > 0 } ? string.Join("; ", payload.Reasons) : null)
+            ?? payload?.ReasonsJson
+            ?? "Không đạt tiêu chuẩn kiểm duyệt";
+
+        var success = await _listingService.RejectListingAsync(id, reason);
+        if (success)
+        {
+            return Ok(new { success = true, id, message = $"Tin đăng {id} đã bị từ chối với lý do: \"{reason}\"" });
+        }
+
+        return NotFound(new { success = false, message = $"Không tìm thấy tin đăng {id} để từ chối." });
     }
 
     [HttpPost("Reject")]
