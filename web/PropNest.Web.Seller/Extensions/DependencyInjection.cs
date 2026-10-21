@@ -20,6 +20,10 @@ namespace PropNest.Web.Seller.Extensions
             services.AddHttpClient<ISellerPropertyService, ApiSellerPropertyService>(client => client.BaseAddress = baseUri)
                     .AddHttpMessageHandler<AuthHeaderHandler>();
 
+            //2. ApiSellerWalletService
+            services.AddHttpClient<ISellerWalletService, ApiSellerWalletService>(client => client.BaseAddress = baseUri)
+                    .AddHttpMessageHandler<AuthHeaderHandler>();
+
             return services;
         }
     }
