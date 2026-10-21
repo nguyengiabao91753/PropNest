@@ -1,110 +1,342 @@
 @model PropNest.Web.Seller.Models.ViewModels.SellerPropertyItemViewModel
 
 @{
-    ViewData["Title"] = $"Chi tiết: {Model.Id}";
-    var histories = ViewData["Histories"] as List<PropNest.Web.Seller.Models.ViewModels.HistoryDeltaViewModel>;
+    ViewData["Title"] = $"Xem trước tin: {Model.Title}";
+    var isRent = string.Equals(Model.ListingType, "rent", StringComparison.OrdinalIgnoreCase);
 }
 
-<div class="mx-auto max-w-5xl space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-neutral-900 transition-colors mb-2">
-                <i data-lucide="arrow-left" class="size-4"></i> Quay lại danh sách
+<div class="mx-auto max-w-7xl px-2 sm:px-4 py-4 md:py-6 space-y-6 pb-20">
+
+    <!-- ================= TOP STATUS & PREVIEW BANNER ================= -->
+    <div class="rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 via-surface to-amber-50/60 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a asp-action="Index"
+               class="grid size-9 place-items-center rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary transition-colors shadow-2xs"
+               title="Quay lại danh sách tin đăng">
+                <i data-lucide="arrow-left" class="size-4"></i>
             </a>
-            <h1 class="font-display text-2xl font-bold text-neutral-900">@Model.Title</h1>
-            <p class="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <i data-lucide="map-pin" class="size-3.5 text-primary"></i>
-                @Model.FullAddress
-            </p>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="rounded-md bg-neutral-900 text-white text-[10px] font-bold px-2 py-0.5 tracking-wide uppercase">
+                        Xem trước (Preview)
+                    </span>
+                    <span class="font-mono text-xs font-semibold text-muted-foreground">PN-@Model.Id</span>
+                    <partial name="_StatusBadge" model="Model.Status" />
+                    @if (Model.PackageCode == "VIP")
+                    {
+                        <span class="rounded-full bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-2xs">
+                            Gói VIP
+                        </span>
+                    }
+                </div>
+                <p class="text-xs text-muted-foreground mt-1">
+                    Giao diện này mô phỏng chính xác cách khách hàng nhìn thấy tin đăng của bạn trên PropNest.
+                </p>
+            </div>
         </div>
+
         <div class="flex items-center gap-2">
-            <span class="font-mono text-xs font-semibold text-muted-foreground">@Model.Id</span>
-            <partial name="_StatusBadge" model="Model.Status" />
-            @if (Model.PackageCode == "VIP")
-            {
-                <span class="rounded bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5">
-                    Gói VIP
-                </span>
-            }
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-neutral-800 hover:border-primary transition-colors">
-                <i data-lucide="edit-3" class="size-3.5 inline mr-1"></i> Chỉnh sửa
+            <!-- Edit Button -->
+            <a asp-action="Edit" asp-route-id="@Model.Id"
+               class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-neutral-800 hover:border-primary hover:text-primary transition-colors shadow-2xs">
+                <i data-lucide="edit-3" class="size-3.5"></i>
+                <span>Chỉnh sửa</span>
             </a>
+
+            <!-- Toggle Hide Button -->
+            @if (Model.Status == PropNest.Domain.Listings.ListingStatus.Published || Model.Status == PropNest.Domain.Listings.ListingStatus.Hidden)
+            {
+                <form asp-action="ToggleHide" asp-route-id="@Model.Id" method="post" class="inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-neutral-800 hover:border-primary transition-colors shadow-2xs">
+                        <i data-lucide="@(Model.Status == PropNest.Domain.Listings.ListingStatus.Published ? "eye-off" : "eye")" class="size-3.5 text-amber-600"></i>
+                        <span>@(Model.Status == PropNest.Domain.Listings.ListingStatus.Published ? "Tạm ẩn tin" : "Bật hiển thị")</span>
+                    </button>
+                </form>
+            }
+
+            <!-- Submit Button -->
+            @if (Model.Status == PropNest.Domain.Listings.ListingStatus.Draft || Model.Status == PropNest.Domain.Listings.ListingStatus.Rejected)
+            {
+                <form asp-action="Submit" asp-route-id="@Model.Id" method="post" class="inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors shadow-2xs">
+                        <i data-lucide="send" class="size-3.5"></i>
+                        <span>Gửi duyệt ngay</span>
+                    </button>
+                </form>
+            }
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(Model.RejectReason) && Model.Status == ListingStatus.Rejected)
+    <!-- Feedback Notice if Rejected -->
+    @if (!string.IsNullOrWhiteSpace(Model.RejectReason) && Model.Status == PropNest.Domain.Listings.ListingStatus.Rejected)
     {
-        <div class="rounded-2xl border border-rose-300 bg-rose-50 p-5 text-xs text-rose-800 space-y-2">
+        <div class="rounded-2xl border border-rose-300 bg-rose-50 p-4 sm:p-5 text-xs text-rose-800 space-y-1.5 shadow-xs">
             <div class="flex items-center gap-2 font-bold text-sm text-destructive">
-                <i data-lucide="alert-triangle" class="size-5"></i>
-                <span>Phản hồi kiểm duyệt: Tin đăng bị từ chối phê duyệt</span>
+                <i data-lucide="alert-triangle" class="size-4 shrink-0"></i>
+                <span>Lý do kiểm duyệt viên từ chối tin:</span>
             </div>
-            <p class="leading-relaxed">
-                <strong>Lý do từ chối:</strong> @Model.RejectReason
-            </p>
-            <div class="pt-1">
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 font-semibold text-destructive underline hover:text-red-800">
-                    Sửa lại tin đăng để gửi duyệt lại <i data-lucide="arrow-right" class="size-3.5"></i>
-                </a>
-            </div>
+            <p class="leading-relaxed pl-6">@Model.RejectReason</p>
         </div>
     }
 
-    <!-- Main Card -->
-    <div class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs space-y-6">
-        <div class="grid gap-6 md:grid-cols-2">
-            <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden border border-border bg-neutral-100">
-                <img src="@Model.PrimaryImage" alt="@Model.Title" class="size-full object-cover" />
-                <span class="absolute left-3 top-3 bg-black/75 text-white text-xs px-3 py-1 rounded-full font-medium">
-                    @(Model.ListingType == "sale" ? "Cần bán" : "Cho thuê") · @Model.PropertyType
+    <!-- ================= HEADER SECTION: TITLE & BADGES ================= -->
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 pb-4 border-b border-border">
+        <div class="space-y-2 max-w-4xl">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold">
+                    @(isRent ? "Cho thuê" : "Cần bán")
                 </span>
-            </div>
-
-            <div class="flex flex-col justify-between space-y-4">
-                <div>
-                    <span class="text-3xl font-extrabold text-primary font-display block">
-                        @FormatHelper.FormatPrice(Model.Price, Model.ListingType)
+                <span class="inline-flex items-center rounded-full bg-neutral-100 text-neutral-800 px-3 py-1 text-xs font-semibold">
+                    @Model.PropertyType
+                </span>
+                @if (Model.PackageCode == "VIP")
+                {
+                    <span class="inline-flex items-center rounded-full bg-amber-500 text-white px-2.5 py-0.5 text-xs font-bold shadow-2xs">
+                        VIP Nổi Bật
                     </span>
-                    <span class="text-xs text-muted-foreground block mt-1">Gói hiển thị: <strong>@Model.PackageCode</strong></span>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
-                    <div>
-                        <strong class="text-sm block text-neutral-900">@Model.Beds</strong>
-                        <span class="text-muted-foreground">Phòng ngủ</span>
-                    </div>
-                    <div>
-                        <strong class="text-sm block text-neutral-900">@Model.Baths</strong>
-                        <span class="text-muted-foreground">Phòng tắm</span>
-                    </div>
-                    <div>
-                        <strong class="text-sm block text-neutral-900">@FormatHelper.FormatArea(Model.Area)</strong>
-                        <span class="text-muted-foreground">Diện tích</span>
-                    </div>
-                </div>
-
-                <div class="p-4 rounded-xl border border-border bg-surface/50 text-xs space-y-1.5">
-                    <p><strong>Ngày tạo:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
-                    <p><strong>Lượt xem:</strong> @Model.Views | <strong>Khách liên hệ:</strong> @Model.Inquiries</p>
-                    <p><strong>RowVersion (Concurrency):</strong> <code class="font-mono text-[11px] bg-neutral-200 px-1.5 py-0.5 rounded">@Model.RowVersion</code></p>
-                </div>
+                }
             </div>
-        </div>
 
-        <div class="border-t border-border pt-4">
-            <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-2">Mô tả bất động sản</h4>
-            <p class="text-xs text-neutral-800 leading-relaxed bg-surface/50 p-4 rounded-xl border border-border/60">
-                @Model.Description
+            <h1 class="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-neutral-900 leading-snug">
+                @Model.Title
+            </h1>
+
+            <p class="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="size-4 text-primary shrink-0"></i>
+                <span>@Model.FullAddress</span>
             </p>
         </div>
+    </div>
 
-        <div class="border-t border-border pt-4 flex items-center justify-between">
-            <span class="text-xs text-muted-foreground">
-                Xem toàn bộ lịch sử các lần sửa đổi giá và nội dung:
-            </span>
-            <a asp-action="History" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline">
-                <i data-lucide="history" class="size-4"></i> Xem lịch sử Delta Engine (F04)
-            </a>
+    <!-- ================= HERO SLIDESHOW GALLERY ================= -->
+    <section class="space-y-3">
+        <!-- Main Big Image Container -->
+        <div id="slideshowContainer" class="group relative aspect-[16/10] sm:aspect-[16/9] md:h-[460px] w-full overflow-hidden rounded-2xl border border-border bg-neutral-900 shadow-md flex items-center justify-center">
+            @if (!string.IsNullOrEmpty(Model.PrimaryImage))
+            {
+                <img id="mainHeroImg" src="@Model.PrimaryImage" alt="@Model.Title"
+                     class="size-full object-cover transition-opacity duration-300 ease-in-out opacity-100" />
+            }
+            else
+            {
+                <div class="size-full flex flex-col items-center justify-center text-neutral-400 space-y-2 bg-neutral-900">
+                    <i data-lucide="image-off" class="size-12 text-neutral-500"></i>
+                    <span class="text-xs font-medium">Tin đăng chưa có hình ảnh</span>
+                </div>
+            }
+
+            @if (Model.Images.Count > 1)
+            {
+                <!-- Prev / Next Navigation Arrows -->
+                <button type="button" onclick="prevHeroImage()"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md opacity-80 group-hover:opacity-100 hover:bg-black/70 hover:scale-105 transition-all shadow-md"
+                        title="Ảnh trước">
+                    <i data-lucide="chevron-left" class="size-5"></i>
+                </button>
+                <button type="button" onclick="nextHeroImage()"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md opacity-80 group-hover:opacity-100 hover:bg-black/70 hover:scale-105 transition-all shadow-md"
+                        title="Ảnh tiếp theo">
+                    <i data-lucide="chevron-right" class="size-5"></i>
+                </button>
+            }
+
+            <div class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md shadow-md">
+                <i data-lucide="image" class="size-3.5 text-amber-400"></i>
+                <span id="imageCounter">1 / @(Model.Images.Count > 0 ? Model.Images.Count : 1)</span>
+            </div>
+        </div>
+
+        <!-- Thumbnail Selector Row -->
+        @if (Model.Images.Count > 1)
+        {
+            <div class="flex items-center gap-2.5 overflow-x-auto pb-1" role="group" aria-label="Thư viện ảnh">
+                @for (var i = 0; i < Model.Images.Count; i++)
+                {
+                    var img = Model.Images[i];
+                    var idx = i;
+                    <button type="button" onclick="selectHeroImage('@img', @idx)"
+                            class="hero-thumb relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 @(i == 0 ? "border-primary ring-2 ring-primary/30 opacity-100 shadow-sm" : "border-border opacity-70 hover:scale-105")"
+                            data-thumb-idx="@idx">
+                        <img src="@img" alt="Ảnh @(idx+1)" class="size-full object-cover" />
+                    </button>
+                }
+            </div>
+        }
+    </section>
+
+    <!-- ================= PRICE & QUICK SPECS BANNER ================= -->
+    <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center justify-between sm:justify-start gap-8 divide-x divide-border/80">
+            <div>
+                <span class="block text-xs text-muted-foreground font-medium mb-1">
+                    @(isRent ? "Giá thuê niêm yết" : "Giá bán niêm yết")
+                </span>
+                <span class="font-display text-2xl sm:text-3xl font-extrabold text-primary">
+                    @FormatHelper.FormatPrice(Model.Price, Model.ListingType)
+                </span>
+            </div>
+            <div class="pl-8">
+                <span class="block text-xs text-muted-foreground font-medium mb-1">Diện tích sử dụng</span>
+                <span class="font-display text-2xl sm:text-3xl font-bold text-neutral-900">
+                    @FormatHelper.FormatArea(Model.Area)
+                </span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs text-muted-foreground bg-surface px-4 py-2.5 rounded-xl border border-border/60">
+            <span class="flex items-center gap-1.5"><i data-lucide="eye" class="size-4 text-primary"></i> <strong>@Model.Views</strong> lượt xem</span>
+            <span>•</span>
+            <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="size-4 text-primary"></i> Đăng ngày <strong>@Model.CreatedAt.ToString("dd/MM/yyyy")</strong></span>
         </div>
     </div>
+
+    <!-- ================= 2-COLUMN BODY CONTENT ================= -->
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+        
+        <!-- Cột Trái: Specs & Mô tả -->
+        <div class="space-y-8 min-w-0">
+            <!-- 1. Thông số tổng quan -->
+            <section class="space-y-3">
+                <h2 class="font-display text-xl font-bold text-neutral-900">
+                    Tổng quan bất động sản
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
+                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                            <i data-lucide="ruler" class="size-4"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-muted-foreground truncate">Diện tích</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@FormatHelper.FormatArea(Model.Area)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
+                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                            <i data-lucide="home" class="size-4"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-muted-foreground truncate">Loại hình</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@Model.PropertyType</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
+                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                            <i data-lucide="tag" class="size-4"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-muted-foreground truncate">Hình thức</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@(isRent ? "Cho thuê" : "Cần bán")</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-2xs">
+                        <span class="grid size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                            <i data-lucide="layers" class="size-4"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-muted-foreground truncate">Gói tin</p>
+                            <p class="text-xs font-bold text-neutral-900 truncate">@Model.PackageCode</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Mô tả chi tiết -->
+            <section class="space-y-3">
+                <h2 class="font-display text-xl font-bold text-neutral-900">
+                    Mô tả chi tiết
+                </h2>
+                <div class="rounded-2xl border border-border bg-card p-6 shadow-xs leading-relaxed text-sm text-neutral-800 whitespace-pre-line">
+                    @(!string.IsNullOrWhiteSpace(Model.Description) ? Model.Description : "Chưa có mô tả chi tiết cho bất động sản này.")
+                </div>
+            </section>
+        </div>
+
+        <!-- Cột Phải: Thông tin Người bán & Quản trị tin -->
+        <aside class="space-y-6">
+            <!-- Thẻ Người bán -->
+            <div class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+                <h3 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Thông tin Người bán</h3>
+                <div class="flex items-center gap-3">
+                    <div class="grid size-12 place-items-center rounded-full bg-primary/15 text-primary text-base font-bold shrink-0">
+                        @Model.SellerName.FirstOrDefault()
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-sm text-neutral-900 truncate">@Model.SellerName</h4>
+                        <p class="text-xs text-muted-foreground">Chủ sở hữu tin đăng</p>
+                    </div>
+                </div>
+                <div class="border-t border-border pt-3 space-y-2 text-xs">
+                    <p class="flex items-center justify-between text-muted-foreground">
+                        <span>Trạng thái tin:</span>
+                        <partial name="_StatusBadge" model="Model.Status" />
+                    </p>
+                    <p class="flex items-center justify-between text-muted-foreground">
+                        <span>Mã định danh:</span>
+                        <span class="font-mono font-semibold text-neutral-800">PN-@Model.Id</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Thẻ Trợ giúp -->
+            <div class="rounded-2xl border border-border bg-surface/70 p-5 text-xs text-muted-foreground space-y-2">
+                <p class="font-bold text-neutral-900 flex items-center gap-1.5">
+                    <i data-lucide="info" class="size-4 text-primary"></i> Lưu ý dành cho Seller
+                </p>
+                <p class="leading-relaxed">
+                    Đây là chế độ xem trước nội bộ của Người bán. Tin đăng chỉ xuất hiện công khai trên trang Tìm kiếm của Khách hàng khi có trạng thái <strong>Đang hiển thị (Published)</strong>.
+                </p>
+            </div>
+        </aside>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        const imageUrls = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Images));
+        let currentIdx = 0;
+
+        function updateHeroDisplay(idx) {
+            if (!imageUrls || imageUrls.length === 0) return;
+            currentIdx = (idx + imageUrls.length) % imageUrls.length;
+            const heroImg = document.getElementById('mainHeroImg');
+            const counter = document.getElementById('imageCounter');
+
+            if (heroImg) {
+                heroImg.style.opacity = '0.5';
+                setTimeout(() => {
+                    heroImg.src = imageUrls[currentIdx];
+                    heroImg.style.opacity = '1';
+                }, 100);
+            }
+
+            if (counter) {
+                counter.innerText = `${currentIdx + 1} / ${imageUrls.length}`;
+            }
+
+            // Update active state on thumbnails
+            document.querySelectorAll('.hero-thumb').forEach((thumb, i) => {
+                if (i === currentIdx) {
+                    thumb.classList.add('border-primary', 'ring-2', 'ring-primary/30', 'opacity-100');
+                    thumb.classList.remove('border-border', 'opacity-70');
+                } else {
+                    thumb.classList.remove('border-primary', 'ring-2', 'ring-primary/30', 'opacity-100');
+                    thumb.classList.add('border-border', 'opacity-70');
+                }
+            });
+        }
+
+        function prevHeroImage() {
+            updateHeroDisplay(currentIdx - 1);
+        }
+
+        function nextHeroImage() {
+            updateHeroDisplay(currentIdx + 1);
+        }
+
+        function selectHeroImage(url, idx) {
+            updateHeroDisplay(idx);
+        }
+    </script>
+}

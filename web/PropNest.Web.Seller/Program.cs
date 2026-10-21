@@ -1,12 +1,11 @@
+using PropNest.Web.Seller.Extensions;
 using PropNest.Web.Seller.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-
-// Register PropNest Seller Service (BFF / Service Layer)
-builder.Services.AddSingleton<ISellerPropertyService, MockSellerPropertyService>();
+builder.Services.AddBackendApiClients(builder.Configuration);
 
 var app = builder.Build();
 
