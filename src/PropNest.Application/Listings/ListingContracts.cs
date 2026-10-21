@@ -52,9 +52,9 @@ public sealed record ListingDto(
     DateTimeOffset? EndDate,
     byte[] RowVersion,
     string? OwnerName = null,
-    string? OwnerPhoneNumber = null,
     string? OwnerEmail = null,
-    DateTimeOffset createdAt = default,
+    string? OwnerPhoneNumber = null,
+    DateTimeOffset? CreatedAt = null,
     IReadOnlyList<string>? Images = null
     );
 
