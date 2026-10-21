@@ -11,6 +11,14 @@ public sealed class AmeRecommendationViewModel
     public bool ImageQualityPassed { get; set; } = true;
 }
 
+public sealed class PropertyHistoryItemViewModel
+{
+    public string ActionType { get; set; } = "Submit";
+    public DateTimeOffset ActionDate { get; set; } = DateTimeOffset.UtcNow;
+    public string Actor { get; set; } = "Người bán";
+    public string? Note { get; set; }
+}
+
 public sealed class PropertyItemViewModel
 {
     public string Id { get; set; } = string.Empty;
@@ -31,7 +39,10 @@ public sealed class PropertyItemViewModel
     public string SellerId { get; set; } = string.Empty;
     public string SellerName { get; set; } = string.Empty;
     public string? SellerAvatar { get; set; }
+    public string SellerEmail { get; set; } = "nguyenvanminh@gmail.com";
+    public string SellerPhone { get; set; } = "0908 123 456";
     public List<string> Images { get; set; } = new();
+    public List<PropertyHistoryItemViewModel> Histories { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? RejectReason { get; set; }
     public string RowVersion { get; set; } = "AAAAAA==";

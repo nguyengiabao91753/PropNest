@@ -1,215 +1,779 @@
 @model PropNest.Web.Admin.Models.ViewModels.ModerationQueueViewModel
 
 @{
-    ViewData["Title"] = "Duyệt tin đăng (F03)";
+    ViewData["Title"] = "Hàng đợi kiểm duyệt (Moderation Queue)";
     var selected = Model.SelectedProperty;
 }
 
-<div class="mx-auto max-w-[1400px] space-y-6">
-    <div>
-        <p class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Kiểm duyệt nội dung</p>
-        <h1 class="font-display text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Duyệt Tin Đăng (F03)</h1>
-        <p class="mt-1 text-xs text-muted-foreground">
-            Thẩm định thông tin người bán đăng tải trước khi hiển thị công khai trên trang tìm kiếm.
-        </p>
+<div class="mx-auto max-w-[1500px] space-y-6">
+    <!-- Page Header & Auto-Refresh Indicator -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Kiểm duyệt nội dung</span>
+                
+            </div>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Duyệt Tin Đăng (Moderation Queue)</h1>
+            <p class="mt-1 text-xs text-muted-foreground">
+                Thẩm định tin đăng người bán theo thứ tự gửi duyệt. Click vào tin để xem đầy đủ nội dung, ảnh và lịch sử.
+            </p>
+        </div>
+
+        <!-- Auto-Refresh Controls -->
+        <div class="flex items-center gap-2.5 self-start sm:self-auto bg-card border border-border rounded-xl px-3 py-2 shadow-2xs">
+            <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <i data-lucide="refresh-cw" id="refreshIcon" class="size-3.5 text-primary"></i>
+                <span class="text-[11px]">Tự làm mới:</span>
+                <span id="refreshTimerText" class="font-mono font-semibold text-neutral-900 text-[11px]">15s</span>
+            </div>
+            <button type="button" onclick="triggerManualRefresh()"
+                    class="rounded-lg bg-surface hover:bg-muted border border-border px-2 py-1 text-[11px] font-medium text-neutral-800 transition-colors flex items-center gap-1">
+                <i data-lucide="rotate-cw" class="size-3"></i> Làm mới ngay
+            </button>
+        </div>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-[1.1fr_1.3fr]">
-        <!-- Left Column: Pending Queue List -->
+    <!-- Main 2-Column Workplace -->
+    <div class="grid gap-6 lg:grid-cols-[1.15fr_1.35fr] items-start">
+        <!-- Left Column: Pending Queue List (FIFO) -->
         <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
             <div class="border-b border-border p-4 flex items-center justify-between bg-surface/50">
-                <span class="font-semibold text-sm text-neutral-900">Danh sách tin cần duyệt</span>
-                <span class="rounded-full bg-amber-500/20 text-amber-800 font-bold px-2.5 py-0.5 text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="font-semibold text-sm text-neutral-900">Danh sách tin cần duyệt</span>
+                    <span class="text-[11px] text-muted-foreground">(Ưu tiên tin gửi trước)</span>
+                </div>
+                <span id="queueBadgeCount" class="rounded-full bg-amber-500/20 text-amber-800 font-bold px-2.5 py-0.5 text-xs">
                     @Model.TotalPending tin
                 </span>
             </div>
 
-            @if (Model.PendingProperties.Count == 0)
-            {
-                <div class="p-12 text-center text-muted-foreground">
-                    <i data-lucide="check-circle-2" class="size-10 text-emerald-500 mx-auto mb-2"></i>
-                    <p class="font-semibold text-sm text-neutral-900">Hàng đợi kiểm duyệt trống</p>
-                    <p class="text-xs mt-1">Tất cả các tin đăng mới đã được xử lý xong.</p>
+            <!-- Empty Queue State -->
+            <div id="emptyQueueState" class="@(Model.PendingProperties.Count == 0 ? "" : "hidden") p-12 text-center text-muted-foreground">
+                <div class="size-14 rounded-full bg-emerald-500/10 text-emerald-600 grid place-items-center mx-auto mb-3">
+                    <i data-lucide="check-check" class="size-7"></i>
                 </div>
-            }
-            else
-            {
-                <div class="divide-y divide-border max-h-[700px] overflow-y-auto">
-                    @foreach (var p in Model.PendingProperties)
-                    {
-                        var isSelected = selected?.Id == p.Id;
-                        <a asp-action="Index" asp-route-id="@p.Id"
-                           class="flex w-full items-center gap-4 p-4 text-left transition hover:bg-surface/60 @(isSelected ? "bg-brand-soft/50 border-l-4 border-l-primary" : "")">
-                            <div class="relative size-16 rounded-xl overflow-hidden shrink-0 border border-border bg-neutral-100">
-                                <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
+                <p class="font-semibold text-sm text-neutral-900">Hàng đợi kiểm duyệt đã hết tin</p>
+                <p class="text-xs mt-1 text-muted-foreground">Tất cả các tin đăng mới đã được duyệt hoặc từ chối thành công.</p>
+            </div>
+
+            <!-- Queue Items List -->
+            <div id="queueListContainer" class="divide-y divide-border max-h-[750px] overflow-y-auto">
+                @for (int i = 0; i < Model.PendingProperties.Count; i++)
+                {
+                    var p = Model.PendingProperties[i];
+                    var isSelected = selected?.Id == p.Id;
+                    var queueIndex = i + 1;
+
+                    <div id="queue-item-@p.Id" data-listing-id="@p.Id"
+                         onclick="selectListing('@p.Id')"
+                         class="queue-card group relative p-4 transition cursor-pointer hover:bg-surface/70 @(isSelected ? "bg-brand-soft/40 border-l-4 border-l-primary" : "")">
+                        <div class="flex items-start gap-3.5">
+                            <!-- FIFO Priority Number & Thumbnail -->
+                            <div class="relative size-20 rounded-xl overflow-hidden shrink-0 border border-border bg-neutral-100">
+                                <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <span class="absolute top-1 left-1 bg-black/70 text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded">
+                                    #@queueIndex
+                                </span>
                             </div>
+
+                            <!-- Content Info -->
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-2 mb-1">
+                                <div class="flex items-center gap-2 mb-1 flex-wrap">
                                     <span class="font-mono text-[11px] text-muted-foreground font-semibold">@p.Id</span>
-                                    <partial name="_StatusBadge" model="p.Status" />
+                                    <span class="rounded-full bg-amber-500/15 text-amber-800 font-semibold px-2 py-0.2 text-[10px]">
+                                        Chờ duyệt
+                                    </span>
                                     @if (p.PackageCode == "VIP")
                                     {
                                         <span class="rounded bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2">
                                             VIP
                                         </span>
                                     }
+                                    <span class="text-[10px] text-muted-foreground ml-auto">
+                                        @p.CreatedAt.ToString("HH:mm dd/MM")
+                                    </span>
                                 </div>
-                                <p class="truncate font-semibold text-sm text-neutral-900">@p.Title</p>
-                                <p class="text-xs text-muted-foreground truncate">
-                                    @p.FormattedLocation · @p.SellerName
+
+                                <h3 class="truncate font-semibold text-sm text-neutral-900 group-hover:text-primary transition-colors">
+                                    @p.Title
+                                </h3>
+
+                                <p class="text-xs text-muted-foreground truncate mt-0.5">
+                                    📍 @p.FormattedLocation · @p.PropertyType
                                 </p>
-                                <p class="text-xs font-bold text-primary mt-1 font-display">
-                                    @FormatHelper.FormatPrice(p.Price, p.ListingType)
-                                </p>
+
+                                <div class="flex items-center justify-between mt-2 pt-1 border-t border-border/40">
+                                    <!-- Price -->
+                                    <span class="text-xs font-bold text-primary font-display">
+                                        @FormatHelper.FormatPrice(p.Price, p.ListingType)
+                                    </span>
+
+                                    <!-- Owner Info -->
+                                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <i data-lucide="user" class="size-3.5 text-neutral-500"></i>
+                                        <span class="font-medium text-neutral-800 text-[11px] truncate max-w-[110px]" title="@p.SellerName">
+                                            @p.SellerName
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons on Each Item -->
+                                <div class="flex items-center gap-2 mt-2.5 pt-2 border-t border-dashed border-border/60">
+                                    <button type="button" onclick="handleApproveClick('@p.Id', event)"
+                                            class="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-[11px] py-1.5 px-3 rounded-lg shadow-2xs transition-all">
+                                        <i data-lucide="check" class="size-3.5"></i> Duyệt
+                                    </button>
+                                    <button type="button" onclick="handleRejectClick('@p.Id', '@p.Title', event)"
+                                            class="flex-1 flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-semibold text-[11px] py-1.5 px-3 rounded-lg transition-all">
+                                        <i data-lucide="x" class="size-3.5"></i> Từ chối
+                                    </button>
+                                </div>
                             </div>
-                        </a>
-                    }
-                </div>
-            }
+                        </div>
+                    </div>
+                }
+            </div>
         </section>
 
-        <!-- Right Column: Active Review Inspector -->
-        @if (selected != null)
-        {
-            <section class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6">
-                <!-- Cover Image & Listing Type Badge -->
-                <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-border bg-neutral-100">
-                    <img src="@selected.PrimaryImage" alt="@selected.Title" class="size-full object-cover" />
-                    <span class="absolute left-3 top-3 bg-black/75 backdrop-blur-xs text-white text-xs px-3 py-1 rounded-full font-medium">
-                        @(selected.ListingType == "sale" ? "Cần bán" : "Cho thuê") · @selected.PropertyType
-                    </span>
+        <!-- Right Column: Detail Panel (Khung chi tiết thẩm định) -->
+        <section id="detailPanelSection" class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6 @(selected != null ? "" : "hidden")">
+            @if (selected != null)
+            {
+                <!-- Cover Image & Badge -->
+                <div class="space-y-3">
+                    <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-border bg-neutral-100">
+                        <img id="detailMainImage" src="@selected.PrimaryImage" alt="@selected.Title" class="size-full object-cover transition-opacity duration-200" />
+                        <span id="detailBadgeType" class="absolute left-3 top-3 bg-black/75 backdrop-blur-xs text-white text-xs px-3 py-1 rounded-full font-medium">
+                            @(selected.ListingType == "sale" ? "Cần bán" : "Cho thuê") · @selected.PropertyType
+                        </span>
+                    </div>
+
+                    <!-- Image Thumbnails Gallery -->
+                    <div id="detailThumbnailsContainer" class="flex items-center gap-2 overflow-x-auto pb-1">
+                        @foreach (var img in selected.Images)
+                        {
+                            <button type="button" onclick="setDetailMainImage('@img')"
+                                    class="relative size-14 rounded-lg overflow-hidden shrink-0 border-2 border-border hover:border-primary transition-colors focus:border-primary">
+                                <img src="@img" class="size-full object-cover" />
+                            </button>
+                        }
+                    </div>
                 </div>
 
-                <!-- Title, Address & Price -->
+                <!-- Title, Full Address & Price -->
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <span class="font-mono text-xs text-muted-foreground font-semibold block">@selected.Id</span>
-                        <h2 class="font-display text-2xl font-bold mt-1 text-neutral-900">@selected.Title</h2>
-                        <p class="text-xs text-muted-foreground mt-1">
-                            📍 @selected.FullAddress
+                        <div class="flex items-center gap-2">
+                            <span id="detailId" class="font-mono text-xs text-muted-foreground font-semibold">@selected.Id</span>
+                            <span id="detailPackageBadge" class="rounded bg-amber-500/20 text-amber-800 text-[10px] font-bold px-2 py-0.5">
+                                @selected.PackageCode
+                            </span>
+                        </div>
+                        <h2 id="detailTitle" class="font-display text-xl sm:text-2xl font-bold mt-1 text-neutral-900 leading-snug">
+                            @selected.Title
+                        </h2>
+                        <p id="detailAddress" class="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <span>📍 @selected.FullAddress</span>
                         </p>
                     </div>
                     <div class="text-right shrink-0">
-                        <span class="text-2xl font-extrabold text-primary font-display block">
+                        <span id="detailPrice" class="text-2xl font-extrabold text-primary font-display block">
                             @FormatHelper.FormatPrice(selected.Price, selected.ListingType)
                         </span>
-                        <span class="text-xs text-muted-foreground block mt-0.5">Người đăng: @selected.SellerName</span>
+                        <span class="text-[11px] text-muted-foreground block mt-0.5">Giá chào bán / thuê</span>
+                    </div>
+                </div>
+
+                <!-- Owner Information Box -->
+                <div class="rounded-xl border border-border bg-surface/60 p-4 space-y-2">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Thông tin Người đăng (Owner)</p>
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="size-10 rounded-full bg-primary/10 text-primary grid place-items-center font-bold text-sm">
+                                @(string.IsNullOrWhiteSpace(selected.SellerName) ? "O" : selected.SellerName.Substring(0, 1).ToUpper())
+                            </div>
+                            <div>
+                                <p id="detailOwnerName" class="font-semibold text-xs text-neutral-900">@selected.SellerName</p>
+                                <p id="detailOwnerId" class="text-[11px] text-muted-foreground font-mono">ID: @selected.SellerId</p>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-0.5 text-right sm:text-left">
+                            <p id="detailOwnerPhone" class="text-[11px] text-neutral-700">📞 @selected.SellerPhone</p>
+                            <p id="detailOwnerEmail" class="text-[11px] text-muted-foreground">✉️ @selected.SellerEmail</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- 4-Stat Specs Grid -->
                 <div class="grid grid-cols-4 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
                     <div>
-                        <strong class="text-sm block text-neutral-900">@selected.Beds</strong>
-                        <span class="text-muted-foreground">Phòng ngủ</span>
+                        <strong id="detailBeds" class="text-sm block text-neutral-900">@selected.Beds</strong>
+                        <span class="text-muted-foreground text-[11px]">Phòng ngủ</span>
                     </div>
                     <div>
-                        <strong class="text-sm block text-neutral-900">@selected.Baths</strong>
-                        <span class="text-muted-foreground">Phòng tắm</span>
+                        <strong id="detailBaths" class="text-sm block text-neutral-900">@selected.Baths</strong>
+                        <span class="text-muted-foreground text-[11px]">Phòng tắm</span>
                     </div>
                     <div>
-                        <strong class="text-sm block text-neutral-900">@FormatHelper.FormatArea(selected.Area)</strong>
-                        <span class="text-muted-foreground">Diện tích</span>
+                        <strong id="detailArea" class="text-sm block text-neutral-900">@FormatHelper.FormatArea(selected.Area)</strong>
+                        <span class="text-muted-foreground text-[11px]">Diện tích</span>
                     </div>
                     <div>
-                        <strong class="text-sm block text-amber-600 font-bold">@selected.PackageCode</strong>
-                        <span class="text-muted-foreground">Gói hiển thị</span>
+                        <strong id="detailPackage" class="text-sm block text-amber-600 font-bold">@selected.PackageCode</strong>
+                        <span class="text-muted-foreground text-[11px]">Gói dịch vụ</span>
                     </div>
                 </div>
 
                 <!-- Description -->
                 <div>
                     <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-1">Mô tả bất động sản</h4>
-                    <p class="text-xs text-muted-foreground leading-relaxed bg-surface/50 p-3.5 rounded-xl border border-border/60">
+                    <p id="detailDescription" class="text-xs text-neutral-700 leading-relaxed bg-surface/50 p-3.5 rounded-xl border border-border/60 whitespace-pre-line">
                         @selected.Description
                     </p>
                 </div>
 
-                <!-- AME AI Recommendation Widget (F09) -->
-                <div class="rounded-xl border border-primary/30 bg-brand-soft/50 p-4 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-primary flex items-center gap-1.5">
-                            <i data-lucide="bot" class="size-4"></i> AME Auto-Moderation Engine (Tư vấn AI)
-                        </span>
-                        <span class="text-[10px] rounded bg-emerald-500/20 text-emerald-800 font-semibold px-2 py-0.5">
-                            @selected.AmeRecommendation.RecommendationText (@selected.AmeRecommendation.ConfidenceScore% tin cậy)
-                        </span>
-                    </div>
-                    <div class="grid sm:grid-cols-3 gap-2 text-xs text-muted-foreground pt-1">
-                        <div>
-                            <span class="block text-[11px]">Từ khóa nhạy cảm:</span>
-                            <strong class="text-emerald-700 font-medium">@(selected.AmeRecommendation.BadwordsPassed ? "Hợp lệ (Không vi phạm)" : "Cần rà soát")</strong>
-                        </div>
-                        <div>
-                            <span class="block text-[11px]">Benchmark giá:</span>
-                            <strong class="text-emerald-700 font-medium">@selected.AmeRecommendation.PriceBenchmarkText</strong>
-                        </div>
-                        <div>
-                            <span class="block text-[11px]">Chất lượng ảnh:</span>
-                            <strong class="text-emerald-700 font-medium">@(selected.AmeRecommendation.ImageQualityPassed ? "Đạt tiêu chuẩn HD" : "Mờ / Thấp")</strong>
-                        </div>
+                <!-- Listing Change & Moderation History Timeline -->
+                <div>
+                    <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
+                        <i data-lucide="history" class="size-3.5"></i> Lịch sử tin đăng (Audit & History)
+                    </h4>
+                    <div id="detailHistoryContainer" class="rounded-xl border border-border bg-surface/40 p-3.5 space-y-3 max-h-[180px] overflow-y-auto">
+                        @if (selected.Histories != null && selected.Histories.Count > 0)
+                        {
+                            @foreach (var h in selected.Histories)
+                            {
+                                <div class="flex items-start gap-2.5 text-xs">
+                                    <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-semibold text-neutral-900">@h.ActionType</span>
+                                            <span class="text-[10px] text-muted-foreground">@h.ActionDate.ToString("HH:mm dd/MM/yyyy")</span>
+                                        </div>
+                                        <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">@h.Actor</span></p>
+                                        @if (!string.IsNullOrWhiteSpace(h.Note))
+                                        {
+                                            <p class="text-[11px] text-neutral-600 italic mt-0.5">"@h.Note"</p>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-xs text-muted-foreground italic">Chưa có lịch sử thay đổi.</p>
+                        }
                     </div>
                 </div>
 
                 <!-- Action Buttons: Approve / Reject -->
-                <div class="flex items-center gap-3 pt-2">
-                    <form asp-action="Approve" asp-route-id="@selected.Id" method="post" class="flex-1">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-colors">
-                            <i data-lucide="check" class="size-4"></i> Phê duyệt tin đăng
-                        </button>
-                    </form>
+                <div class="flex items-center gap-3 pt-3 border-t border-border">
+                    <button type="button" id="detailBtnApprove" onclick="handleDetailApprove()"
+                            class="flex items-center justify-center gap-2 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all active:scale-98">
+                        <i data-lucide="check-circle" class="size-4"></i> Phê duyệt tin đăng
+                    </button>
 
-                    <button type="button" onclick="openRejectModal('@selected.Id', '@selected.Title')"
-                            class="flex items-center justify-center gap-2 flex-1 bg-destructive hover:bg-red-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-colors">
-                        <i data-lucide="x" class="size-4"></i> Từ chối duyệt (Lý do)
+                    <button type="button" id="detailBtnReject" onclick="handleDetailReject()"
+                            class="flex items-center justify-center gap-2 flex-1 bg-destructive hover:bg-red-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all active:scale-98">
+                        <i data-lucide="x-circle" class="size-4"></i> Từ chối duyệt (Lý do)
                     </button>
                 </div>
-            </section>
-        }
-        else
-        {
-            <div class="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center text-muted-foreground text-xs flex flex-col items-center justify-center min-h-[400px]">
-                <i data-lucide="inbox" class="size-8 text-muted-foreground/60 mb-2"></i>
-                <span>Chọn một tin đăng từ danh sách bên trái để xem chi tiết và thẩm định.</span>
-            </div>
-        }
+            }
+        </section>
+
+        <!-- Placeholder when no listing selected -->
+        <div id="noSelectionPlaceholder" class="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center text-muted-foreground text-xs flex flex-col items-center justify-center min-h-[400px] @(selected == null ? "" : "hidden")">
+            <i data-lucide="inbox" class="size-10 text-muted-foreground/60 mb-2"></i>
+            <span class="font-medium text-sm text-neutral-800">Chọn một tin đăng từ danh sách bên trái</span>
+            <span class="text-xs text-muted-foreground mt-1">Nội dung, ảnh và lịch sử chi tiết sẽ hiển thị tại đây để bạn kiểm duyệt.</span>
+        </div>
     </div>
 </div>
 
-<!-- Reject Reason Modal (F03 Blueprint Mandatory Reason) -->
+<!-- Reject Reason Dialog/Modal -->
 <div id="rejectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
-        <div class="flex items-center gap-2 text-destructive">
-            <i data-lucide="shield-alert" class="size-5"></i>
-            <h3 class="font-bold text-base text-neutral-900">Từ chối duyệt tin: <span id="rejectTargetTitle" class="text-destructive font-mono text-sm"></span></h3>
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between text-destructive">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-alert" class="size-5"></i>
+                <h3 class="font-bold text-base text-neutral-900">Từ chối duyệt tin</h3>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="text-muted-foreground hover:text-neutral-900 p-1">
+                <i data-lucide="x" class="size-4"></i>
+            </button>
         </div>
 
-        <p class="text-xs text-muted-foreground leading-relaxed">
-            Theo quy định Blueprint, từ chối tin đăng <strong>bắt buộc phải có lý do cụ thể</strong> để lưu vết vào Audit Log và gửi phản hồi cho người bán.
-        </p>
+        <div>
+            <p class="text-xs text-muted-foreground">Mã tin: <span id="modalRejectListingId" class="font-mono font-bold text-neutral-900"></span></p>
+            <p id="modalRejectTitle" class="text-xs font-semibold text-neutral-800 mt-0.5 line-clamp-1"></p>
+        </div>
 
-        <form asp-action="Reject" method="post" class="space-y-4">
-            @Html.AntiForgeryToken()
-            <input type="hidden" id="rejectListingId" name="ListingId" value="" />
-
-            <div>
-                <label for="rejectReason" class="text-xs font-semibold text-neutral-900 mb-1.5 block">Lý do từ chối (Reason) *</label>
-                <textarea id="rejectReason" name="Reason" rows="3" required
-                          placeholder="Nhập lý do vi phạm (ví dụ: Hình ảnh không rõ ràng, sai lệch thông số diện tích thực tế so với quy hoạch...)"
-                          class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-destructive transition-colors">Hình ảnh không rõ ràng và sai lệch thông số diện tích thực tế.</textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" onclick="closeRejectModal()"
-                        class="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-surface transition-colors">
-                    Hủy
+        <!-- Quick Reason Tags -->
+        <div>
+            <label class="text-[11px] font-semibold text-muted-foreground mb-1 block">Lý do mẫu thường gặp (Click để chọn nhanh):</label>
+            <div class="flex flex-wrap gap-1.5">
+                <button type="button" onclick="setQuickReason('Hình ảnh mờ, chứa logo ngoài hoặc không rõ chi tiết bất động sản')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border px-2 py-1 text-[10px] text-neutral-700 transition">
+                    Ảnh mờ / chứa logo
                 </button>
-                <button type="submit"
-                        class="rounded-xl bg-destructive px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 transition-colors shadow-xs">
-                    Xác nhận từ chối tin
+                <button type="button" onclick="setQuickReason('Thông số giá và diện tích không đúng với thực tế hoặc quy hoạch')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border px-2 py-1 text-[10px] text-neutral-700 transition">
+                    Sai giá / diện tích
+                </button>
+                <button type="button" onclick="setQuickReason('Địa chỉ không chính xác hoặc trùng lặp với tin đăng đang hoạt động')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border px-2 py-1 text-[10px] text-neutral-700 transition">
+                    Địa chỉ sai / Trùng lặp
                 </button>
             </div>
-        </form>
+        </div>
+
+        <div>
+            <label for="rejectReasonInput" class="text-xs font-semibold text-neutral-900 mb-1.5 block">Lý do từ chối cụ thể *</label>
+            <textarea id="rejectReasonInput" rows="3" required
+                      placeholder="Nhập lý do từ chối cụ thể để gửi thông báo cho người bán..."
+                      class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-destructive focus:ring-1 focus:ring-destructive transition-colors"></textarea>
+            <span id="rejectErrorMsg" class="text-[11px] text-destructive hidden mt-1 block">Vui lòng nhập lý do từ chối.</span>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <button type="button" onclick="closeRejectModal()"
+                    class="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-surface transition-colors">
+                Hủy bỏ
+            </button>
+            <button type="button" id="confirmRejectBtn" onclick="confirmRejectListing()"
+                    class="rounded-xl bg-destructive hover:bg-red-700 text-white px-4 py-2 text-xs font-semibold shadow-xs transition-all active:scale-98 flex items-center gap-1.5">
+                <i data-lucide="x-circle" class="size-3.5"></i> Xác nhận từ chối tin
+            </button>
+        </div>
     </div>
 </div>
+
+<!-- Toast Notification Container -->
+<div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-xl p-4 text-xs font-medium shadow-lg transition-all duration-300"></div>
+
+<!-- Embedded Initial Queue Data for Instant Client Rendering -->
+<script>
+    window.INITIAL_MODERATION_QUEUE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PendingProperties));
+    window.SELECTED_LISTING_ID = "@(selected?.Id ?? "")";
+</script>
+
+@section Scripts {
+<script>
+    let currentQueue = window.INITIAL_MODERATION_QUEUE || [];
+    let selectedId = window.SELECTED_LISTING_ID || (currentQueue.length > 0 ? currentQueue[0].Id : null);
+    let autoRefreshSeconds = 15;
+    let refreshCountdown = autoRefreshSeconds;
+    let refreshInterval = null;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        startAutoRefreshTimer();
+        if (selectedId) {
+            updateSelectedCardHighlight(selectedId);
+        }
+    });
+
+    // ----------------------------------------------------
+    // Auto-Refresh FIFO Queue logic
+    // ----------------------------------------------------
+    function startAutoRefreshTimer() {
+        if (refreshInterval) clearInterval(refreshInterval);
+
+        refreshCountdown = autoRefreshSeconds;
+        updateTimerDisplay();
+
+        refreshInterval = setInterval(function () {
+            refreshCountdown--;
+            if (refreshCountdown <= 0) {
+                refreshCountdown = autoRefreshSeconds;
+                fetchLatestQueue();
+            }
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const timerEl = document.getElementById("refreshTimerText");
+        if (timerEl) {
+            timerEl.textContent = refreshCountdown + "s";
+        }
+    }
+
+    async function triggerManualRefresh() {
+        const icon = document.getElementById("refreshIcon");
+        if (icon) icon.classList.add("animate-spin");
+        await fetchLatestQueue();
+        refreshCountdown = autoRefreshSeconds;
+        updateTimerDisplay();
+        setTimeout(() => {
+            if (icon) icon.classList.remove("animate-spin");
+        }, 600);
+    }
+
+    async function fetchLatestQueue() {
+        try {
+            const res = await fetch("/api/v1/moderation/listings", {
+                headers: { "Accept": "application/json" }
+            });
+            if (!res.ok) return;
+
+            const data = await res.json();
+            const items = data.items || [];
+            currentQueue = items;
+            updateQueueCountBadge(items.length);
+
+            // Re-render queue if items changed or empty
+            if (items.length === 0) {
+                showEmptyQueueState();
+            }
+        } catch (err) {
+            console.error("Auto-refresh error:", err);
+        }
+    }
+
+    // ----------------------------------------------------
+    // Select Listing & Update Detail Panel
+    // ----------------------------------------------------
+    function selectListing(id) {
+        selectedId = id;
+        updateSelectedCardHighlight(id);
+
+        const listing = currentQueue.find(p => p.Id === id);
+        if (listing) {
+            renderDetailPanel(listing);
+        } else {
+            // Fetch single detail from API if not in memory
+            fetchDetailFromApi(id);
+        }
+    }
+
+    async function fetchDetailFromApi(id) {
+        try {
+            const res = await fetch("/api/v1/moderation/listings/" + id);
+            if (res.ok) {
+                const data = await res.json();
+                renderDetailPanel(data);
+            }
+        } catch (e) {
+            console.error("Fetch detail error:", e);
+        }
+    }
+
+    function updateSelectedCardHighlight(id) {
+        document.querySelectorAll(".queue-card").forEach(el => {
+            el.classList.remove("bg-brand-soft/40", "border-l-4", "border-l-primary");
+        });
+        const activeCard = document.getElementById("queue-item-" + id);
+        if (activeCard) {
+            activeCard.classList.add("bg-brand-soft/40", "border-l-4", "border-l-primary");
+        }
+    }
+
+    function renderDetailPanel(item) {
+        const panel = document.getElementById("detailPanelSection");
+        const placeholder = document.getElementById("noSelectionPlaceholder");
+        if (!panel) return;
+
+        panel.classList.remove("hidden");
+        if (placeholder) placeholder.classList.add("hidden");
+
+        // Main Image & Badges
+        const mainImg = document.getElementById("detailMainImage");
+        if (mainImg) mainImg.src = item.PrimaryImage || (item.Images && item.Images[0]) || "/images/p1.png";
+
+        const badgeType = document.getElementById("detailBadgeType");
+        if (badgeType) {
+            const typeText = item.ListingType === "sale" ? "Cần bán" : "Cho thuê";
+            badgeType.textContent = typeText + " · " + (item.PropertyType || "Bất động sản");
+        }
+
+        // Thumbnails
+        const thumbContainer = document.getElementById("detailThumbnailsContainer");
+        if (thumbContainer && item.Images) {
+            thumbContainer.innerHTML = item.Images.map(img => `
+                <button type="button" onclick="setDetailMainImage('${img}')"
+                        class="relative size-14 rounded-lg overflow-hidden shrink-0 border-2 border-border hover:border-primary transition-colors focus:border-primary">
+                    <img src="${img}" class="size-full object-cover" />
+                </button>
+            `).join("");
+        }
+
+        // Header info
+        setText("detailId", item.Id);
+        setText("detailPackageBadge", item.PackageCode || "Standard");
+        setText("detailTitle", item.Title);
+        setText("detailAddress", "📍 " + (item.FullAddress || item.Address || ""));
+        setText("detailPrice", formatVnd(item.Price, item.ListingType));
+
+        // Owner info
+        setText("detailOwnerName", item.SellerName || "Người bán");
+        setText("detailOwnerId", "ID: " + (item.SellerId || item.OwnerUserId || ""));
+        setText("detailOwnerPhone", "📞 " + (item.SellerPhone || item.OwnerPhoneNumber || "0901 234 567"));
+        setText("detailOwnerEmail", "✉️ " + (item.SellerEmail || item.OwnerEmail || "contact@propnest.com"));
+
+        // Specs
+        setText("detailBeds", item.Beds || 0);
+        setText("detailBaths", item.Baths || 0);
+        setText("detailArea", (item.Area || 0) + " m²");
+        setText("detailPackage", item.PackageCode || "Standard");
+
+        // Description
+        setText("detailDescription", item.Description || "Không có mô tả chi tiết.");
+
+        // History Timeline
+        const historyContainer = document.getElementById("detailHistoryContainer");
+        if (historyContainer) {
+            const histories = item.Histories || [];
+            if (histories.length > 0) {
+                historyContainer.innerHTML = histories.map(h => `
+                    <div class="flex items-start gap-2.5 text-xs">
+                        <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-neutral-900">${h.ActionType}</span>
+                                <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate)}</span>
+                            </div>
+                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || "Hệ thống"}</span></p>
+                            ${h.Note ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${h.Note}"</p>` : ""}
+                        </div>
+                    </div>
+                `).join("");
+            } else {
+                historyContainer.innerHTML = `<p class="text-xs text-muted-foreground italic">Chưa có lịch sử thay đổi.</p>`;
+            }
+        }
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function setDetailMainImage(src) {
+        const img = document.getElementById("detailMainImage");
+        if (img) img.src = src;
+    }
+
+    // ----------------------------------------------------
+    // Approve Action
+    // ----------------------------------------------------
+    async function handleApproveClick(id, event) {
+        if (event) event.stopPropagation();
+        await executeApprove(id);
+    }
+
+    async function handleDetailApprove() {
+        if (selectedId) {
+            await executeApprove(selectedId);
+        }
+    }
+
+    async function executeApprove(id) {
+        try {
+            const res = await fetch("/api/v1/moderation/listings/" + id + "/approve", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            if (res.ok) {
+                removeListingFromUi(id);
+                showToast("Đã phê duyệt và xuất bản tin " + id + " thành công!", "success");
+            } else {
+                showToast("Lỗi khi phê duyệt tin " + id, "error");
+            }
+        } catch (err) {
+            console.error("Approve error:", err);
+            showToast("Có lỗi xảy ra khi gọi API duyệt tin.", "error");
+        }
+    }
+
+    // ----------------------------------------------------
+    // Reject Action (Modal & Confirm)
+    // ----------------------------------------------------
+    let rejectingListingId = null;
+
+    function handleRejectClick(id, title, event) {
+        if (event) event.stopPropagation();
+        openRejectModal(id, title);
+    }
+
+    function handleDetailReject() {
+        if (selectedId) {
+            const listing = currentQueue.find(p => p.Id === selectedId);
+            openRejectModal(selectedId, listing ? listing.Title : "");
+        }
+    }
+
+    function openRejectModal(id, title) {
+        rejectingListingId = id;
+        document.getElementById("modalRejectListingId").textContent = id;
+        document.getElementById("modalRejectTitle").textContent = title || "";
+        document.getElementById("rejectReasonInput").value = "";
+        document.getElementById("rejectErrorMsg").classList.add("hidden");
+
+        const modal = document.getElementById("rejectModal");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeRejectModal() {
+        const modal = document.getElementById("rejectModal");
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        rejectingListingId = null;
+    }
+
+    function setQuickReason(text) {
+        const input = document.getElementById("rejectReasonInput");
+        if (input) {
+            input.value = text;
+            document.getElementById("rejectErrorMsg").classList.add("hidden");
+        }
+    }
+
+    async function confirmRejectListing() {
+        if (!rejectingListingId) return;
+
+        const reasonInput = document.getElementById("rejectReasonInput");
+        const reason = reasonInput ? reasonInput.value.trim() : "";
+
+        if (!reason) {
+            document.getElementById("rejectErrorMsg").classList.remove("hidden");
+            return;
+        }
+
+        const btn = document.getElementById("confirmRejectBtn");
+        if (btn) btn.disabled = true;
+
+        try {
+            const res = await fetch("/api/v1/moderation/listings/" + rejectingListingId + "/reject", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    reason: reason,
+                    reasons: [reason]
+                })
+            });
+
+            if (res.ok) {
+                const targetId = rejectingListingId;
+                closeRejectModal();
+                removeListingFromUi(targetId);
+                showToast("Đã từ chối duyệt tin " + targetId + "!", "warning");
+            } else {
+                showToast("Lỗi khi từ chối tin đăng.", "error");
+            }
+        } catch (err) {
+            console.error("Reject error:", err);
+            showToast("Có lỗi xảy ra khi gọi API từ chối.", "error");
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    // ----------------------------------------------------
+    // UI Helpers: Remove from list, next item, toast
+    // ----------------------------------------------------
+    function removeListingFromUi(id) {
+        const card = document.getElementById("queue-item-" + id);
+        if (card) {
+            card.classList.add("opacity-0", "scale-95", "transition-all", "duration-200");
+            setTimeout(() => card.remove(), 200);
+        }
+
+        // Remove from memory queue
+        currentQueue = currentQueue.filter(p => p.Id !== id);
+        updateQueueCountBadge(currentQueue.length);
+
+        // If the removed item was currently selected, pick next item in FIFO queue
+        if (selectedId === id) {
+            if (currentQueue.length > 0) {
+                selectListing(currentQueue[0].Id);
+            } else {
+                showEmptyQueueState();
+            }
+        }
+
+        // Re-number FIFO priority badges #1, #2, ...
+        setTimeout(() => renumberQueue(), 250);
+    }
+
+    function renumberQueue() {
+        const cards = document.querySelectorAll(".queue-card");
+        cards.forEach((c, idx) => {
+            const badge = c.querySelector(".font-mono.font-bold");
+            if (badge) badge.textContent = "#" + (idx + 1);
+        });
+    }
+
+    function updateQueueCountBadge(count) {
+        const badge = document.getElementById("queueBadgeCount");
+        if (badge) badge.textContent = count + " tin";
+    }
+
+    function showEmptyQueueState() {
+        const emptyState = document.getElementById("emptyQueueState");
+        const panel = document.getElementById("detailPanelSection");
+        const placeholder = document.getElementById("noSelectionPlaceholder");
+
+        if (emptyState) emptyState.classList.remove("hidden");
+        if (panel) panel.classList.add("hidden");
+        if (placeholder) {
+            placeholder.classList.remove("hidden");
+            placeholder.querySelector("span.text-sm").textContent = "Tất cả các tin trong hàng đợi đã được xử lý xong!";
+        }
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById("toastNotification");
+        if (!toast) return;
+
+        let bg = "bg-neutral-900 text-white";
+        if (type === "success") bg = "bg-emerald-600 text-white";
+        if (type === "warning") bg = "bg-amber-600 text-white";
+        if (type === "error") bg = "bg-destructive text-white";
+
+        toast.className = `fixed bottom-6 right-6 z-50 rounded-xl p-4 text-xs font-semibold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${bg}`;
+        toast.innerHTML = `<span>${message}</span>`;
+        toast.classList.remove("hidden");
+
+        setTimeout(() => {
+            toast.classList.add("hidden");
+        }, 3500);
+    }
+
+    function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
+    function formatVnd(val, type) {
+        if (!val || isNaN(val)) return "0 đ";
+        const num = Number(val);
+        if (num >= 1000000000) {
+            return (num / 1000000000).toFixed(2).replace(/\.00$/, "") + " tỷ" + (type === "rent" ? "/tháng" : "");
+        }
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1).replace(/\.0$/, "") + " tr" + (type === "rent" ? "/tháng" : "");
+        }
+        return num.toLocaleString("vi-VN") + " đ";
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return "";
+        try {
+            const d = new Date(dateStr);
+            return d.getHours().toString().padStart(2, "0") + ":" +
+                   d.getMinutes().toString().padStart(2, "0") + " " +
+                   d.getDate().toString().padStart(2, "0") + "/" +
+                   (d.getMonth() + 1).toString().padStart(2, "0") + "/" +
+                   d.getFullYear();
+        } catch {
+            return dateStr;
+        }
+    }
+</script>
+}
