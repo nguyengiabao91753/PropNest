@@ -1,4 +1,4 @@
-﻿using PropNest.Domain.Listings;
+using PropNest.Domain.Listings;
 
 namespace PropNest.Domain.Tests;
 
@@ -111,6 +111,52 @@ public sealed class ListingTests
     {
         var listing = CreateListing();
         Assert.Throws<InvalidOperationException>(() => listing.Reject());
+    }
+
+    [Fact]
+    public void ExpireFromPublishedWithPastEndDateShouldMoveToExpired()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+
+        listing.Expire(now);
+
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireParameterlessShouldMoveToExpiredWhenEndDatePast()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+
+        listing.Expire();
+
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireFromPublishedWithFutureEndDateShouldRemainPublished()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now, now.AddDays(7));
+
+        listing.Expire(now);
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireFromDraftShouldRemainDraft()
+    {
+        var listing = CreateListing();
+
+        listing.Expire();
+
+        Assert.Equal(ListingStatus.Draft, listing.Status);
     }
 
     //Tạo tin đăng đang chờ duyệt
