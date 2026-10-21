@@ -267,6 +267,7 @@ public sealed class ModerationFlowTests
         public List<OutboxMessage> OutboxMessages { get; } = [];
         public List<ListingDto> PendingListings { get; } = [];
 
+        public Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default) => Task.FromResult<ListingOwnerContactDto?>(null);
         public Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ListingDto>>(PendingListings);
 

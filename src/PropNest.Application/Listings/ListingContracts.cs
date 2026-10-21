@@ -52,8 +52,9 @@ public sealed record ListingDto(
     DateTimeOffset? EndDate,
     byte[] RowVersion,
     string? OwnerName = null,
-    string? OwnerPhoneNumber = null,
     string? OwnerEmail = null,
+    string? OwnerPhoneNumber = null,
+    DateTimeOffset? CreatedAt = null,
     IReadOnlyList<string>? Images = null
     );
 
@@ -62,9 +63,6 @@ public sealed record ListingOwnerContactDto(
     string FullName,
     string PhoneNumber,
     string Email);
-    string? OwnerEmail = null,
-    string? OwnerPhoneNumber = null,
-    DateTimeOffset? CreatedAt = null);
 
 public sealed record ListingSummaryDto(
     long ListingId,

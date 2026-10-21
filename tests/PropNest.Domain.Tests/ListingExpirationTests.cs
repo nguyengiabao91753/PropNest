@@ -188,6 +188,7 @@ public sealed class ListingExpirationTests
         public void AddOutboxMessage(OutboxMessage message) => OutboxMessages.Add(message);
 
         public Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
+        public Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default) => Task.FromResult<ListingOwnerContactDto?>(null);
         public Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Listing>>([]);
         public Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Listing>>([]);
         public Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingDto>>([]);
@@ -224,6 +225,7 @@ public sealed class ListingExpirationTests
         public void AddOutboxMessage(OutboxMessage message) => OutboxMessages.Add(message);
 
         public Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
+        public Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default) => Task.FromResult<ListingOwnerContactDto?>(null);
         public Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Listing>>([]);
         public Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Listing>>([]);
         public Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingDto>>([]);
