@@ -6,3 +6,4 @@ TestResults/
 appsettings.Local.json
 *.user
 /scripts/seed_listings.sql
+logs/

@@ -11,6 +11,7 @@ using PropNest.Infrastructure.Services;
 using MassTransit;
 using PropNest.Infrastructure.Workflows;
 using PropNest.Infrastructure.Consumers;
+using PropNest.Infrastructure.Filters;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -27,7 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IOutboxDispatchService, OutboxDispatchService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
-        services.AddSingleton<IOutboxMessagePublisher, LoggingOutboxMessagePublisher>();
+        services.AddScoped<IOutboxMessagePublisher, MassTransitOutboxPublisher>();
         services.AddScoped<IPhotoService, CloudinaryPhotoService>();
 
         //bao
@@ -55,7 +56,8 @@ public static class ServiceCollectionExtensions
 
             // đăng ký consumers
             busConfig.AddConsumer<DeductWalletConsumer>();
-
+            busConfig.AddConsumer<UpgradeListingConsumer>();
+            busConfig.AddConsumer<RefundWalletConsumer>();
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
@@ -68,7 +70,7 @@ public static class ServiceCollectionExtensions
                     h.Username(username);
                     h.Password(password);
                 });
-
+                cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
 

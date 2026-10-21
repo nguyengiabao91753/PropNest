@@ -14,13 +14,120 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
     private readonly string _currentSellerId = "seller-1";
     private readonly string _currentSellerName = "Nguyễn Văn Minh";
 
+    private static readonly string SharedFilePath = Path.Combine(
+        Directory.Exists(@"d:\PropNest") ? @"d:\PropNest" : Path.GetTempPath(),
+        ".shared_mock_listings.json");
+    private static readonly object SyncLock = new();
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
     public MockSellerPropertyService()
     {
         InitializeMockData();
+        SyncFromSharedFile();
+        SaveToSharedFile();
+    }
+
+    private void SyncFromSharedFile()
+    {
+        lock (SyncLock)
+        {
+            try
+            {
+                if (!File.Exists(SharedFilePath)) return;
+                var json = File.ReadAllText(SharedFilePath);
+                var records = System.Text.Json.JsonSerializer.Deserialize<List<SharedPropertyRecord>>(json);
+                if (records is null) return;
+
+                foreach (var r in records)
+                {
+                    if (_listings.TryGetValue(r.Id, out var existing))
+                    {
+                        existing.Status = r.Status;
+                        existing.RejectReason = r.RejectReason;
+                        existing.Title = r.Title;
+                        existing.Price = r.Price;
+                        existing.Address = r.Address;
+                        existing.PackageCode = r.PackageCode;
+                    }
+                    else
+                    {
+                        _listings[r.Id] = new SellerPropertyItemViewModel
+                        {
+                            Id = r.Id,
+                            Title = r.Title,
+                            Description = r.Description,
+                            PropertyType = r.PropertyType,
+                            ListingType = r.ListingType,
+                            Price = r.Price,
+                            Area = r.Area,
+                            LandSize = Math.Round(r.Area * 1.2m),
+                            Beds = r.Beds,
+                            Baths = r.Baths,
+                            Carports = r.Carports,
+                            City = r.City,
+                            District = r.District,
+                            Ward = r.Ward,
+                            Address = r.Address,
+                            Status = r.Status,
+                            PackageCode = r.PackageCode,
+                            SellerId = r.SellerId,
+                            SellerName = r.SellerName,
+                            SellerAvatar = r.SellerAvatar ?? "/images/avatar-1.png",
+                            Images = r.Images.Count > 0 ? r.Images : new List<string> { "/images/p1.png" },
+                            CreatedAt = r.CreatedAt,
+                            RejectReason = r.RejectReason,
+                            RowVersion = r.RowVersion
+                        };
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void SaveToSharedFile()
+    {
+        lock (SyncLock)
+        {
+            try
+            {
+                var records = _listings.Values.Select(item => new SharedPropertyRecord
+                {
+                    Id = item.Id,
+                    Title = item.Title,
+                    Description = item.Description,
+                    PropertyType = item.PropertyType,
+                    ListingType = item.ListingType,
+                    Price = item.Price,
+                    Area = item.Area,
+                    Beds = item.Beds,
+                    Baths = item.Baths,
+                    Carports = item.Carports,
+                    City = item.City,
+                    District = item.District,
+                    Ward = item.Ward,
+                    Address = item.Address,
+                    Status = item.Status,
+                    PackageCode = item.PackageCode,
+                    SellerId = item.SellerId,
+                    SellerName = item.SellerName,
+                    SellerAvatar = item.SellerAvatar,
+                    Images = item.Images,
+                    CreatedAt = item.CreatedAt,
+                    RejectReason = item.RejectReason,
+                    RowVersion = item.RowVersion
+                }).ToList();
+
+                var json = System.Text.Json.JsonSerializer.Serialize(records, JsonOptions);
+                File.WriteAllText(SharedFilePath, json);
+            }
+            catch { }
+        }
     }
 
     public Task<SellerPropertiesViewModel> GetMyPropertiesAsync(string? status = null, string? searchTerm = null, string layout = "table")
     {
+        SyncFromSharedFile();
         var mine = _listings.Values
             .Where(p => p.SellerId == _currentSellerId && p.Status != ListingStatus.Deleted)
             .ToList();
@@ -74,6 +181,7 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
 
     public Task<SellerPropertyItemViewModel?> GetPropertyByIdAsync(string id)
     {
+        SyncFromSharedFile();
         _listings.TryGetValue(id, out var found);
         return Task.FromResult(found);
     }
@@ -133,6 +241,7 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
         };
 
         _histories[newId] = new List<HistoryDeltaViewModel> { history };
+        SaveToSharedFile();
 
         return Task.FromResult(newId);
     }
@@ -212,6 +321,7 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
                 }
             });
 
+            SaveToSharedFile();
             return Task.FromResult(true);
         }
         return Task.FromResult(false);
@@ -609,4 +719,31 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
             }
         });
     }
+}
+
+public sealed class SharedPropertyRecord
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string PropertyType { get; set; } = "Apartment";
+    public string ListingType { get; set; } = "sale";
+    public decimal Price { get; set; }
+    public decimal Area { get; set; }
+    public int Beds { get; set; }
+    public int Baths { get; set; }
+    public int Carports { get; set; } = 1;
+    public string City { get; set; } = string.Empty;
+    public string District { get; set; } = string.Empty;
+    public string? Ward { get; set; }
+    public string Address { get; set; } = string.Empty;
+    public ListingStatus Status { get; set; } = ListingStatus.Draft;
+    public string PackageCode { get; set; } = "Standard";
+    public string SellerId { get; set; } = "seller-1";
+    public string SellerName { get; set; } = "Nguyễn Văn Minh";
+    public string? SellerAvatar { get; set; }
+    public List<string> Images { get; set; } = new();
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string? RejectReason { get; set; }
+    public string RowVersion { get; set; } = "AAAAAA==";
 }

@@ -13,9 +13,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="CloudinaryDotNet" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	<PackageReference Include="MassTransit.RabbitMQ" />
 	<PackageReference Include="MassTransit.EntityFrameworkCore" />
-	<PackageReference Include="CloudinaryDotNet" />
   </ItemGroup>
 </Project>
