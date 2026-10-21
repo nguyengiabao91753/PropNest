@@ -2,200 +2,342 @@
 
 @{
     ViewData["Title"] = "Ví & Giao dịch (F05)";
+    var currentType = string.IsNullOrWhiteSpace(Model.CurrentType) ? "all" : Model.CurrentType;
+
+    var typeTabs = new[]
+    {
+        ("all", "Tất cả", Model.Counts.All),
+        ("TopUp", "Nạp tiền", Model.Counts.TopUp),
+        ("Charge", "Thanh toán", Model.Counts.Charge),
+        ("Refund", "Bồi hoàn Saga", Model.Counts.Refund),
+        ("PromoReward", "Thưởng", Model.Counts.PromoReward)
+    };
 }
 
-<div class="mx-auto max-w-7xl space-y-8">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="font-display text-3xl font-bold text-neutral-900">Ví Tài Khoản & Giao Dịch (F05)</h1>
-            <p class="text-xs text-muted-foreground mt-1">
-                Quản lý số dư, theo dõi lịch sử thanh toán mua gói VIP và kiểm toán bồi hoàn (Saga Refund).
-            </p>
-        </div>
-        <div>
-            <button type="button" onclick="openTopUpModal()"
-                    class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
-                <i data-lucide="plus" class="size-4"></i> Nạp tiền vào ví
-            </button>
-        </div>
-    </div>
-
-    <!-- 3 Balance Cards -->
-    <div class="grid gap-6 md:grid-cols-3">
-        <!-- Total Balance -->
-        <div class="rounded-2xl border border-primary/30 bg-brand-soft/60 p-6 shadow-xs relative overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Tổng số dư khả dụng</span>
-                <div class="grid size-10 place-items-center rounded-xl bg-primary text-white shadow-xs">
-                    <i data-lucide="wallet" class="size-5"></i>
-                </div>
-            </div>
-            <p class="font-display text-3xl font-extrabold text-neutral-900">@FormatHelper.FormatVnd(Model.TotalBalance)</p>
-            <p class="text-xs text-muted-foreground mt-2">Dùng để thanh toán gói VIP và đẩy tin tự động</p>
-        </div>
-
-        <!-- Main Balance -->
-        <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư chính (Main Balance)</span>
-                <div class="grid size-10 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
-                    <i data-lucide="credit-card" class="size-5"></i>
-                </div>
-            </div>
-            <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.MainBalance)</p>
-            <p class="text-xs text-muted-foreground mt-2">Nạp từ thẻ ngân hàng, tiền mặt hoặc chuyển khoản</p>
-        </div>
-
-        <!-- Promo Balance -->
-        <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư khuyến mãi (Promo)</span>
-                <div class="grid size-10 place-items-center rounded-xl bg-amber-500/15 text-amber-600">
-                    <i data-lucide="shield-check" class="size-5"></i>
-                </div>
-            </div>
-            <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.PromoBalance)</p>
-            <p class="text-xs text-muted-foreground mt-2">Ưu tiên trừ trước khi thanh toán gói tin</p>
-        </div>
-    </div>
-
-    <!-- Optimistic Concurrency & Policy Info -->
-    <div class="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-muted-foreground shadow-xs">
-        <div class="flex items-center gap-2">
-            <span class="font-semibold text-neutral-900">Optimistic Concurrency:</span>
-            <code class="rounded bg-surface border border-border px-2 py-0.5 font-mono text-[11px] text-neutral-800">@Model.RowVersion</code>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="font-semibold text-neutral-900">Quy tắc trừ tiền:</span>
-            <span>Khuyến mãi (Promo) trừ trước → Số dư chính (Main) trừ sau → Hoàn tiền bồi hoàn đúng số tiền đã trừ.</span>
-        </div>
-    </div>
-
-    <!-- Transaction Ledger Table -->
+<div class="mx-auto max-w-7xl space-y-6">
+    <!-- Top Card Header -->
     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-        <div class="border-b border-border px-6 py-4 flex items-center justify-between bg-surface/40">
-            <div class="flex items-center gap-2">
-                <i data-lucide="history" class="size-4 text-primary"></i>
-                <h2 class="text-base font-semibold text-neutral-900">Sổ cái giao dịch (Immutable Ledger)</h2>
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5 md:px-8">
+            <div>
+                <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Ví Tài Khoản & Giao Dịch (F05)</h1>
+                <p class="text-xs text-muted-foreground mt-1">
+                    Quản lý số dư, theo dõi lịch sử thanh toán mua gói VIP và kiểm toán bồi hoàn (Saga Refund).
+                </p>
             </div>
-            <span class="text-xs text-muted-foreground">@Model.Transactions.Count giao dịch đã ghi nhận</span>
+            <div>
+                <button type="button" onclick="openTopUpModal()"
+                        class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                    <i data-lucide="plus" class="size-4"></i> Nạp tiền vào ví
+                </button>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="border-b border-border text-xs text-muted-foreground bg-surface/70 uppercase">
-                    <tr>
-                        <th class="px-5 py-3 font-semibold">Mã GD</th>
-                        <th class="px-4 py-3 font-semibold">Loại</th>
-                        <th class="px-4 py-3 font-semibold">Số tiền</th>
-                        <th class="px-4 py-3 font-semibold">Số dư sau GD</th>
-                        <th class="px-5 py-3 font-semibold">Nội dung</th>
-                        <th class="px-4 py-3 font-semibold">Thời gian</th>
-                        <th class="px-4 py-3 font-semibold text-right">Correlation ID</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border">
-                    @foreach (var t in Model.Transactions)
+        <div class="p-6 md:p-8 space-y-6">
+            <!-- 3 Balance Cards -->
+            <div class="grid gap-6 md:grid-cols-3">
+                <!-- Total Balance -->
+                <div class="rounded-2xl border border-primary/30 bg-brand-soft/60 p-6 shadow-xs relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Tổng số dư khả dụng</span>
+                        <div class="grid size-10 place-items-center rounded-xl bg-primary text-white shadow-xs">
+                            <i data-lucide="wallet" class="size-5"></i>
+                        </div>
+                    </div>
+                    <p class="font-display text-3xl font-extrabold text-neutral-900">@FormatHelper.FormatVnd(Model.TotalBalance)</p>
+                    <p class="text-xs text-muted-foreground mt-2">Dùng để thanh toán gói VIP và đẩy tin tự động</p>
+                </div>
+
+                <!-- Main Balance -->
+                <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư chính (Main Balance)</span>
+                        <div class="grid size-10 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
+                            <i data-lucide="credit-card" class="size-5"></i>
+                        </div>
+                    </div>
+                    <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.MainBalance)</p>
+                    <p class="text-xs text-muted-foreground mt-2">Nạp từ thẻ ngân hàng, tiền mặt hoặc chuyển khoản</p>
+                </div>
+
+                <!-- Promo Balance -->
+                <div class="rounded-2xl border border-border bg-card p-6 shadow-xs">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Số dư khuyến mãi (Promo)</span>
+                        <div class="grid size-10 place-items-center rounded-xl bg-amber-500/15 text-amber-600">
+                            <i data-lucide="shield-check" class="size-5"></i>
+                        </div>
+                    </div>
+                    <p class="font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.PromoBalance)</p>
+                    <p class="text-xs text-muted-foreground mt-2">Ưu tiên trừ trước khi thanh toán gói tin</p>
+                </div>
+            </div>
+
+            <!-- Optimistic Concurrency & Policy Info -->
+            <div class="rounded-xl border border-border bg-surface/50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-muted-foreground shadow-2xs">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="info" class="size-4 text-primary shrink-0"></i>
+                    <span class="font-semibold text-neutral-900">Quy tắc trừ tiền:</span>
+                    <span>Khuyến mãi (Promo) trừ trước → Số dư chính (Main) trừ sau → Hoàn tiền bồi hoàn đúng số tiền đã trừ.</span>
+                </div>
+            </div>
+
+            <!-- 1. Horizontal Status Tabs Filter (Đồng bộ chuẩn 1:1 với Properties/Index) -->
+            <div class="border-b border-border/80 pb-1">
+                <nav class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" aria-label="Tabs loại giao dịch">
+                    @foreach (var (val, lbl, count) in typeTabs)
                     {
-                        var isPositive = t.Amount > 0;
-                        <tr class="hover:bg-surface/50 transition-colors">
-                            <td class="px-5 py-3.5 font-mono text-xs text-muted-foreground font-semibold">@t.Id</td>
-                            <td class="px-4 py-3.5">
-                                @if (t.Type == "TopUp")
-                                {
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
-                                        Nạp tiền
-                                    </span>
-                                }
-                                else if (t.Type == "Charge")
-                                {
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300">
-                                        Thanh toán
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300">
-                                        Bồi hoàn Saga
-                                    </span>
-                                }
-                            </td>
-                            <td class="px-4 py-3.5 font-semibold font-display @(isPositive ? "text-emerald-600" : "text-destructive")">
-                                @(isPositive ? "+" : "")@FormatHelper.FormatVnd(t.Amount)
-                            </td>
-                            <td class="px-4 py-3.5 text-xs text-neutral-800 font-mono">
-                                @FormatHelper.FormatVnd(t.BalanceAfter)
-                            </td>
-                            <td class="px-5 py-3.5 text-xs text-neutral-800 max-w-xs">
-                                <p class="truncate" title="@t.Description">@t.Description</p>
-                                @if (!string.IsNullOrWhiteSpace(t.ListingId))
-                                {
-                                    <span class="text-[10px] text-muted-foreground font-mono">Tin: @t.ListingId</span>
-                                }
-                            </td>
-                            <td class="px-4 py-3.5 text-xs text-muted-foreground font-mono whitespace-nowrap">
-                                @t.CreatedAt.ToString("dd/MM/yyyy HH:mm")
-                            </td>
-                            <td class="px-4 py-3.5 text-right font-mono text-[11px] text-muted-foreground">
-                                <span class="truncate block max-w-28 ml-auto" title="@t.CorrelationId">@t.CorrelationId</span>
-                            </td>
-                        </tr>
+                        var isActive = string.Equals(Model.CurrentType, val, StringComparison.OrdinalIgnoreCase);
+                        <a asp-action="Index"
+                           asp-route-type="@val"
+                           asp-route-q="@Model.SearchTerm"
+                           asp-route-page="1"
+                           class="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all @(isActive ? "bg-primary text-white shadow-xs" : "bg-surface/70 text-muted-foreground hover:bg-surface hover:text-neutral-900 border border-border/60")">
+                            <span>@lbl</span>
+                            <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold @(isActive ? "bg-white/20 text-white" : "bg-neutral-200/70 text-neutral-700")">
+                                @count
+                            </span>
+                        </a>
                     }
-                </tbody>
-            </table>
+                </nav>
+            </div>
+
+            <!-- 2. Search Toolbar (Đồng bộ chuẩn 1:1 với Properties/Index) -->
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <form method="get" asp-action="Index" class="flex items-center gap-2">
+                    <input type="hidden" name="type" value="@Model.CurrentType" />
+                    <input type="hidden" name="page" value="1" />
+
+                    <div class="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs w-72 sm:w-80 focus-within:border-primary transition-colors">
+                        <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
+                        <input type="text" name="q" value="@Model.SearchTerm"
+                               placeholder="Tìm mã GD, nội dung, correlation..."
+                               class="w-full bg-transparent outline-none text-neutral-900 placeholder:text-muted-foreground/70" />
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                        {
+                            <a asp-action="Index" asp-route-type="@Model.CurrentType" class="text-muted-foreground hover:text-neutral-900">
+                                <i data-lucide="x" class="size-3.5"></i>
+                            </a>
+                        }
+                    </div>
+                    <button type="submit" class="h-10 px-4 rounded-xl bg-card border border-border text-neutral-700 hover:border-primary hover:text-primary font-semibold text-xs transition-colors shadow-2xs">
+                        Tìm
+                    </button>
+                </form>
+
+                <div class="text-xs text-muted-foreground">
+                    Sổ cái giao dịch <span class="font-mono text-neutral-900 font-bold">#Immutable</span>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            @if (Model.Transactions != null && Model.Transactions.Count > 0)
+            {
+                <div class="overflow-x-auto rounded-2xl border border-border bg-card">
+                    <table class="w-full text-left text-sm">
+                        <thead class="border-b border-border text-xs text-muted-foreground bg-surface/70 uppercase">
+                            <tr>
+                                <th class="px-5 py-3.5 font-semibold">Mã GD</th>
+                                <th class="px-4 py-3.5 font-semibold">Loại</th>
+                                <th class="px-4 py-3.5 font-semibold">Số tiền</th>
+                                <th class="px-4 py-3.5 font-semibold">Số dư sau GD</th>
+                                <th class="px-5 py-3.5 font-semibold">Nội dung</th>
+                                <th class="px-4 py-3.5 font-semibold">Thời gian</th>
+                                <th class="px-4 py-3.5 font-semibold text-right">Correlation ID</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            @foreach (var t in Model.Transactions)
+                            {
+                                var isPositive = t.Amount > 0;
+                                <tr class="hover:bg-surface/50 transition-colors">
+                                    <td class="px-5 py-3.5 font-mono text-xs text-muted-foreground font-semibold">#@t.Id</td>
+                                    <td class="px-4 py-3.5 whitespace-nowrap">
+                                        @if (string.Equals(t.Type, "TopUp", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                                <i data-lucide="arrow-down-left" class="size-3 mr-1"></i> Nạp tiền
+                                            </span>
+                                        }
+                                        else if (string.Equals(t.Type, "Charge", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300">
+                                                <i data-lucide="arrow-up-right" class="size-3 mr-1"></i> Thanh toán
+                                            </span>
+                                        }
+                                        else if (string.Equals(t.Type, "Refund", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300">
+                                                <i data-lucide="rotate-ccw" class="size-3 mr-1"></i> Bồi hoàn Saga
+                                            </span>
+                                        }
+                                        else if (string.Equals(t.Type, "PromoReward", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                                                <i data-lucide="gift" class="size-3 mr-1"></i> Thưởng
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
+                                                @t.Type
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="px-4 py-3.5 font-semibold font-display whitespace-nowrap @(isPositive ? "text-emerald-600" : "text-destructive")">
+                                        @(isPositive ? "+" : "")@FormatHelper.FormatVnd(t.Amount)
+                                    </td>
+                                    <td class="px-4 py-3.5 text-xs text-neutral-800 font-mono whitespace-nowrap">
+                                        @FormatHelper.FormatVnd(t.BalanceAfter)
+                                    </td>
+                                    <td class="px-5 py-3.5 text-xs text-neutral-800 max-w-xs">
+                                        <p class="truncate" title="@t.Description">@t.Description</p>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                                        @t.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                                        <span class="truncate block max-w-28 ml-auto" title="@t.CorrelationId">@t.CorrelationId</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="rounded-2xl border border-border bg-card p-12 text-center space-y-3">
+                    <div class="grid size-12 place-items-center rounded-2xl bg-neutral-100 text-neutral-400 mx-auto">
+                        <i data-lucide="receipt" class="size-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-neutral-800">Không tìm thấy giao dịch nào</p>
+                        <p class="text-xs text-muted-foreground mt-1">Chưa có lịch sử biến động số dư nào phù hợp với bộ lọc hiện tại.</p>
+                    </div>
+                </div>
+            }
+
+            <!-- 3. Pagination Controls (Đồng bộ chuẩn 1:1 với Properties/Index) -->
+            <div class="mt-8 pt-4 border-t border-border flex flex-wrap items-center justify-between gap-4 text-xs font-medium">
+                <p class="text-muted-foreground">
+                    Hiển thị <span class="font-bold text-neutral-900">@(Model.TotalCount == 0 ? 0 : (Model.PageNumber - 1) * Model.PageSize + 1)</span> - 
+                    <span class="font-bold text-neutral-900">@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount))</span> trong tổng số 
+                    <span class="font-bold text-neutral-900">@Model.TotalCount</span> giao dịch
+                </p>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Phân trang" class="flex items-center gap-1.5">
+                        <!-- Nút Trang trước -->
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a asp-action="Index"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-page="@(Model.PageNumber - 1)"
+                               class="h-8 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <i data-lucide="chevron-left" class="size-3.5"></i>
+                                <span>Trước</span>
+                            </a>
+                        }
+
+                        <!-- Các số trang -->
+                        @for (var i = 1; i <= Model.TotalPages; i++)
+                        {
+                            var pageIdx = i;
+                            <a asp-action="Index"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-page="@pageIdx"
+                               class="size-8 rounded-xl border flex items-center justify-center font-semibold transition-colors @(pageIdx == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
+                                @pageIdx
+                            </a>
+                        }
+
+                        <!-- Nút Trang sau -->
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a asp-action="Index"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-page="@(Model.PageNumber + 1)"
+                               class="h-8 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <span>Sau</span>
+                                <i data-lucide="chevron-right" class="size-3.5"></i>
+                            </a>
+                        }
+                    </nav>
+                }
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Top-up Modal -->
 <div id="topUpModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-5">
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-5 animate-[modalScaleIn_0.2s_ease-out]">
         <div class="flex items-center justify-between border-b border-border/80 pb-3">
             <h3 class="font-display text-lg font-bold text-neutral-900 flex items-center gap-2">
                 <i data-lucide="wallet" class="size-5 text-primary"></i> Nạp tiền vào ví
             </h3>
-            <button type="button" onclick="closeTopUpModal()" class="text-muted-foreground hover:text-neutral-900">
+            <button type="button" onclick="closeTopUpModal()" class="text-muted-foreground hover:text-neutral-900 p-1 rounded-lg">
                 <i data-lucide="x" class="size-5"></i>
             </button>
         </div>
 
-        <form asp-action="TopUp" method="post" class="space-y-4">
+        <form method="post" asp-action="TopUp">
             @Html.AntiForgeryToken()
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Số tiền muốn nạp (VNĐ)</label>
+                    <div class="relative">
+                        <input type="number" id="topUpAmountInput" name="Amount" min="10000" step="10000" required
+                               placeholder="500000"
+                               class="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-neutral-900 outline-none focus:border-primary focus:bg-card transition-colors" />
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">₫</span>
+                    </div>
+                    <p class="text-[11px] text-muted-foreground mt-1">Số tiền nạp tối thiểu là 10.000 ₫.</p>
+                </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-neutral-800 mb-1.5">Số tiền cần nạp (VNĐ) *</label>
-                <input id="topUpAmountInput" name="Amount" type="number" step="50000" min="50000" value="1000000" required
-                       class="w-full rounded-xl border border-border bg-surface p-3 text-sm font-mono outline-none focus:border-primary transition-colors text-neutral-900" />
-            </div>
+                <!-- Quick Pick Buttons -->
+                <div>
+                    <p class="text-xs font-medium text-neutral-600 mb-2">Chọn nhanh mệnh giá:</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="setTopUpAmount(100000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            100.000 ₫
+                        </button>
+                        <button type="button" onclick="setTopUpAmount(200000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            200.000 ₫
+                        </button>
+                        <button type="button" onclick="setTopUpAmount(500000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            500.000 ₫
+                        </button>
+                        <button type="button" onclick="setTopUpAmount(1000000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            1.000.000 ₫
+                        </button>
+                        <button type="button" onclick="setTopUpAmount(2000000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            2.000.000 ₫
+                        </button>
+                        <button type="button" onclick="setTopUpAmount(5000000)" class="rounded-xl border border-border bg-surface py-2 text-xs font-semibold hover:border-primary hover:bg-brand-soft/50 transition-colors">
+                            5.000.000 ₫
+                        </button>
+                    </div>
+                </div>
 
-            <!-- Quick pick buttons -->
-            <div>
-                <span class="text-[11px] text-muted-foreground block mb-2">Chọn nhanh số tiền:</span>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="setTopUpAmount(500000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
-                        500.000 ₫
+                <div class="rounded-xl bg-surface/80 p-3 text-xs text-muted-foreground">
+                    <p>💡 Tiền sẽ được cộng trực tiếp vào <strong>Số dư chính (Main Balance)</strong> ngay khi xác nhận.</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeTopUpModal()"
+                            class="px-4 py-2.5 rounded-xl border border-border text-xs font-semibold text-neutral-700 hover:bg-surface transition-colors">
+                        Hủy bỏ
                     </button>
-                    <button type="button" onclick="setTopUpAmount(1000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
-                        1.000.000 ₫
-                    </button>
-                    <button type="button" onclick="setTopUpAmount(2000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
-                        2.000.000 ₫
-                    </button>
-                    <button type="button" onclick="setTopUpAmount(5000000)" class="rounded-lg border border-border p-2 text-xs font-medium hover:border-primary hover:bg-surface">
-                        5.000.000 ₫
+                    <button type="submit"
+                            class="px-5 py-2.5 rounded-xl bg-primary text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                        Xác nhận nạp tiền
                     </button>
                 </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-3 border-t border-border">
-                <button type="button" onclick="closeTopUpModal()"
-                        class="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-surface transition-colors">
-                    Hủy bỏ
-                </button>
-                <button type="submit"
-                        class="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-colors shadow-xs">
-                    Xác nhận nạp tiền
-                </button>
             </div>
         </form>
     </div>
