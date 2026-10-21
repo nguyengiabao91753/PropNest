@@ -73,7 +73,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? (user.FullName ?? user.UserName) : null,
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
-                        l.CreatedAt);
+                        l.CreatedAt,
+                        null);
 
         return await query.ToListAsync(cancellationToken);
     }

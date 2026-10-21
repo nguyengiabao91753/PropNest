@@ -154,8 +154,9 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     listing.EndDate,
     listing.RowVersion,
     owner?.FullName,
-    owner?.PhoneNumber,
     owner?.Email,
+    owner?.PhoneNumber,
+    listing.CreatedAt,
     listing.Images.Select(img => img.Url).ToList());
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
