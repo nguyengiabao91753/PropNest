@@ -158,6 +158,8 @@ public sealed class Listing : AuditableEntity
         Touch(); // Update UpdatedAt
     }
 
+    public void Expire() => Expire(DateTimeOffset.UtcNow);
+
     public void Expire(DateTimeOffset now)
     {
         if (Status == ListingStatus.Published && EndDate <= now)

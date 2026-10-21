@@ -135,6 +135,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         null,
         null,
         null,
+        null,
         listing.Images?.Select(img => img.Url).ToList() ?? new List<string>()
         );
 
