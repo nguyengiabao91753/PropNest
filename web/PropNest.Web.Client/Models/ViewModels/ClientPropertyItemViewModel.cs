@@ -4,46 +4,33 @@ namespace PropNest.Web.Client.Models.ViewModels;
 
 public sealed class ClientPropertyItemViewModel
 {
-    public string Id { get; set; } = string.Empty;
+    public long Id { get; set; }
     public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string PropertyType { get; set; } = "Apartment";
-    public string ListingType { get; set; } = "sale"; // 'sale' | 'rent'
-    public string Category { get; set; } = "Residential"; // 'Residential' | 'Commercial' | 'Apartments'
     public decimal Price { get; set; }
-    public decimal Area { get; set; }
-    public decimal LandSize { get; set; }
-    public int Beds { get; set; }
-    public int Baths { get; set; }
-    public int Carports { get; set; } = 1;
-    public string Condition { get; set; } = "Nhà mới đẹp";
+    public decimal Area { get; set; } 
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
-    public string? Ward { get; set; }
     public string Address { get; set; } = string.Empty;
-    public bool ShowAddress { get; set; } = true;
-    public ListingStatus Status { get; set; } = ListingStatus.Published;
-    public string PackageCode { get; set; } = "Standard";
-    public bool Featured { get; set; }
-    public string? Banner { get; set; }
-    public string SellerId { get; set; } = "seller-1";
-    public string SellerName { get; set; } = "Nguyễn Văn Minh";
-    public string SellerAvatar { get; set; } = "/images/avatar-1.png";
-    public double Rating { get; set; } = 4.8;
-    public int Reviews { get; set; } = 18;
-    public List<string> Images { get; set; } = new();
-    public List<string> Facilities { get; set; } = new();
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public double Lat { get; set; } = 10.8031;
-    public double Lng { get; set; } = 106.7324;
+    public string PackageCode { get; set; } = string.Empty;
+    public string ListingType { get; set; } = string.Empty;
+    public string PropertyType { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+    public string? Description {  get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
+    public string OwnerEmail { get; set; } = string.Empty;
+    public string OwnerPhone { get; set; } = string.Empty;
 
-    public string PrimaryImage => Images.Count > 0 ? Images[0] : "/images/p1.png";
+    public List<string> ImageUrls { get; set; } = new();
 
+    // Lấy ảnh đầu tiên trong ImageUrls, nếu chưa có ảnh thì fallback theo PropertyType
+    public string PrimaryImage => ImageUrls.FirstOrDefault() ?? PropertyType switch
+    {
+        "Apartment" => "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
+        "House" => "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80",
+        "Villa" => "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
+        "Land" => "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
+        _ => "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80"
+    };
     public string FormattedLocation =>
         string.Join(", ", new[] { District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
-
-    public string PublicAddress =>
-        ShowAddress
-            ? string.Join(", ", new[] { Address, Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)))
-            : string.Join(", ", new[] { Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
