@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PropNest.Web.Client.Models.InputModels;
-using PropNest.Web.Client.Services;
+using PropNest.Web.Client.Services.IServices;
 
 namespace PropNest.Web.Client.Controllers;
 
@@ -15,7 +15,7 @@ public class PropertiesController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Details(string id)
+    public async Task<IActionResult> Details(long id)
     {
         var model = await _listingService.GetPropertyDetailAsync(id);
         if (model == null)

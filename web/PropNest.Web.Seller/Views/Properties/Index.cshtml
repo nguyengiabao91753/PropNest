@@ -3,16 +3,15 @@
 @{
     ViewData["Title"] = "Bất động sản của tôi";
 
-    var statusOptions = new[]
+    var statusTabs = new[]
     {
-        ("all", "Tất cả trạng thái", Model.Counts.All),
-        ("Published", "Đang hiển thị (Published)", Model.Counts.Published),
-        ("PendingModeration", "Chờ duyệt (PendingModeration)", Model.Counts.PendingModeration),
-        ("Draft", "Bản nháp (Draft)", Model.Counts.Draft),
-        ("PendingPayment", "Chờ thanh toán (PendingPayment)", Model.Counts.PendingPayment),
-        ("Rejected", "Bị từ chối (Rejected)", Model.Counts.Rejected),
-        ("Hidden", "Đã tạm ẩn (Hidden)", Model.Counts.Hidden),
-        ("Expired", "Hết hạn (Expired)", Model.Counts.Expired)
+        ("all", "Tất cả", Model.Counts.All),
+        ("Published", "Đang hiển thị", Model.Counts.Published),
+        ("PendingModeration", "Chờ duyệt", Model.Counts.PendingModeration),
+        ("Draft", "Bản nháp", Model.Counts.Draft),
+        ("Rejected", "Bị từ chối", Model.Counts.Rejected),
+        ("Hidden", "Đã tạm ẩn", Model.Counts.Hidden),
+        ("Expired", "Hết hạn", Model.Counts.Expired)
     };
 }
 
@@ -21,7 +20,7 @@
     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5 md:px-8">
             <div>
-                <h1 class="font-display text-3xl font-bold text-neutral-900">Quản lý Bất động sản</h1>
+                <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Quản lý Bất động sản</h1>
                 <p class="text-xs text-muted-foreground mt-1">
                     Theo dõi vòng đời tin đăng, cập nhật giá và kiểm toán lịch sử thay đổi (Delta Engine F04).
                 </p>
@@ -34,49 +33,63 @@
         </div>
 
         <div class="p-6 md:p-8 space-y-6">
-            <!-- Filter Toolbar -->
+            <!-- 1. Horizontal Status Tabs Filter (Task 210) -->
+            <div class="border-b border-border/80 pb-1">
+                <nav class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" aria-label="Tabs trạng thái">
+                    @foreach (var (val, lbl, count) in statusTabs)
+                    {
+                        var isActive = string.Equals(Model.CurrentStatus, val, StringComparison.OrdinalIgnoreCase);
+                        <a asp-action="Index"
+                           asp-route-status="@val"
+                           asp-route-q="@Model.SearchTerm"
+                           asp-route-layout="@Model.Layout"
+                           asp-route-page="1"
+                           class="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all @(isActive ? "bg-primary text-white shadow-xs" : "bg-surface/70 text-muted-foreground hover:bg-surface hover:text-neutral-900 border border-border/60")">
+                            <span>@lbl</span>
+                            <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold @(isActive ? "bg-white/20 text-white" : "bg-neutral-200/70 text-neutral-700")">
+                                @count
+                            </span>
+                        </a>
+                    }
+                </nav>
+            </div>
+
+            <!-- 2. Search Toolbar & Layout Switcher -->
             <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <!-- Status Filter Select -->
-                    <form method="get" asp-action="Index" id="filterForm" class="flex items-center gap-2">
-                        <input type="hidden" name="layout" value="@Model.Layout" />
-                        <select name="status" onchange="this.form.submit()"
-                                class="h-10 rounded-xl border border-border bg-surface px-4 text-xs font-medium outline-none focus:border-primary transition-colors text-neutral-800">
-                            @foreach (var (val, lbl, count) in statusOptions)
-                            {
-                                <option value="@val" selected="@(string.Equals(Model.CurrentStatus, val, StringComparison.OrdinalIgnoreCase))">
-                                    @lbl (@count)
-                                </option>
-                            }
-                        </select>
+                <!-- Search Input Form -->
+                <form method="get" asp-action="Index" class="flex items-center gap-2">
+                    <input type="hidden" name="status" value="@Model.CurrentStatus" />
+                    <input type="hidden" name="layout" value="@Model.Layout" />
+                    <input type="hidden" name="page" value="1" />
 
-                        <!-- Search Input -->
-                        <div class="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs w-64 focus-within:border-primary transition-colors">
-                            <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
-                            <input type="text" name="q" value="@Model.SearchTerm"
-                                   placeholder="Tìm mã PN-, địa chỉ, quận..."
-                                   class="w-full bg-transparent outline-none text-neutral-900 placeholder:text-muted-foreground/70" />
-                            @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
-                            {
-                                <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-layout="@Model.Layout" class="text-muted-foreground hover:text-neutral-900">
-                                    <i data-lucide="x" class="size-3.5"></i>
-                                </a>
-                            }
-                        </div>
-                    </form>
-                </div>
+                    <div class="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs w-72 focus-within:border-primary transition-colors">
+                        <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
+                        <input type="text" name="q" value="@Model.SearchTerm"
+                               placeholder="Tìm mã tin, tiêu đề, địa chỉ..."
+                               class="w-full bg-transparent outline-none text-neutral-900 placeholder:text-muted-foreground/70" />
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                        {
+                            <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-layout="@Model.Layout" asp-route-page="1" class="text-muted-foreground hover:text-neutral-900" title="Xóa tìm kiếm">
+                                <i data-lucide="x" class="size-3.5"></i>
+                            </a>
+                        }
+                    </div>
+                    <button type="submit" class="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold text-neutral-700 hover:border-primary hover:text-primary transition-colors">
+                        Tìm kiếm
+                    </button>
+                </form>
 
-                <!-- Layout Toggle (Table vs Grid) -->
-                <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-surface">
-                    <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-q="@Model.SearchTerm" asp-route-layout="table"
-                       class="rounded-lg p-2 transition-colors @(Model.Layout == "table" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                       title="Xem dạng bảng">
-                        <i data-lucide="rows-3" class="size-4"></i>
+                <!-- Layout Toggle (Table / Grid) -->
+                <div class="flex items-center gap-1 rounded-xl border border-border bg-surface p-1">
+                    <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-q="@Model.SearchTerm" asp-route-layout="table" asp-route-page="@Model.PageNumber"
+                       class="rounded-lg p-2 transition-colors @(Model.Layout == "table" ? "bg-card text-primary shadow-xs font-bold" : "text-muted-foreground hover:text-neutral-900")"
+                       title="Chế độ bảng">
+                        <i data-lucide="list" class="size-4"></i>
                     </a>
-                    <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-q="@Model.SearchTerm" asp-route-layout="grid"
-                       class="rounded-lg p-2 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                       title="Xem dạng lưới">
-                        <i data-lucide="grid-3x3" class="size-4"></i>
+                    <a asp-action="Index" asp-route-status="@Model.CurrentStatus" asp-route-q="@Model.SearchTerm" asp-route-layout="grid" asp-route-page="@Model.PageNumber"
+                       class="rounded-lg p-2 transition-colors @(Model.Layout == "grid" ? "bg-card text-primary shadow-xs font-bold" : "text-muted-foreground hover:text-neutral-900")"
+                       title="Chế độ lưới">
+                        <i data-lucide="layout-grid" class="size-4"></i>
                     </a>
                 </div>
             </div>
@@ -98,8 +111,18 @@
                     {
                         <div class="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between">
                             <div>
-                                <div class="relative aspect-[16/10] w-full bg-neutral-100 overflow-hidden">
-                                    <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
+                                <div class="relative aspect-[16/10] w-full bg-neutral-100 overflow-hidden flex items-center justify-center">
+                                    @if (!string.IsNullOrEmpty(p.PrimaryImage))
+                                    {
+                                        <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
+                                    }
+                                    else
+                                    {
+                                        <div class="flex flex-col items-center justify-center text-neutral-400 gap-1">
+                                            <i data-lucide="image" class="size-7"></i>
+                                            <span class="text-[10px] font-medium">Chưa có ảnh</span>
+                                        </div>
+                                    }
                                     <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                                         <partial name="_StatusBadge" model="p.Status" />
                                         @if (p.PackageCode == "VIP")
@@ -115,12 +138,12 @@
                                 </div>
 
                                 <div class="p-4 space-y-2">
-                                    <span class="font-mono text-[11px] text-muted-foreground font-semibold">@p.Id</span>
+                                    <span class="font-mono text-[11px] text-muted-foreground font-semibold">PN-@p.Id</span>
                                     <h3 class="font-semibold text-sm text-neutral-900 truncate" title="@p.Title">@p.Title</h3>
                                     <p class="text-xs text-muted-foreground truncate">📍 @p.FormattedLocation</p>
                                     <p class="font-display text-lg font-bold text-primary">@FormatHelper.FormatPrice(p.Price, p.ListingType)</p>
 
-                                    @if (!string.IsNullOrWhiteSpace(p.RejectReason) && p.Status == ListingStatus.Rejected)
+                                    @if (!string.IsNullOrWhiteSpace(p.RejectReason) && p.Status == PropNest.Domain.Listings.ListingStatus.Rejected)
                                     {
                                         <div class="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-[11px] text-rose-800">
                                             <strong>Lý do từ chối:</strong> @p.RejectReason
@@ -130,15 +153,22 @@
                             </div>
 
                             <div class="border-t border-border p-3 bg-surface/40 flex items-center justify-between text-xs">
-                                <a asp-action="Details" asp-route-id="@p.Id" class="text-primary hover:underline font-medium">
+                                <a asp-action="Details" asp-route-id="@p.Id" class="text-primary hover:underline font-semibold">
                                     Chi tiết
                                 </a>
                                 <div class="flex items-center gap-2">
+                                    <!-- Delete Button (Only for Draft) -->
+                                    @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tin nháp này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="p-1.5 rounded-lg text-destructive hover:bg-rose-50 transition-colors" title="Xóa tin nháp">
+                                                <i data-lucide="trash-2" class="size-4"></i>
+                                            </button>
+                                        </form>
+                                    }
                                     <a asp-action="History" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900" title="Xem lịch sử Delta">
                                         <i data-lucide="history" class="size-4"></i>
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900" title="Chỉnh sửa">
-                                        <i data-lucide="edit-3" class="size-4"></i>
                                     </a>
                                 </div>
                             </div>
@@ -148,103 +178,192 @@
             }
             else
             {
-                <!-- Table View -->
-                <div class="rounded-xl border border-border overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-surface/70 text-xs text-muted-foreground border-b border-border uppercase">
+                <!-- Table View (Clean, Compact, Modern) -->
+                <div class="rounded-xl border border-border overflow-visible bg-card">
+                    <div class="overflow-x-auto overflow-y-visible">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-surface/80 text-[11px] text-muted-foreground border-b border-border uppercase tracking-wider">
                                 <tr>
-                                    <th class="px-5 py-3.5 font-semibold">Bất động sản</th>
-                                    <th class="px-4 py-3.5 font-semibold">Mã tin</th>
-                                    <th class="px-4 py-3.5 font-semibold">Trạng thái</th>
-                                    <th class="px-4 py-3.5 font-semibold">Gói</th>
-                                    <th class="px-4 py-3.5 font-semibold">Giá</th>
-                                    <th class="px-4 py-3.5 font-semibold">Diện tích</th>
-                                    <th class="px-4 py-3.5 font-semibold">Lượt xem</th>
-                                    <th class="px-5 py-3.5 font-semibold text-right">Thao tác</th>
+                                    <th class="px-4 py-3 font-semibold">Bất động sản</th>
+                                    <th class="px-3 py-3 font-semibold">Trạng thái</th>
+                                    <th class="px-3 py-3 font-semibold">Gói</th>
+                                    <th class="px-3 py-3 font-semibold">Giá</th>
+                                    <th class="px-3 py-3 font-semibold">Diện tích</th>
+                                    <th class="px-3 py-3 font-semibold">Lượt xem</th>
+                                    <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-border bg-card">
+                            <tbody class="divide-y divide-border/70">
                                 @foreach (var p in Model.Properties)
                                 {
-                                    <tr class="hover:bg-surface/50 transition-colors">
-                                        <td class="px-5 py-3.5">
+                                    <tr class="hover:bg-surface/40 transition-colors">
+                                        <!-- Column 1: Info (Title + Location + ID) -->
+                                        <td class="px-4 py-3">
                                             <div class="flex items-center gap-3">
-                                                <div class="relative size-12 rounded-xl overflow-hidden border border-border shrink-0 bg-neutral-100">
-                                                    <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
-                                                </div>
-                                                <div class="min-w-0 max-w-xs">
-                                                    <p class="font-medium text-neutral-900 truncate">@p.Title</p>
-                                                    <p class="text-xs text-muted-foreground truncate">@p.FormattedLocation</p>
-                                                    @if (!string.IsNullOrWhiteSpace(p.RejectReason) && p.Status == ListingStatus.Rejected)
+                                                <div class="relative size-11 rounded-lg overflow-hidden border border-border shrink-0 bg-neutral-100 flex items-center justify-center">
+                                                    @if (!string.IsNullOrEmpty(p.PrimaryImage))
                                                     {
-                                                        <span class="text-[10px] text-rose-600 block truncate">Vi phạm: @p.RejectReason</span>
+                                                        <img src="@p.PrimaryImage" alt="@p.Title" class="size-full object-cover" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <i data-lucide="image" class="size-4 text-neutral-400"></i>
+                                                    }
+                                                </div>
+                                                <div class="min-w-0 max-w-[280px]">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-mono text-[10px] text-muted-foreground font-semibold">PN-@p.Id</span>
+                                                        <span class="text-[10px] text-muted-foreground/80">• @(p.ListingType == "sale" ? "Bán" : "Thuê")</span>
+                                                    </div>
+                                                    <a asp-action="Details" asp-route-id="@p.Id" class="font-medium text-neutral-900 hover:text-primary transition-colors block truncate text-xs" title="@p.Title">
+                                                        @p.Title
+                                                    </a>
+                                                    <p class="text-[11px] text-muted-foreground truncate">@p.FormattedLocation</p>
+                                                    @if (!string.IsNullOrWhiteSpace(p.RejectReason) && p.Status == PropNest.Domain.Listings.ListingStatus.Rejected)
+                                                    {
+                                                        <span class="text-[10px] text-rose-600 font-semibold block truncate">Lý do từ chối: @p.RejectReason</span>
                                                     }
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-3.5 font-mono text-xs text-muted-foreground font-semibold">@p.Id</td>
-                                        <td class="px-4 py-3.5">
+
+                                        <!-- Column 2: Status Badge -->
+                                        <td class="px-3 py-3 whitespace-nowrap">
                                             <partial name="_StatusBadge" model="p.Status" />
                                         </td>
-                                        <td class="px-4 py-3.5">
-                                            <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "")">
+
+                                        <!-- Column 3: Package -->
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
                                                 @p.PackageCode
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3.5 font-semibold text-primary font-display">
+
+                                        <!-- Column 4: Price -->
+                                        <td class="px-3 py-3 whitespace-nowrap font-semibold text-primary font-display text-sm">
                                             @FormatHelper.FormatPrice(p.Price, p.ListingType)
                                         </td>
-                                        <td class="px-4 py-3.5 text-xs text-muted-foreground">@FormatHelper.FormatArea(p.Area)</td>
-                                        <td class="px-4 py-3.5 text-xs text-muted-foreground">
-                                            <span>@p.Views lượt xem</span>
+
+                                        <!-- Column 5: Area -->
+                                        <td class="px-3 py-3 whitespace-nowrap text-muted-foreground">
+                                            @FormatHelper.FormatArea(p.Area)
                                         </td>
-                                        <td class="px-5 py-3.5 text-right">
-                                            <div class="inline-flex items-center gap-2">
-                                                <!-- Details -->
-                                                <a asp-action="Details" asp-route-id="@p.Id" class="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-surface" title="Chi tiết">
-                                                    <i data-lucide="eye" class="size-4"></i>
-                                                </a>
 
-                                                <!-- Edit -->
-                                                <a asp-action="Edit" asp-route-id="@p.Id" class="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-surface" title="Chỉnh sửa">
-                                                    <i data-lucide="edit-3" class="size-4"></i>
-                                                </a>
+                                        <!-- Column 6: Views -->
+                                        <td class="px-3 py-3 whitespace-nowrap text-muted-foreground">
+                                            <span>@p.Views</span>
+                                        </td>
 
-                                                <!-- History Delta (F04) -->
-                                                <a asp-action="History" asp-route-id="@p.Id" class="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-surface" title="Lịch sử Delta (F04)">
-                                                    <i data-lucide="history" class="size-4"></i>
-                                                </a>
-
-                                                <!-- Submit for Moderation (if Draft or Rejected or Hidden) -->
-                                                @if (p.Status == ListingStatus.Draft || p.Status == ListingStatus.Rejected || p.Status == ListingStatus.Hidden)
+                                        <!-- Column 7: Actions (Delete outside + Context Menu for other actions) -->
+                                        <td class="px-4 py-3 whitespace-nowrap text-right">
+                                            <div class="inline-flex items-center justify-end gap-1.5 relative">
+                                                <!-- Delete button directly outside (Chỉ cho phép xóa khi là Draft) -->
+                                                @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
                                                 {
-                                                    <form asp-action="Submit" asp-route-id="@p.Id" method="post" class="inline">
+                                                    <form asp-action="Delete" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tin nháp PN-@p.Id?');">
                                                         @Html.AntiForgeryToken()
-                                                        <button type="submit" class="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title="Gửi duyệt tin">
-                                                            <i data-lucide="send" class="size-4"></i>
+                                                        <button type="submit" class="p-1.5 rounded-lg text-destructive hover:bg-rose-50 transition-colors" title="Xóa tin nháp">
+                                                            <i data-lucide="trash-2" class="size-4"></i>
                                                         </button>
                                                     </form>
                                                 }
-
-                                                <!-- Toggle Hide (if Published or Hidden) -->
-                                                @if (p.Status == ListingStatus.Published || p.Status == ListingStatus.Hidden)
+                                                else
                                                 {
-                                                    <form asp-action="ToggleHide" asp-route-id="@p.Id" method="post" class="inline">
-                                                        @Html.AntiForgeryToken()
-                                                        <button type="submit" class="p-1.5 rounded-lg text-muted-foreground hover:text-neutral-900 hover:bg-surface" title="@(p.Status == ListingStatus.Published ? "Tạm ẩn tin" : "Bật hiển thị")">
-                                                            <i data-lucide="@(p.Status == ListingStatus.Published ? "eye-off" : "eye")" class="size-4"></i>
-                                                        </button>
-                                                    </form>
-                                                }
-
-                                                <!-- Delete -->
-                                                <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tin đăng này?');">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="p-1.5 rounded-lg text-destructive hover:bg-rose-50" title="Xóa tin">
+                                                    <!-- Khi không phải là Draft: Disable nút xóa kèm tooltip giải thích -->
+                                                    <button type="button" disabled class="p-1.5 rounded-lg text-neutral-300 cursor-not-allowed" title="Chỉ tin đăng ở trạng thái Bản nháp (Draft) mới có thể xóa">
                                                         <i data-lucide="trash-2" class="size-4"></i>
                                                     </button>
-                                                </form>
+                                                }
+
+                                                <!-- Action Dropdown Toggle Button -->
+                                                <div class="relative action-dropdown-container">
+                                                    <button type="button"
+                                                            onclick="toggleActionMenu('action-menu-@p.Id', this, event)"
+                                                            class="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:border-primary hover:text-neutral-900 transition-colors shadow-2xs"
+                                                            title="Tùy chọn thao tác">
+                                                        <i data-lucide="more-vertical" class="size-4"></i>
+                                                    </button>
+
+                                                    <!-- Dropdown Menu Content -->
+                                                    <div id="action-menu-@p.Id"
+                                                         class="action-menu-popup hidden fixed w-48 rounded-xl border border-border bg-white p-1.5 shadow-2xl z-[9990] text-left ring-1 ring-black/5">
+                                                        
+                                                        <!-- Chi tiết -->
+                                                        <a asp-action="Details" asp-route-id="@p.Id"
+                                                           class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
+                                                            <i data-lucide="eye" class="size-3.5 text-primary"></i> Xem chi tiết (Preview)
+                                                        </a>
+
+                                                        <!-- Chỉnh sửa (Không cho sửa khi đang chờ duyệt) -->
+                                                        @if (p.Status == PropNest.Domain.Listings.ListingStatus.PendingModeration)
+                                                        {
+                                                            <span class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-300 cursor-not-allowed" title="Tin đang chờ kiểm duyệt, không thể chỉnh sửa">
+                                                                <i data-lucide="edit-3" class="size-3.5 text-neutral-300"></i> Chỉnh sửa
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a asp-action="Edit" asp-route-id="@p.Id"
+                                                               class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
+                                                                <i data-lucide="edit-3" class="size-3.5 text-neutral-600"></i> Chỉnh sửa
+                                                            </a>
+                                                        }
+
+                                                        <!-- Lịch sử Delta F04 -->
+                                                        <a asp-action="History" asp-route-id="@p.Id"
+                                                           class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
+                                                            <i data-lucide="history" class="size-3.5 text-neutral-600"></i> Lịch sử kiểm toán
+                                                        </a>
+
+                                                        <!-- Gửi kiểm duyệt (Submit) - Disable nếu không phải Draft hoặc Rejected -->
+                                                        <div class="border-t border-border/60 my-1"></div>
+                                                        @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft || p.Status == PropNest.Domain.Listings.ListingStatus.Rejected)
+                                                        {
+                                                            <form asp-action="Submit" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="block">
+                                                                @Html.AntiForgeryToken()
+                                                                <button type="submit" class="flex w-full items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors text-left">
+                                                                    <i data-lucide="send" class="size-3.5 text-emerald-600"></i> Gửi duyệt tin
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-300 cursor-not-allowed" title="Chỉ gửi duyệt được khi tin ở trạng thái Bản nháp hoặc Bị từ chối">
+                                                                <i data-lucide="send" class="size-3.5 text-neutral-300"></i> Gửi duyệt tin
+                                                            </span>
+                                                        }
+
+                                                        <!-- Tạm ẩn tin (Hide) - Chỉ khả dụng khi Published -->
+                                                        @if (p.Status == PropNest.Domain.Listings.ListingStatus.Published)
+                                                        {
+                                                            <form asp-action="ToggleHide" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="block">
+                                                                @Html.AntiForgeryToken()
+                                                                <button type="submit" class="flex w-full items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors text-left" title="Tạm ẩn tin khỏi danh sách tìm kiếm">
+                                                                    <i data-lucide="eye-off" class="size-3.5 text-amber-600"></i> Tạm ẩn tin
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                        else if (p.Status == PropNest.Domain.Listings.ListingStatus.Hidden)
+                                                        {
+                                                            <!-- Đã ẩn: Nút Tạm ẩn bị disable và có giải thích -->
+                                                            <span class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-300 cursor-not-allowed" title="Tin đăng hiện đã ở trạng thái Tạm ẩn">
+                                                                <i data-lucide="eye-off" class="size-3.5 text-neutral-300"></i> Tạm ẩn tin
+                                                            </span>
+                                                            <form asp-action="ToggleHide" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="block">
+                                                                @Html.AntiForgeryToken()
+                                                                <button type="submit" class="flex w-full items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-primary hover:bg-surface transition-colors text-left" title="Bật lại tin để hiển thị công khai">
+                                                                    <i data-lucide="eye" class="size-3.5 text-primary"></i> Bật hiển thị lại
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-300 cursor-not-allowed" title="Chỉ có thể tạm ẩn khi tin đang hiển thị (Published)">
+                                                                <i data-lucide="eye-off" class="size-3.5 text-neutral-300"></i> Tạm ẩn tin
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -254,6 +373,117 @@
                     </div>
                 </div>
             }
+
+            <!-- 3. Pagination Controls (Task 210) -->
+            @if (Model.TotalPages > 1)
+            {
+                <div class="mt-8 pt-4 border-t border-border flex flex-wrap items-center justify-between gap-4 text-xs font-medium">
+                    <p class="text-muted-foreground">
+                        Hiển thị <span class="font-bold text-neutral-900">@((Model.PageNumber - 1) * Model.PageSize + 1)</span> - 
+                        <span class="font-bold text-neutral-900">@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount))</span> trong tổng số 
+                        <span class="font-bold text-neutral-900">@Model.TotalCount</span> bất động sản
+                    </p>
+
+                    <nav aria-label="Phân trang" class="flex items-center gap-1.5">
+                        <!-- Nút Trang trước -->
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a asp-action="Index"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-layout="@Model.Layout"
+                               asp-route-page="@(Model.PageNumber - 1)"
+                               class="h-8 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <i data-lucide="chevron-left" class="size-3.5"></i>
+                                <span>Trước</span>
+                            </a>
+                        }
+
+                        <!-- Các số trang -->
+                        @for (var i = 1; i <= Model.TotalPages; i++)
+                        {
+                            var pageIdx = i;
+                            <a asp-action="Index"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-layout="@Model.Layout"
+                               asp-route-page="@pageIdx"
+                               class="size-8 rounded-xl border flex items-center justify-center font-semibold transition-colors @(pageIdx == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
+                                @pageIdx
+                            </a>
+                        }
+
+                        <!-- Nút Trang sau -->
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a asp-action="Index"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-q="@Model.SearchTerm"
+                               asp-route-layout="@Model.Layout"
+                               asp-route-page="@(Model.PageNumber + 1)"
+                               class="h-8 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <span>Sau</span>
+                                <i data-lucide="chevron-right" class="size-3.5"></i>
+                            </a>
+                        }
+                    </nav>
+                </div>
+            }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleActionMenu(menuId, btn, event) {
+            event.stopPropagation();
+            const targetMenu = document.getElementById(menuId);
+            const isHidden = targetMenu.classList.contains('hidden');
+
+            // Đóng tất cả action menu khác đang mở
+            document.querySelectorAll('.action-menu-popup').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+
+            if (isHidden) {
+                // Tính tọa độ nút bấm để neo menu cố định trên màn hình
+                const rect = btn.getBoundingClientRect();
+                const menuWidth = 176; // w-44 = 11rem = 176px
+                const menuHeight = 220; // xấp xỉ chiều cao menu
+
+                // Tọa độ ngang: Căn mép phải của menu trùng với mép phải nút bấm
+                targetMenu.style.left = `${rect.right - menuWidth}px`;
+
+                // Tọa độ dọc: Nếu không đủ chỗ phía dưới thì mở lật lên trên
+                if (window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight) {
+                    targetMenu.style.top = `${rect.top - menuHeight - 6}px`;
+                } else {
+                    targetMenu.style.top = `${rect.bottom + 6}px`;
+                }
+
+                targetMenu.classList.remove('hidden');
+            }
+        }
+
+        // Bấm ngoài màn hình thì tự động đóng menu
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.action-dropdown-container') && !e.target.closest('.action-menu-popup')) {
+                document.querySelectorAll('.action-menu-popup').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+
+        // Cuộn trang hoặc thay đổi kích thước cửa sổ thì đóng menu
+        window.addEventListener('scroll', function () {
+            document.querySelectorAll('.action-menu-popup').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        }, true);
+        window.addEventListener('resize', function () {
+            document.querySelectorAll('.action-menu-popup').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        });
+    </script>
+}

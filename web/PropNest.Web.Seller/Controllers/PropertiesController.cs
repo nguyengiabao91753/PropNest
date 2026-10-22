@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using PropNest.Web.Seller.Filters;
 using PropNest.Web.Seller.Models.InputModels;
-using PropNest.Web.Seller.Services;
+using PropNest.Web.Seller.Models.ViewModels;
+using PropNest.Web.Seller.Services.IServices;
 
 namespace PropNest.Web.Seller.Controllers;
 
+[SellerAuthorize]
 [Route("")]
 [Route("Properties")]
 [Route("seller/properties")]
@@ -18,176 +21,267 @@ public class PropertiesController : Controller
 
     [HttpGet("")]
     [HttpGet("Index")]
-    public async Task<IActionResult> Index([FromQuery] string? status = "all", [FromQuery] string? q = null, [FromQuery] string layout = "table")
+    public async Task<IActionResult> Index(
+        [FromQuery] string? status = "all",
+        [FromQuery] string? q = null,
+        [FromQuery] string layout = "table",
+        [FromQuery] int page = 1,
+        CancellationToken cancellationToken = default)
     {
         ViewData["ActiveNav"] = "Properties";
-        var model = await _sellerService.GetMyPropertiesAsync(status, q, layout);
+        var model = await _sellerService.GetMyPropertiesAsync(status, q, layout, page, 8, cancellationToken);
         return View(model);
     }
-
-    [HttpGet("New")]
-    [HttpGet("Create")]
-    [Route("seller/properties/new")]
-    public IActionResult Create()
+    [HttpPost("Submit/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Submit(
+        long id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
     {
-        ViewData["ActiveNav"] = "Create";
-        return View(new CreatePropertyInputModel());
+        var success = await _sellerService.SubmitForModerationAsync(id, cancellationToken);
+        if (success)
+        {
+            TempData["SuccessMessage"] = "Đã gửi duyệt tin thành công! Tin đăng đang chờ Admin phê duyệt.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"Không thể gửi duyệt tin đăng #{id}. Vui lòng thử lại sau.";
+        }
+        return RedirectToAction(nameof(Index), new { status });
+    }
+    [HttpPost("ToggleHide/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleHide(
+        long id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
+    {
+        var success = await _sellerService.ToggleHideAsync(id, cancellationToken);
+        if (success)
+        {
+            TempData["SuccessMessage"] = $"Đã cập nhật trạng thái hiển thị cho tin #{id}.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"Không thể thay đổi trạng thái ẩn/hiện cho tin #{id}.";
+        }
+        return RedirectToAction(nameof(Index), new { status });
+    }
+    [HttpPost("Delete/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(
+        long id,
+        [FromQuery] string? status = "all",
+        CancellationToken cancellationToken = default)
+    {
+        var success = await _sellerService.DeletePropertyAsync(id, cancellationToken);
+        if (success)
+        {
+            TempData["SuccessMessage"] = $"Tin đăng #{id} đã được xóa thành công.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"Không thể xóa tin đăng #{id}. Chỉ tin đăng ở trạng thái Bản nháp (Draft) mới có thể xóa.";
+        }
+        return RedirectToAction(nameof(Index), new { status });
     }
 
-    [HttpPost("Create")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([FromForm] CreatePropertyInputModel input)
+    [HttpGet("Details/{id}")]
+    public async Task<IActionResult> Details(long id, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(input.Title) || input.Title.Length < 10)
+        ViewData["ActiveNav"] = "Properties";
+        var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+        if (item == null)
         {
-            input.Title = "Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn";
-            ModelState.Remove(nameof(input.Title));
+            TempData["ErrorMessage"] = $"Không tìm thấy thông tin bất động sản #{id}.";
+            return RedirectToAction(nameof(Index));
+>>>>>>> e3882219ab9b9505c0d33a0cffa5257379d52c13
         }
 
-        if (string.IsNullOrWhiteSpace(input.Description) || input.Description.Length < 20)
+        return View(item);
+    }
+
+    [HttpGet("Create")]
+    public IActionResult Create()
+    {
+        ViewData["ActiveNav"] = "Properties";
+        var model = new CreatePropertyInputModel();
+        return View(model);
+    }
+    [HttpPost("Create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(CreatePropertyInputModel model, [FromForm] string? submitAction, CancellationToken cancellationToken)
+    {
+        ViewData["ActiveNav"] = "Properties";
+
+        // Xử lý khi user bấm nút "Lưu bản nháp (Draft)"
+        if (string.Equals(submitAction, "save_draft", StringComparison.OrdinalIgnoreCase))
         {
-            input.Description = "Căn hộ cao cấp hoàn thiện đầy đủ nội thất sang trọng, ban công thoáng rộng view trực diện sông, pháp lý chuẩn sổ hồng.";
-            ModelState.Remove(nameof(input.Description));
+            if (string.IsNullOrWhiteSpace(model.Title))
+            {
+                model.Title = $"[Bản nháp] Tin đăng ngày {DateTime.Now:dd/MM/yyyy HH:mm}";
+            }
+            if (string.IsNullOrWhiteSpace(model.Description))
+            {
+                model.Description = "Bản nháp đang soạn thảo...";
+            }
+            if (string.IsNullOrWhiteSpace(model.City))
+            {
+                model.City = "TP. Hồ Chí Minh";
+            }
+            if (string.IsNullOrWhiteSpace(model.District))
+            {
+                model.District = "Chưa chọn quận";
+            }
+            if (string.IsNullOrWhiteSpace(model.Address))
+            {
+                model.Address = "Đang cập nhật địa chỉ";
+            }
+            model.Price ??= 0m;
+            model.Area ??= 1m;
+
+            var draftId = await _sellerService.CreatePropertyAsync(model, cancellationToken);
+            if (draftId is not null)
+            {
+                TempData["SuccessMessage"] = $"Đã lưu bản nháp tin đăng #{draftId} thành công!";
+                return RedirectToAction(nameof(Index), new { status = "draft" });
+            }
+
+            TempData["ErrorMessage"] = "Không thể lưu bản nháp. Vui lòng thử lại.";
+            return View(model);
+        }
+
+        // Luồng chuẩn: Add Listing -> Validate -> Submit tạo tin -> Chuyển sang Add Images
+        if (string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 10)
+        {
+            model.Title = "Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn";
+            ModelState.Remove(nameof(model.Title));
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Description) || model.Description.Length < 20)
+        {
+            model.Description = "Căn hộ cao cấp hoàn thiện đầy đủ nội thất sang trọng, ban công thoáng rộng view trực diện sông, pháp lý chuẩn sổ hồng.";
+            ModelState.Remove(nameof(model.Description));
         }
 
         if (!ModelState.IsValid)
         {
-            ViewData["ActiveNav"] = "Create";
-            return View(input);
+            return View(model);
         }
 
-        var newId = await _sellerService.CreatePropertyAsync(input);
-
-        if (input.IsDraft)
+        var createdListingId = await _sellerService.CreatePropertyAsync(model, cancellationToken);
+        if (createdListingId is null)
         {
-            TempData["SuccessMessage"] = $"Tin đăng {newId} đã được lưu vào danh sách Bản nháp (Draft).";
-        }
-        else
-        {
-            TempData["SuccessMessage"] = "Đã gửi duyệt tin thành công! Tin đăng đang chờ Admin phê duyệt.";
+            TempData["ErrorMessage"] = "Không thể tạo tin đăng mới. Vui lòng kiểm tra lại thông tin và thử lại.";
+            return View(model);
         }
 
-        return RedirectToAction(nameof(Index));
+        // Chuyển sang màn hình Add Images
+        TempData["SuccessMessage"] = $"Tin đăng #{createdListingId} đã được tạo ở trạng thái Bản nháp! Vui lòng tải lên hình ảnh cho tin.";
+        return RedirectToAction(nameof(UploadImages), new { id = createdListingId });
+    }
+
+    [HttpGet("UploadImages/{id}")]
+    public async Task<IActionResult> UploadImages(long id, CancellationToken cancellationToken)
+    {
+        ViewData["ActiveNav"] = "Properties";
+        var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+        if (item == null)
+        {
+            TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(item);
+    }
+
+    [HttpPost("UploadImages/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadImages(long id, [FromForm] List<IFormFile> files, CancellationToken cancellationToken)
+    {
+        ViewData["ActiveNav"] = "Properties";
+        if (files != null && files.Count > 0)
+        {
+            var success = await _sellerService.UploadPropertyImagesAsync(id, files, cancellationToken);
+            if (success)
+            {
+                TempData["SuccessMessage"] = $"Đã tải lên {files.Count} hình ảnh cho tin đăng #{id} thành công!";
+            }
+            else
+            {
+                TempData["WarningMessage"] = "Không thể tải lên một số hình ảnh. Bạn có thể bổ sung lại sau.";
+            }
+        }
+
+        // Hoàn tất: Chuyển về tab Bản nháp
+        return RedirectToAction(nameof(Index), new { status = "draft" });
     }
 
     [HttpGet("Edit/{id}")]
-    public async Task<IActionResult> Edit(string id)
+    public async Task<IActionResult> Edit(long id, CancellationToken cancellationToken)
     {
         ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
+        // 1. Lấy thông tin tin đăng hiện có từ Backend API
+        var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+        if (item == null)
+        {
+            TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id}.";
+            return RedirectToAction(nameof(Index));
+        }
+        // 2. Map dữ liệu sang InputModel (chứa RowVersion và ảnh cũ)
         var model = new CreatePropertyInputModel
         {
+            Id = item.Id,
             Title = item.Title,
             Description = item.Description,
             PropertyType = item.PropertyType,
             ListingType = item.ListingType,
             Price = item.Price,
             Area = item.Area,
-            Beds = item.Beds,
-            Baths = item.Baths,
-            Carports = item.Carports,
             City = item.City,
             District = item.District,
             Ward = item.Ward,
             Address = item.Address,
-            PackageCode = item.PackageCode,
-            ImageUrl = item.PrimaryImage
+            RowVersion = item.RowVersion,                      // Chuỗi Base64 concurrency token
+            ExistingImages = item.Images ?? new List<string>() // Danh sách ảnh đã có
         };
-
-        ViewData["ListingId"] = id;
         return View(model);
     }
-
     [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(string id, [FromForm] CreatePropertyInputModel input)
+    public async Task<IActionResult> Edit(long id, CreatePropertyInputModel model, CancellationToken cancellationToken)
     {
+        ViewData["ActiveNav"] = "Properties";
+        // 1. Kiểm tra validation
         if (!ModelState.IsValid)
         {
-            ViewData["ActiveNav"] = "Properties";
-            ViewData["ListingId"] = id;
-            return View(input);
+            return View(model);
         }
-
-        var success = await _sellerService.UpdatePropertyAsync(id, input);
-        if (success)
+        // 2. Gọi Service gửi PUT /api/v1/listings/{id}
+        var result = await _sellerService.UpdatePropertyAsync(id, model, cancellationToken);
+        switch (result)
         {
-            TempData["SuccessMessage"] = $"Cập nhật tin đăng {id} thành công! Lịch sử thay đổi đã được ghi nhận vào Delta Engine (F04).";
+            case UpdatePropertyStatus.Success:
+                TempData["SuccessMessage"] = $"Cập nhật tin đăng #{id} thành công!";
+                return RedirectToAction(nameof(Details), new { id });
+            case UpdatePropertyStatus.ConcurrencyConflict:
+                // ĐÚNG YÊU CẦU ĐỀ BÀI: Optimistic Concurrency fail (HTTP 409)
+                TempData["ErrorMessage"] = "Tin đã bị người khác chỉnh sửa, vui lòng tải lại.";
+                // Tải lại dữ liệu mới nhất để cập nhật RowVersion mới và ảnh vào form
+                var refreshed = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+                if (refreshed != null)
+                {
+                    model.RowVersion = refreshed.RowVersion;
+                    model.ExistingImages = refreshed.Images;
+                }
+                return View(model);
+            case UpdatePropertyStatus.NotFound:
+                TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id} để cập nhật.";
+                return RedirectToAction(nameof(Index));
+            default:
+                TempData["ErrorMessage"] = "Có lỗi xảy ra khi cập nhật tin đăng. Vui lòng thử lại sau.";
+                return View(model);
         }
-        else
-        {
-            TempData["ErrorMessage"] = $"Không tìm thấy tin đăng {id}.";
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpGet("Details/{id}")]
-    public async Task<IActionResult> Details(string id)
-    {
-        ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
-        var histories = await _sellerService.GetHistoryDeltaAsync(id);
-        ViewData["Histories"] = histories;
-
-        return View(item);
-    }
-
-    [HttpPost("Submit/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(string id)
-    {
-        var success = await _sellerService.SubmitForModerationAsync(id);
-        if (success)
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {id} đã được gửi vào hàng đợi duyệt thành công!";
-        }
-        else
-        {
-            TempData["ErrorMessage"] = $"Không thể gửi duyệt tin đăng {id}.";
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("ToggleHide/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ToggleHide(string id)
-    {
-        var success = await _sellerService.ToggleHideAsync(id);
-        if (success)
-        {
-            TempData["WarningMessage"] = $"Đã cập nhật trạng thái hiển thị cho tin {id}.";
-        }
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("Delete/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(string id)
-    {
-        var success = await _sellerService.DeletePropertyAsync(id);
-        if (success)
-        {
-            TempData["SuccessMessage"] = $"Tin đăng {id} đã được xóa thành công.";
-        }
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpGet("History/{id}")]
-    public async Task<IActionResult> History(string id)
-    {
-        ViewData["ActiveNav"] = "Properties";
-        var item = await _sellerService.GetPropertyByIdAsync(id);
-        if (item == null) return NotFound();
-
-        var histories = await _sellerService.GetHistoryDeltaAsync(id);
-        ViewData["Property"] = item;
-
-        return View(histories);
     }
 }

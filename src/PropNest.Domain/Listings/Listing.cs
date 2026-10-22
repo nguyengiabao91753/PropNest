@@ -147,6 +147,17 @@ public sealed class Listing : AuditableEntity
         Touch();
     }
 
+    public void Delete()
+    {
+        EnsureNotDeleted();
+        if (Status != ListingStatus.Draft)
+        {
+            throw new InvalidOperationException("Only a draft listing can be deleted.");
+        }
+        Status = ListingStatus.Deleted;
+        Touch(); // Update UpdatedAt
+    }
+
     public void Expire() => Expire(DateTimeOffset.UtcNow);
 
     public void Expire(DateTimeOffset now)

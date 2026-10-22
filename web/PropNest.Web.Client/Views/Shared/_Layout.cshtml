@@ -1,5 +1,11 @@
 @{
     var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? "";
+    var authToken = Context.Request.Cookies[PropNest.Web.Client.Services.AuthHeaderHandler.TokenCookieName];
+    var isLoggedIn = !string.IsNullOrWhiteSpace(authToken);
+    var userProfile = isLoggedIn ? PropNest.Web.Client.Helpers.JwtUserHelper.GetProfileFromToken(authToken) : null;
+    var role = userProfile?.Role ?? string.Empty;
+    var isSeller = string.Equals(role, "Seller", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Moderator", StringComparison.OrdinalIgnoreCase);
 }
 
 <!DOCTYPE html>
@@ -42,7 +48,7 @@
                     },
                     fontFamily: {
                         sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                        display: ['"Playfair Display"', 'Georgia', 'Cambria', 'serif']
+                        display: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
                     }
                 }
             }
@@ -110,15 +116,27 @@
 
             <!-- Right: Portal Switchers & Account -->
             <div class="flex items-center gap-3">
-                <!-- Portal Switchers -->
-                <a href="https://localhost:7006/"
-                   class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
-                    <i data-lucide="store" class="size-3.5 text-primary"></i> Kênh Người bán
-                </a>
-                <a href="https://localhost:7215/"
-                   class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
-                    <i data-lucide="layout-dashboard" class="size-3.5 text-destructive"></i> Kênh Quản trị
-                </a>
+
+                <!-- Portal Switchers based on Roles -->
+                @if (isLoggedIn)
+                {
+                    @if (isSeller)
+                    {
+                        <!-- Seller: Chỉ thấy Kênh Người bán, Ẩn Kênh Quản trị -->
+                        <a href="https://localhost:7006/"
+                           class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
+                            <i data-lucide="store" class="size-3.5 text-primary"></i> Kênh Người bán
+                        </a>
+                    }
+                    else if (isAdmin)
+                    {
+                        <!-- Admin: Chỉ thấy Kênh Quản trị, Chặn Kênh Người bán -->
+                        <a href="https://localhost:7215/"
+                           class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
+                            <i data-lucide="layout-dashboard" class="size-3.5 text-destructive"></i> Kênh Quản trị
+                        </a>
+                    }
+                }
 
                 <!-- Saved Favorites Button -->
                 <a asp-controller="Listings" asp-action="Index" asp-route-savedOnly="true"
@@ -130,19 +148,38 @@
                     </span>
                 </a>
 
-                <!-- Auth links -->
-                <a asp-controller="Auth" asp-action="Login" class="text-xs font-semibold text-muted-foreground hover:text-primary px-3 py-1.5">
-                    Đăng nhập
-                </a>
-                <a asp-controller="Auth" asp-action="Signup"
-                   class="hidden sm:inline-flex items-center rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors">
-                    Đăng ký
-                </a>
 
-                <!-- Mobile menu button -->
-                <button type="button" onclick="toggleMobileMenu()" class="grid size-9 place-items-center rounded-lg border border-border md:hidden" aria-label="Mở menu điều hướng">
-                    <i data-lucide="menu" class="size-5"></i>
-                </button>
+                @if (isLoggedIn)
+                {
+                    <!-- Đã đăng nhập: Nút xem hồ sơ và Đăng xuất -->
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openProfileModal()"
+                                class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-neutral-800 hover:border-primary hover:bg-surface transition-colors shadow-2xs group cursor-pointer"
+                                title="Bấm để xem hồ sơ thông tin tài khoản">
+                            <span class="grid size-6 place-items-center rounded-full bg-primary/15 text-primary text-[10px] font-bold group-hover:bg-primary group-hover:text-white transition-colors">
+                                @(userProfile?.Initials ?? "PN")
+                            </span>
+                            <span class="max-w-[120px] truncate font-medium">@(string.IsNullOrWhiteSpace(userProfile?.FullName) ? "Hồ sơ" : userProfile.FullName)</span>
+                            <i data-lucide="chevron-down" class="size-3 text-muted-foreground group-hover:text-primary transition-colors"></i>
+                        </button>
+                        <a asp-controller="Auth" asp-action="Logout"
+                           class="rounded-full border border-border bg-card hover:border-rose-400 hover:text-rose-600 px-3.5 py-1.5 text-xs font-semibold text-neutral-600 transition-colors"
+                           title="Đăng xuất khỏi hệ thống">
+                            Đăng xuất
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <!-- Chưa đăng nhập: Hiện Đăng nhập / Đăng ký -->
+                    <a asp-controller="Auth" asp-action="Login" class="text-xs font-semibold text-muted-foreground hover:text-primary px-3 py-1.5">
+                        Đăng nhập
+                    </a>
+                    <a asp-controller="Auth" asp-action="Signup"
+                       class="hidden sm:inline-flex items-center rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-primary-hover transition-colors">
+                        Đăng ký
+                    </a>
+                }
             </div>
         </div>
     </header>
@@ -179,39 +216,43 @@
                 </div>
             </div>
 
-            <div class="border-t border-border pt-4 flex gap-2">
-                <a asp-controller="Auth" asp-action="Login" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl border border-border bg-card">
-                    Đăng nhập
-                </a>
-                <a asp-controller="Auth" asp-action="Signup" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl bg-primary text-white">
-                    Đăng ký
-                </a>
+            <div class="border-t border-border pt-4">
+                @if (isLoggedIn)
+                {
+                    <div class="flex flex-col gap-2.5">
+                        <button type="button" onclick="toggleMobileMenu(); openProfileModal();"
+                                class="flex items-center gap-3 p-2.5 rounded-xl bg-card border border-border text-left hover:border-primary transition-colors cursor-pointer w-full">
+                            <div class="grid size-9 place-items-center rounded-xl bg-primary text-white text-xs font-bold shrink-0">
+                                @(userProfile?.Initials ?? "PN")
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-neutral-900 truncate">@(string.IsNullOrWhiteSpace(userProfile?.FullName) ? "Người dùng PropNest" : userProfile.FullName)</p>
+                                <p class="text-[11px] text-muted-foreground truncate">@userProfile?.Email</p>
+                            </div>
+                            <i data-lucide="chevron-right" class="size-4 text-muted-foreground shrink-0"></i>
+                        </button>
+                        <a asp-controller="Auth" asp-action="Logout" class="text-center py-2 text-xs font-semibold rounded-xl border border-rose-300 text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors">
+                            Đăng xuất
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="flex gap-2">
+                        <a asp-controller="Auth" asp-action="Login" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl border border-border bg-card">
+                            Đăng nhập
+                        </a>
+                        <a asp-controller="Auth" asp-action="Signup" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl bg-primary text-white">
+                            Đăng ký
+                        </a>
+                    </div>
+                }
             </div>
         </div>
     </div>
 
     <!-- Main Content -->
     <main class="flex-1">
-        <!-- Flash Notifications -->
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="flash-alert mx-auto max-w-7xl px-4 pt-4">
-                <div class="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 shadow-xs transition-opacity duration-300">
-                    <i data-lucide="check-circle-2" class="size-4 shrink-0 text-emerald-600"></i>
-                    <span>@TempData["SuccessMessage"]</span>
-                </div>
-            </div>
-        }
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="flash-alert mx-auto max-w-7xl px-4 pt-4">
-                <div class="flex items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs font-medium text-rose-800 shadow-xs transition-opacity duration-300">
-                    <i data-lucide="x-circle" class="size-4 shrink-0 text-rose-600"></i>
-                    <span>@TempData["ErrorMessage"]</span>
-                </div>
-            </div>
-        }
-
         @RenderBody()
     </main>
 
@@ -245,18 +286,158 @@
         </div>
     </footer>
 
-    <!-- Live Toast Component -->
-    <div id="liveToast" class="fixed bottom-6 right-6 z-50 hidden translate-y-10 opacity-0 transition-all duration-300">
-        <div class="flex items-start gap-3 rounded-2xl border border-primary/30 bg-card p-4 shadow-xl">
-            <div class="grid size-8 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
-                <i data-lucide="check" class="size-4"></i>
+    <!-- Global Back to Top Button -->
+    <button type="button" id="backToTopBtn" aria-label="Cuộn lên đầu trang"
+            class="fixed bottom-6 right-6 z-40 hidden size-11 place-items-center rounded-full bg-card/90 text-neutral-800 shadow-lg border border-border backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-white hover:scale-110 hover:shadow-xl hover:border-primary">
+        <i data-lucide="arrow-up" class="size-5"></i>
+    </button>
+
+    <!-- Floating Toast Popups Container (Nổi trên bề mặt, không làm xô lệch layout) -->
+    <div id="toastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            var errors = ViewData.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Distinct()
+                .ToList();
+
+            if (errors.Any())
+            {
+                <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-rose-500/15 text-neutral-900 animate-[toastSlideIn_0.3s_ease-out]">
+                    <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700">
+                        <i data-lucide="alert-triangle" class="size-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0 pt-0.5">
+                        <p class="text-xs font-bold text-rose-900">Vui lòng kiểm tra lại thông tin</p>
+                        <div class="text-xs text-neutral-700 mt-1 space-y-1">
+                            @foreach (var err in errors)
+                            {
+                                <p class="leading-relaxed flex items-start gap-1.5">• <span>@err</span></p>
+                            }
+                        </div>
+                    </div>
+                    <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                        <i data-lucide="x" class="size-4"></i>
+                    </button>
+                </div>
+            }
+        }
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-emerald-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/15 text-neutral-900">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <i data-lucide="check-circle-2" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-emerald-900">Thành công</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["SuccessMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
             </div>
-            <div>
-                <h4 id="toastTitle" class="text-xs font-bold text-neutral-900">Thông báo</h4>
-                <p id="toastDesc" class="text-[11px] text-muted-foreground mt-0.5 max-w-xs">Nội dung thông báo</p>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-rose-500/15 text-neutral-900">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700">
+                    <i data-lucide="alert-triangle" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-rose-900">Thông báo</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["ErrorMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (isLoggedIn && userProfile != null)
+    {
+        <!-- User Profile Modal (Xem thông tin hồ sơ người dùng) -->
+        <div id="userProfileModal" class="fixed inset-0 z-[9998] hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="w-full max-w-md rounded-2xl bg-surface border border-border shadow-2xl overflow-hidden transition-all transform scale-100">
+                <!-- Header Modal -->
+                <div class="relative bg-gradient-to-br from-[#1f1a14] via-[#2c241c] to-[#1f1a14] p-6 text-white border-b border-white/10">
+                    <button type="button" onclick="closeProfileModal()" class="absolute top-4 right-4 rounded-full p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer" title="Đóng">
+                        <i data-lucide="x" class="size-5"></i>
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="grid size-14 place-items-center rounded-2xl bg-primary text-white font-bold font-display text-xl shadow-md border-2 border-white/20">
+                            @userProfile.Initials
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-bold font-display truncate">@userProfile.FullName</h3>
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-semibold">
+                                    <i data-lucide="check" class="size-3"></i> @userProfile.StatusDisplay
+                                </span>
+                            </div>
+                            <p class="text-xs text-white/70 mt-0.5">@userProfile.RoleDisplay</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Form Fields -->
+                <div class="p-6 space-y-4 text-xs">
+                    <div>
+                        <label class="font-semibold text-muted-foreground block mb-1.5">Họ và tên</label>
+                        <div class="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card text-neutral-900 font-medium">
+                            <i data-lucide="user" class="size-4 text-primary shrink-0"></i>
+                            <span class="truncate">@userProfile.FullName</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-muted-foreground block mb-1.5">Địa chỉ Email</label>
+                        <div class="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card text-neutral-900 font-medium">
+                            <i data-lucide="mail" class="size-4 text-primary shrink-0"></i>
+                            <span class="truncate">@userProfile.Email</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-muted-foreground block mb-1.5">Số điện thoại</label>
+                        <div class="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card text-neutral-900 font-medium">
+                            <i data-lucide="phone" class="size-4 text-primary shrink-0"></i>
+                            <span>@(string.IsNullOrWhiteSpace(userProfile.PhoneNumber) ? "Chưa cập nhật" : userProfile.PhoneNumber)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="font-semibold text-muted-foreground block mb-1.5">Vai trò tài khoản</label>
+                            <div class="p-3 rounded-xl border border-border bg-card text-neutral-900 font-medium flex items-center gap-2">
+                                <i data-lucide="shield" class="size-4 text-primary shrink-0"></i>
+                                <span class="truncate">@userProfile.Role</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-semibold text-muted-foreground block mb-1.5">Mã định danh</label>
+                            <div class="p-3 rounded-xl border border-border bg-card text-neutral-900 font-medium flex items-center gap-2">
+                                <i data-lucide="hash" class="size-4 text-primary shrink-0"></i>
+                                <span>#@(userProfile.UserId?.ToString() ?? "N/A")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="border-t border-border p-4 bg-card/60 flex items-center justify-between gap-3">
+                    <a asp-controller="Auth" asp-action="Logout" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors">
+                        <i data-lucide="log-out" class="size-3.5"></i> Đăng xuất
+                    </a>
+                    <button type="button" onclick="closeProfileModal()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    }
 
     <!-- Lucide Icons & Client Scripts -->
     <script src="https://unpkg.com/lucide@latest"></script>

@@ -35,7 +35,7 @@
                     },
                     fontFamily: {
                         sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-                        display: ['"Playfair Display"', 'Georgia', 'Cambria', 'serif']
+                        display: ['"Be Vietnam Pro"', 'system-ui', 'sans-serif']
                     }
                 }
             }
@@ -46,7 +46,7 @@
 <body class="min-h-screen bg-surface font-sans text-neutral-900 antialiased">
     <main class="grid min-h-screen lg:grid-cols-2">
         <!-- Left Dark Visual Panel -->
-        <div class="hidden bg-[#1f1a14] p-12 text-[#fffaf0] lg:flex lg:flex-col lg:justify-between border-r border-white/10">
+        <div class="hidden bg-[#1f1a14] p-12 text-[#fffaf0] lg:flex lg:flex-col lg:justify-between border-r border-white/10 sticky top-0 h-screen overflow-hidden">
             <div>
                 <a href="/" class="flex items-center gap-2.5">
                     <div class="grid size-10 place-items-center rounded-xl bg-primary text-white font-bold font-display text-lg">PN</div>
@@ -58,10 +58,10 @@
             </div>
 
             <div class="space-y-6 max-w-lg">
-                <p class="font-display text-4xl sm:text-5xl font-medium leading-snug">
-                    Khởi đầu hành trình <br />
-                    <em class="text-primary italic">cùng PropNest hôm nay.</em>
-                </p>
+                <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-snug tracking-tight">
+                    <span>Khởi đầu hành trình</span>
+                    <span class="block mt-2 text-primary">cùng PropNest hôm nay.</span>
+                </h2>
                 <p class="text-xs text-[#fffaf0]/75 leading-relaxed">
                     Cho dù bạn đang tìm kiếm căn nhà mơ ước hay là nhà môi giới muốn tiếp cận hàng triệu khách hàng, PropNest mang đến giải pháp công nghệ hàng đầu.
                 </p>
@@ -97,28 +97,38 @@
                         <input type="hidden" id="selectedRoleInput" asp-for="Role" value="@Model.Role" />
                         <div class="grid grid-cols-2 gap-3">
                             <button type="button" onclick="selectRole('customer')" id="roleBtnCustomer"
-                                    class="role-card flex flex-col items-center text-center p-3.5 rounded-xl border text-xs transition-all @(Model.Role == "customer" ? "border-primary bg-brand-soft text-primary font-bold shadow-xs" : "border-border bg-card text-muted-foreground hover:border-primary/50")">
+                                    class="role-card flex flex-col items-center text-center p-3 rounded-xl border text-xs transition-all @(Model.Role == "customer" ? "border-primary bg-brand-soft text-primary font-bold shadow-xs" : "border-border bg-card text-muted-foreground hover:border-primary/50")">
                                 <i data-lucide="user" class="size-5 mb-1.5 shrink-0"></i>
                                 <strong class="block">Khách hàng</strong>
-                                <span class="text-[10px] text-muted-foreground mt-0.5">Tìm kiếm BĐS, lưu tin & liên hệ</span>
+                                <span class="text-[10px] text-muted-foreground mt-0.5">Tìm kiếm BĐS & liên hệ</span>
                             </button>
                             <button type="button" onclick="selectRole('seller')" id="roleBtnSeller"
-                                    class="role-card flex flex-col items-center text-center p-3.5 rounded-xl border text-xs transition-all @(Model.Role == "seller" ? "border-primary bg-brand-soft text-primary font-bold shadow-xs" : "border-border bg-card text-muted-foreground hover:border-primary/50")">
+                                    class="role-card flex flex-col items-center text-center p-3 rounded-xl border text-xs transition-all @(Model.Role == "seller" ? "border-primary bg-brand-soft text-primary font-bold shadow-xs" : "border-border bg-card text-muted-foreground hover:border-primary/50")">
                                 <i data-lucide="store" class="size-5 mb-1.5 shrink-0"></i>
                                 <strong class="block">Người bán / Môi giới</strong>
-                                <span class="text-[10px] text-muted-foreground mt-0.5">Đăng tin BĐS, mua gói VIP & ví</span>
+                                <span class="text-[10px] text-muted-foreground mt-0.5">Đăng tin BĐS & nạp ví</span>
                             </button>
                         </div>
                     </div>
 
                     <div class="space-y-3 text-xs">
+                        <!-- 1. Họ và tên -->
                         <div>
-                            <label asp-for="Name" class="font-semibold text-neutral-800 mb-1 block">Họ và tên *</label>
-                            <input asp-for="Name" required placeholder="Ví dụ: Nguyễn Văn A"
+                            <label asp-for="FullName" class="font-semibold text-neutral-800 mb-1 block">Họ và tên *</label>
+                            <input asp-for="FullName" required placeholder="Ví dụ: Nguyễn Văn A"
                                    class="w-full rounded-xl border border-border bg-card p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
-                            <span asp-validation-for="Name" class="text-[11px] text-destructive mt-1 block"></span>
+                            <span asp-validation-for="FullName" class="text-[11px] text-destructive mt-1 block"></span>
                         </div>
 
+                        <!-- 2. Số điện thoại (Bổ sung mới) -->
+                        <div>
+                            <label asp-for="PhoneNumber" class="font-semibold text-neutral-800 mb-1 block">Số điện thoại *</label>
+                            <input asp-for="PhoneNumber" required placeholder="Ví dụ: 0912345678"
+                                   class="w-full rounded-xl border border-border bg-card p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
+                            <span asp-validation-for="PhoneNumber" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+
+                        <!-- 3. Địa chỉ Email -->
                         <div>
                             <label asp-for="Email" class="font-semibold text-neutral-800 mb-1 block">Địa chỉ Email *</label>
                             <input asp-for="Email" type="email" required placeholder="you@example.com"
@@ -126,11 +136,20 @@
                             <span asp-validation-for="Email" class="text-[11px] text-destructive mt-1 block"></span>
                         </div>
 
+                        <!-- 4. Mật khẩu -->
                         <div>
                             <label asp-for="Password" class="font-semibold text-neutral-800 mb-1 block">Mật khẩu *</label>
                             <input asp-for="Password" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
                                    class="w-full rounded-xl border border-border bg-card p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
                             <span asp-validation-for="Password" class="text-[11px] text-destructive mt-1 block"></span>
+                        </div>
+
+                        <!-- 5. Xác nhận mật khẩu (Bổ sung mới) -->
+                        <div>
+                            <label asp-for="ConfirmPassword" class="font-semibold text-neutral-800 mb-1 block">Xác nhận mật khẩu *</label>
+                            <input asp-for="ConfirmPassword" type="password" required minlength="6" placeholder="Nhập lại mật khẩu"
+                                   class="w-full rounded-xl border border-border bg-card p-3 outline-none focus:border-primary transition-colors text-neutral-900" />
+                            <span asp-validation-for="ConfirmPassword" class="text-[11px] text-destructive mt-1 block"></span>
                         </div>
                     </div>
 
@@ -142,8 +161,8 @@
                 </form>
 
                 <div class="border-t border-border pt-4 text-center text-xs text-muted-foreground">
-                    Đã có tài khoản?{' '}
-                    <a asp-action="Login" class="font-semibold text-primary hover:underline">
+                    Đã có tài khoản?
+                    <a asp-action="Login" class="font-semibold text-primary hover:underline ml-1">
                         Đăng nhập tại đây
                     </a>
                 </div>
@@ -151,8 +170,82 @@
         </div>
     </main>
 
+    <!-- Floating Toast Popups Container -->
+    <div id="toastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            var errors = ViewData.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Distinct()
+                .ToList();
+
+            if (errors.Any())
+            {
+                <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-rose-500/15 text-neutral-900 animate-[toastSlideIn_0.3s_ease-out]">
+                    <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700">
+                        <i data-lucide="alert-triangle" class="size-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0 pt-0.5">
+                        <p class="text-xs font-bold text-rose-900">Vui lòng kiểm tra lại thông tin</p>
+                        <div class="text-xs text-neutral-700 mt-1 space-y-1">
+                            @foreach (var err in errors)
+                            {
+                                <p class="leading-relaxed flex items-start gap-1.5">• <span>@err</span></p>
+                            }
+                        </div>
+                    </div>
+                    <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                        <i data-lucide="x" class="size-4"></i>
+                    </button>
+                </div>
+            }
+        }
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-emerald-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/15 text-neutral-900">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <i data-lucide="check-circle-2" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-emerald-900">Thành công</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["SuccessMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-rose-500/15 text-neutral-900">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700">
+                    <i data-lucide="alert-triangle" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-rose-900">Thông báo</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["ErrorMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+    </div>
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
+        function dismissToast(el) {
+            const toast = el.closest('.toast-item') || el;
+            if (!toast) return;
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-12px) scale(0.96)';
+            setTimeout(() => {
+                if (toast.parentElement) toast.remove();
+            }, 300);
+        }
+
         function selectRole(role) {
             document.getElementById('selectedRoleInput').value = role;
             document.querySelectorAll('.role-card').forEach(btn => {
@@ -167,6 +260,9 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) window.lucide.createIcons();
+            document.querySelectorAll('.toast-item').forEach(toast => {
+                setTimeout(() => dismissToast(toast), 4500);
+            });
         });
     </script>
 </body>
