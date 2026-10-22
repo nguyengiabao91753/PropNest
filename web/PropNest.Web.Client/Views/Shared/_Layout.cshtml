@@ -151,6 +151,13 @@
                     </span>
                 </a>
 
+                <!-- Auth links -->
+                @{
+                    var authToken = Context.Request.Cookies[PropNest.Web.Client.Services.AuthHeaderHandler.TokenCookieName];
+                    var isLoggedIn = !string.IsNullOrWhiteSpace(authToken);
+                    var userProfile = isLoggedIn ? PropNest.Web.Client.Helpers.JwtUserHelper.GetProfileFromToken(authToken) : null;
+                }
+
                 @if (isLoggedIn)
                 {
                     <!-- Đã đăng nhập: Nút xem hồ sơ và Đăng xuất -->
