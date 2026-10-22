@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;

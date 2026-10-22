@@ -68,21 +68,73 @@ function toggleMobileMenu() {
     if (sheet) sheet.classList.toggle('hidden');
 }
 
-function showToast(title, desc) {
-    const toast = document.getElementById('liveToast');
+function dismissToast(el) {
+    const toast = el.closest('.toast-item') || el;
     if (!toast) return;
-
-    document.getElementById('toastTitle').innerText = title;
-    document.getElementById('toastDesc').innerText = desc || '';
-
-    toast.classList.remove('hidden', 'translate-y-10', 'opacity-0');
-    toast.classList.add('translate-y-0', 'opacity-100');
-
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-12px) scale(0.96)';
     setTimeout(() => {
-        toast.classList.add('translate-y-10', 'opacity-0');
-        setTimeout(() => toast.classList.add('hidden'), 300);
-    }, 3500);
+        if (toast.parentElement) toast.remove();
+    }, 300);
 }
+
+function showToast(title, desc, type = 'success') {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0';
+        document.body.appendChild(container);
+    }
+
+    const isSuccess = type === 'success';
+    const toast = document.createElement('div');
+    toast.className = `toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border ${isSuccess ? 'border-emerald-400/40' : 'border-rose-400/40'} bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ${isSuccess ? 'ring-emerald-500/15' : 'ring-rose-500/15'} text-neutral-900`;
+    toast.innerHTML = `
+        <div class="grid size-8 shrink-0 place-items-center rounded-xl ${isSuccess ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+            <i data-lucide="${isSuccess ? 'check-circle-2' : 'alert-triangle'}" class="size-5"></i>
+        </div>
+        <div class="flex-1 min-w-0 pt-0.5">
+            <p class="text-xs font-bold ${isSuccess ? 'text-emerald-900' : 'text-rose-900'}">${title}</p>
+            ${desc ? `<p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">${desc}</p>` : ''}
+        </div>
+        <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg">
+            <i data-lucide="x" class="size-4"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+    if (window.lucide) window.lucide.createIcons();
+
+    setTimeout(() => dismissToast(toast), 4500);
+}
+
+// User Profile Modal Handlers
+function openProfileModal() {
+    const modal = document.getElementById('userProfileModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closeProfileModal() {
+    const modal = document.getElementById('userProfileModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Close modal on outside click
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('userProfileModal');
+    if (modal && !modal.classList.contains('hidden') && e.target === modal) {
+        closeProfileModal();
+    }
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeProfileModal();
+});
 
 // Close dropdown on outside click
 document.addEventListener('click', (e) => {
@@ -120,11 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Auto dismiss flash alerts
-    setTimeout(() => {
-        document.querySelectorAll('.flash-alert').forEach(el => {
-            el.style.opacity = '0';
-            setTimeout(() => el.remove(), 400);
-        });
-    }, 4000);
+    // Auto dismiss any server-rendered toast popups after 4.5s
+    document.querySelectorAll('.toast-item').forEach(toast => {
+        setTimeout(() => dismissToast(toast), 4500);
+    });
 });

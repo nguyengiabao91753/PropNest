@@ -5,11 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddHttpClient<IClientListingService, ApiClientListingServices>(client =>
-{
-    var baseUrl = builder.Configuration["ServiceUrls:BackendApi"] ?? "https://localhost:65147";
-    client.BaseAddress = new Uri(baseUrl);
-});
+builder.Services.AddBackendApiClients(builder.Configuration);
 
 var app = builder.Build();
 
