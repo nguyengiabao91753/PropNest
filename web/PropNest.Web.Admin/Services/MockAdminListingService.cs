@@ -123,6 +123,7 @@ public sealed class MockAdminListingService : IAdminListingService
 
     public Task<DashboardViewModel> GetDashboardDataAsync()
     {
+        SyncFromSharedFile();
         var all = _listings.Values.OrderByDescending(p => p.CreatedAt).ToList();
         var pendingList = all.Where(p => p.Status == ListingStatus.PendingModeration).ToList();
         var published = all.Count(p => p.Status == ListingStatus.Published);
@@ -131,7 +132,7 @@ public sealed class MockAdminListingService : IAdminListingService
         // Thống kê phân bổ 8 trạng thái vòng đời tin đăng (Blueprint F02)
         var distribution = new Dictionary<string, int>
         {
-            ["Published"] = all.Count(p => p.Status == ListingStatus.Published),
+            ["Published"] = published,
             ["PendingModeration"] = pendingList.Count,
             ["Draft"] = all.Count(p => p.Status == ListingStatus.Draft),
             ["PendingPayment"] = all.Count(p => p.Status == ListingStatus.PendingPayment),
@@ -143,25 +144,95 @@ public sealed class MockAdminListingService : IAdminListingService
         // Doanh thu và lượng tin đăng 6 tháng gần nhất (Blueprint F05 & Saga F06)
         var monthlyMetrics = new List<MonthlyMetricItem>
         {
-            new() { Month = "T4/2026", Revenue = 12500000m, ListingCount = 28 },
-            new() { Month = "T5/2026", Revenue = 18200000m, ListingCount = 42 },
-            new() { Month = "T6/2026", Revenue = 24000000m, ListingCount = 55 },
-            new() { Month = "T7/2026", Revenue = 31500000m, ListingCount = 68 },
-            new() { Month = "T8/2026", Revenue = 42000000m, ListingCount = 84 },
-            new() { Month = "T9/2026", Revenue = 58500000m, ListingCount = 112 }
+            new() { Month = "T5/2026", Revenue = 18_200_000m, ListingCount = 42, WalletTransactionCount = 58 },
+            new() { Month = "T6/2026", Revenue = 24_000_000m, ListingCount = 55, WalletTransactionCount = 76 },
+            new() { Month = "T7/2026", Revenue = 31_500_000m, ListingCount = 68, WalletTransactionCount = 94 },
+            new() { Month = "T8/2026", Revenue = 42_000_000m, ListingCount = 84, WalletTransactionCount = 118 },
+            new() { Month = "T9/2026", Revenue = 58_500_000m, ListingCount = 112, WalletTransactionCount = 145 },
+            new() { Month = "T10/2026", Revenue = 72_000_000m, ListingCount = Math.Max(all.Count, 126), WalletTransactionCount = 182 }
         };
+
+        var recentTransactions = new List<WalletTransactionItemViewModel>
+        {
+            new()
+            {
+                TransactionId = "TX-9082",
+                UserName = "Nguyễn Văn Minh",
+                TransactionType = "TopUp",
+                Amount = 5_000_000m,
+                CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-12),
+                Status = "Thành công",
+                Description = "Nạp tiền vào ví qua cổng thanh toán VNPay"
+            },
+            new()
+            {
+                TransactionId = "TX-9081",
+                UserName = "Trần Thị Thu Hà",
+                TransactionType = "Charge",
+                Amount = 500_000m,
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
+                Status = "Thành công",
+                Description = "Thanh toán gói tin VIP cho tin đăng PN-1017"
+            },
+            new()
+            {
+                TransactionId = "TX-9080",
+                UserName = "Lê Hoàng Long",
+                TransactionType = "Charge",
+                Amount = 200_000m,
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-3),
+                Status = "Thành công",
+                Description = "Thanh toán gói đẩy tin Boost cho tin đăng PN-1051"
+            },
+            new()
+            {
+                TransactionId = "TX-9079",
+                UserName = "Phạm Quang Huy",
+                TransactionType = "Refund",
+                Amount = 500_000m,
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-6),
+                Status = "Thành công",
+                Description = "Bồi hoàn phí Saga do kiểm duyệt từ chối theo chính sách F06"
+            },
+            new()
+            {
+                TransactionId = "TX-9078",
+                UserName = "Đặng Mai Anh",
+                TransactionType = "TopUp",
+                Amount = 2_000_000m,
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-9),
+                Status = "Thành công",
+                Description = "Nạp tiền ví điện tử qua mã VietQR"
+            }
+        };
+
+        var totalUsers = Math.Max(distinctSellers * 18 + 112, 148);
+        var totalWalletTx = 342;
+        var totalWalletVol = 48_500_000m;
 
         var model = new DashboardViewModel
         {
             TotalProperties = all.Count,
             PublishedCount = published,
             PendingCount = pendingList.Count,
+            TotalUsers = totalUsers,
+            TotalWalletTransactions = totalWalletTx,
+            TotalWalletVolume = totalWalletVol,
             ActiveSellersCount = distinctSellers,
             TotalRevenue = _totalRevenue,
             RecentProperties = all.Take(6).ToList(),
             PendingQueue = pendingList.Take(5).ToList(),
+            RecentTransactions = recentTransactions,
             StatusDistribution = distribution,
             MonthlyMetrics = monthlyMetrics,
+            WalletStats = new WalletDistributionViewModel
+            {
+                TopUpCount = 168,
+                PackagePurchaseCount = 142,
+                RefundCount = 32,
+                TotalTopUpAmount = 32_000_000m,
+                TotalSpentAmount = 16_500_000m
+            },
             AmeAutoApprovedCount = 26,
             AmeFlaggedCount = 3,
             SagaSuccessRate = 99.8
@@ -281,6 +352,7 @@ public sealed class MockAdminListingService : IAdminListingService
 
     public Task<int> GetPendingCountAsync()
     {
+        SyncFromSharedFile();
         var count = _listings.Values.Count(p => p.Status == ListingStatus.PendingModeration);
         return Task.FromResult(count);
     }
@@ -503,7 +575,7 @@ public sealed class MockAdminListingService : IAdminListingService
                 Beds = 4,
                 Baths = 3,
                 Area = 260m,
-                Status = ListingStatus.PendingPayment,
+                Status = ListingStatus.PendingModeration,
                 PackageCode = "VIP",
                 SellerId = "seller-1",
                 SellerName = "Nguyễn Văn Minh",
@@ -515,26 +587,50 @@ public sealed class MockAdminListingService : IAdminListingService
             new()
             {
                 Id = "PN-1153",
-                Title = "Mặt Bằng Văn Phòng Quận 1 Hạng A Cho Thuê",
+                Title = "Mặt Bằng Văn Phòng Quận 1 Hạng A Cho Thuê (Đã bổ sung bản vẽ & PCCC)",
                 City = "TP. Hồ Chí Minh",
                 District = "Quận 1",
                 Ward = "Bến Thành",
-                Address = "Lê Duẩn",
+                Address = "Số 33 Lê Duẩn",
                 Price = 120_000_000m,
                 ListingType = "rent",
                 PropertyType = "Commercial",
                 Beds = 0,
                 Baths = 4,
                 Area = 300m,
-                Status = ListingStatus.Rejected,
-                PackageCode = "Standard",
+                Status = ListingStatus.PendingModeration,
+                PackageCode = "VIP",
                 SellerId = "seller-1",
                 SellerName = "Nguyễn Văn Minh",
                 SellerAvatar = "/images/avatar-1.png",
-                Images = new List<string> { "/images/p4.png" },
-                Description = "Mặt bằng tòa nhà văn phòng tiêu chuẩn quốc tế hạng A, quản lý chuyên nghiệp CBRE.",
-                RejectReason = "Hình ảnh đăng tải mờ và sai lệch thông tin diện tích thực tế so với quy hoạch.",
-                CreatedAt = DateTimeOffset.UtcNow.AddDays(-6)
+                Images = new List<string> { "/images/p4.png", "/images/i1.png", "/images/i2.png", "/images/i3.png" },
+                Description = "Mặt bằng tòa nhà văn phòng tiêu chuẩn quốc tế hạng A ngay mặt tiền Lê Duẩn, quận 1. Quản lý vận hành chuyên nghiệp bởi CBRE.\n\nĐặc điểm nổi bật:\n- Diện tích sàn sử dụng thực tế: 300m² đã hoàn công chuẩn quy hoạch.\n- Hệ thống PCCC tự động nghiệm thu đạt chuẩn thẩm duyệt số 428/PCCC-TPHCM.\n- 04 thang máy tốc độ cao Schindler, điều hòa trung tâm Daikin VRV.\n- Chiều cao trần 2.8m thông thoáng, view trực diện công viên 30/4.\n- Hợp đồng thuê linh hoạt từ 3 - 5 năm, miễn phí 30 ngày fit-out thi công.",
+                RejectReason = "Hình ảnh đăng tải ban đầu bị mờ, diện tích ghi không khớp quy hoạch (ghi 350m² thay vì 300m²) và chưa xuất trình giấy chứng nhận PCCC theo quy định F03.",
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
+                Histories = new List<PropertyHistoryItemViewModel>
+                {
+                    new() { ActionType = "Create", ActionDate = DateTimeOffset.UtcNow.AddDays(-6), Actor = "Nguyễn Văn Minh", Note = "Người bán khởi tạo tin đăng ban đầu" },
+                    new() { ActionType = "Submit", ActionDate = DateTimeOffset.UtcNow.AddDays(-6), Actor = "Nguyễn Văn Minh", Note = "Gửi duyệt tin đăng lần đầu" },
+                    new() { ActionType = "Reject", ActionDate = DateTimeOffset.UtcNow.AddDays(-5), Actor = "Kiểm duyệt viên (Moderator)", Note = "Hình ảnh đăng tải ban đầu bị mờ, diện tích ghi không khớp quy hoạch (ghi 350m² thay vì 300m²) và chưa xuất trình giấy chứng nhận PCCC theo quy định F03." },
+                    new() { ActionType = "UpdateContent", ActionDate = DateTimeOffset.UtcNow.AddHours(-2), Actor = "Nguyễn Văn Minh", Note = "Đã cập nhật diện tích chuẩn 300m², bổ sung thông tin PCCC và tải lên bộ 4 ảnh sắc nét" },
+                    new() { ActionType = "Submit", ActionDate = DateTimeOffset.UtcNow.AddHours(-1), Actor = "Nguyễn Văn Minh", Note = "Gửi duyệt lại (Re-submission) sau khi tiếp thu yêu cầu chỉnh sửa của ban kiểm duyệt" }
+                },
+                ResubmissionDeltas = new List<ListingDeltaViewModel>
+                {
+                    new() { FieldName = "Title", FieldDisplayName = "Tiêu đề tin đăng", OldValue = "Mặt Bằng Văn Phòng Quận 1 Hạng A Cho Thuê", NewValue = "Mặt Bằng Văn Phòng Quận 1 Hạng A Cho Thuê (Đã bổ sung bản vẽ & PCCC)" },
+                    new() { FieldName = "Area", FieldDisplayName = "Diện tích sàn sử dụng", OldValue = "350 m² (Sai lệch so với hồ sơ bàn giao)", NewValue = "300 m² (Đúng theo bản vẽ hoàn công CBRE)" },
+                    new() { FieldName = "Address", FieldDisplayName = "Địa chỉ chi tiết", OldValue = "Lê Duẩn", NewValue = "Số 33 Lê Duẩn, Phường Bến Thành, Quận 1" },
+                    new() { FieldName = "Description", FieldDisplayName = "Nội dung mô tả & Pháp lý", OldValue = "Mặt bằng tòa nhà văn phòng tiêu chuẩn quốc tế hạng A, quản lý chuyên nghiệp CBRE.", NewValue = "Đã bổ sung đầy đủ nghiệm thu PCCC số 428/PCCC, thông số 4 thang máy Schindler và điều hòa trung tâm VRV." },
+                    new() { FieldName = "Images", FieldDisplayName = "Hình ảnh thực tế", OldValue = "1 hình ảnh chất lượng thấp mờ nhòe", NewValue = "4 hình ảnh độ phân giải cao chụp sảnh, sàn văn phòng và tầm nhìn mặt tiền" }
+                },
+                AmeRecommendation = new AmeRecommendationViewModel
+                {
+                    ConfidenceScore = 98,
+                    RecommendationText = "Khuyên duyệt (Đã khắc phục lỗi)",
+                    BadwordsPassed = true,
+                    PriceBenchmarkText = "Chuẩn khu vực Quận 1 (1.0x)",
+                    ImageQualityPassed = true
+                }
             },
             new()
             {

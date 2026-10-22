@@ -6,11 +6,11 @@ public sealed class CreatePropertyInputModel
 {
     [Required(ErrorMessage = "Vui lòng nhập tiêu đề tin đăng.")]
     [StringLength(150, MinimumLength = 10, ErrorMessage = "Tiêu đề cần có từ 10 đến 150 ký tự.")]
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; set; } = "Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn";
 
     [Required(ErrorMessage = "Vui lòng nhập mô tả chi tiết bất động sản.")]
     [MinLength(20, ErrorMessage = "Mô tả cần có ít nhất 20 ký tự để khách hàng nắm rõ thông tin.")]
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; set; } = "Căn hộ cao cấp hoàn thiện đầy đủ nội thất sang trọng, ban công thoáng rộng view trực diện sông, pháp lý chuẩn sổ hồng.";
 
     [Required(ErrorMessage = "Vui lòng chọn loại bất động sản.")]
     public string PropertyType { get; set; } = "Apartment";

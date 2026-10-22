@@ -101,12 +101,9 @@
                                 <i data-lucide="check-square" class="size-4 shrink-0"></i>
                                 <span>Duyệt tin đăng</span>
                             </div>
-                            @if (pendingCount > 0)
-                            {
-                                <span class="rounded-full px-2 py-0.5 text-xs font-bold @(activeNav == "Moderation" ? "bg-white text-primary" : "bg-destructive text-white")">
-                                    @pendingCount
-                                </span>
-                            }
+                            <span id="sidebarPendingCount" class="rounded-full px-2 py-0.5 text-xs font-bold @(activeNav == "Moderation" ? "bg-white text-primary" : "bg-destructive text-white") @(pendingCount > 0 ? "" : "hidden")">
+                                @pendingCount
+                            </span>
                         </a>
 
                         <!-- Properties -->
@@ -157,8 +154,8 @@
             </div>
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-surface border border-border px-3 py-1 rounded-full">
-                    <span class="size-2 rounded-full @(pendingCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500")"></span>
-                    <strong>@pendingCount</strong> tin đang đợi phê duyệt
+                    <span id="topHeaderPendingPulse" class="size-2 rounded-full @(pendingCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500")"></span>
+                    <strong id="topHeaderPendingCount">@pendingCount</strong> tin đang đợi phê duyệt
                 </span>
             </div>
         </header>

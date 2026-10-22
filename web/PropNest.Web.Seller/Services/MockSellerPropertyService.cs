@@ -188,6 +188,7 @@ public sealed class MockSellerPropertyService : ISellerPropertyService
 
     public Task<string> CreatePropertyAsync(CreatePropertyInputModel input)
     {
+        SyncFromSharedFile();
         var newId = $"PN-{Random.Shared.Next(2000, 9999)}";
         var status = input.IsDraft ? ListingStatus.Draft : ListingStatus.PendingModeration;
 

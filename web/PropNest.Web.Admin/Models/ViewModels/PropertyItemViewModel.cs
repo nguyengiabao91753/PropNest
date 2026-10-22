@@ -11,12 +11,21 @@ public sealed class AmeRecommendationViewModel
     public bool ImageQualityPassed { get; set; } = true;
 }
 
+public sealed class ListingDeltaViewModel
+{
+    public string FieldName { get; set; } = string.Empty;
+    public string FieldDisplayName { get; set; } = string.Empty;
+    public string? OldValue { get; set; }
+    public string? NewValue { get; set; }
+}
+
 public sealed class PropertyHistoryItemViewModel
 {
     public string ActionType { get; set; } = "Submit";
     public DateTimeOffset ActionDate { get; set; } = DateTimeOffset.UtcNow;
     public string Actor { get; set; } = "Người bán";
     public string? Note { get; set; }
+    public string? DeltasJson { get; set; }
 }
 
 public sealed class PropertyItemViewModel
@@ -48,6 +57,23 @@ public sealed class PropertyItemViewModel
     public string RowVersion { get; set; } = "AAAAAA==";
     public AmeRecommendationViewModel AmeRecommendation { get; set; } = new();
 
+    public string? PreviousRejectReason
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(RejectReason)) return RejectReason;
+            var lastReject = Histories.LastOrDefault(h => h.ActionType == "Reject");
+            return lastReject?.Note;
+        }
+        set => RejectReason = value;
+    }
+
+    public bool IsResubmission =>
+        !string.IsNullOrWhiteSpace(PreviousRejectReason)
+        || Histories.Any(h => h.ActionType == "Reject" || h.ActionType == "UpdateContent");
+
+    public List<ListingDeltaViewModel> ResubmissionDeltas { get; set; } = new();
+
     public string FormattedLocation =>
         string.Join(", ", new[] { District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
@@ -57,3 +83,4 @@ public sealed class PropertyItemViewModel
     public string PrimaryImage =>
         Images.Count > 0 ? Images[0] : "/images/p1.png";
 }
+

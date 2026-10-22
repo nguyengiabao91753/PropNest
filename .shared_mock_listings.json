@@ -14,7 +14,7 @@
     "District": "H\u1EA3i Ch\u00E2u",
     "Ward": "Th\u1EA1ch Thang",
     "Address": "B\u1EA1ch \u0110\u1EB1ng",
-    "Status": 1,
+    "Status": 2,
     "PackageCode": "VIP",
     "SellerId": "seller-1",
     "SellerName": "Nguy\u1EC5n V\u0103n Minh",
@@ -22,7 +22,7 @@
     "Images": [
       "/images/p3.png"
     ],
-    "CreatedAt": "2026-10-12T08:48:20.7142271+00:00",
+    "CreatedAt": "2026-10-18T15:37:27.4382903+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -51,7 +51,7 @@
       "/images/i2.png",
       "/images/i3.png"
     ],
-    "CreatedAt": "2026-10-10T08:48:20.714158+00:00",
+    "CreatedAt": "2026-10-16T15:37:27.43821+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -76,10 +76,9 @@
     "SellerName": "Nguy\u1EC5n V\u0103n Minh",
     "SellerAvatar": "/images/avatar-1.png",
     "Images": [
-      "/images/p2.png",
-      "/images/i1.png"
+      "/images/p2.png"
     ],
-    "CreatedAt": "2026-10-14T03:48:20.7142253+00:00",
+    "CreatedAt": "2026-10-20T10:38:00.3329954+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -106,7 +105,7 @@
     "Images": [
       "/images/p5.png"
     ],
-    "CreatedAt": "2026-10-11T08:48:20.7142375+00:00",
+    "CreatedAt": "2026-10-17T15:38:00.3330513+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -133,7 +132,7 @@
     "Images": [
       "/images/p6.png"
     ],
-    "CreatedAt": "2026-09-28T08:48:20.7141673+00:00",
+    "CreatedAt": "2026-10-04T15:37:27.4382163+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -160,7 +159,7 @@
     "Images": [
       "/images/p6.png"
     ],
-    "CreatedAt": "2026-10-02T08:48:20.714238+00:00",
+    "CreatedAt": "2026-10-08T15:38:00.3330526+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -185,17 +184,16 @@
     "SellerName": "Nguy\u1EC5n V\u0103n Minh",
     "SellerAvatar": "/images/avatar-1.png",
     "Images": [
-      "/images/p5.png",
-      "/images/i1.png"
+      "/images/p5.png"
     ],
-    "CreatedAt": "2026-10-01T08:48:20.7141662+00:00",
+    "CreatedAt": "2026-10-07T15:38:00.3329769+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
   {
     "Id": "PN-1000",
     "Title": "Bi\u1EC7t Th\u1EF1 \u0110\u01A1n L\u1EADp Th\u1EA3o \u0110i\u1EC1n Ven S\u00F4ng",
-    "Description": "Bi\u1EC7t th\u1EF1 v\u1ECB tr\u00ED \u0111\u1EAFc \u0111\u1ECBa v\u1EDBi thi\u1EBFt k\u1EBF hi\u1EC7n \u0111\u1EA1i, ng\u1EADp tr\u00E0n \u00E1nh s\u00E1ng t\u1EF1 nhi\u00EAn. Ph\u00E1p l\u00FD chu\u1EA9n ch\u1EC9nh, s\u1ED5 h\u1ED3ng trao tay, c\u00F4ng ch\u1EE9ng trong ng\u00E0y. G\u1EA7n c\u00E1c ti\u1EC7n \u00EDch \u0111\u1EB3ng c\u1EA5p, b\u1EC7nh vi\u1EC7n qu\u1ED1c t\u1EBF v\u00E0 tr\u01B0\u1EDDng h\u1ECDc danh ti\u1EBFng.",
+    "Description": "Bi\u1EC7t th\u1EF1 v\u1ECB tr\u00ED \u0111\u1EAFc \u0111\u1ECBa v\u1EDBi thi\u1EBFt k\u1EBF hi\u1EC7n \u0111\u1EA1i, ng\u1EADp tr\u00E0n \u00E1nh s\u00E1ng t\u1EF1 nhi\u00EAn. Ph\u00E1p l\u00FD chu\u1EA9n ch\u1EC9nh, s\u1ED5 h\u1ED3ng trao tay, c\u00F4ng ch\u1EE9ng trong ng\u00E0y.",
     "PropertyType": "Villa",
     "ListingType": "sale",
     "Price": 35000000000,
@@ -217,7 +215,7 @@
       "/images/i1.png",
       "/images/i2.png"
     ],
-    "CreatedAt": "2026-10-13T08:48:20.7141427+00:00",
+    "CreatedAt": "2026-10-19T15:38:00.332805+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -242,10 +240,9 @@
     "SellerName": "Nguy\u1EC5n V\u0103n Minh",
     "SellerAvatar": "/images/avatar-1.png",
     "Images": [
-      "/images/p1.png",
-      "/images/i2.png"
+      "/images/p1.png"
     ],
-    "CreatedAt": "2026-10-14T06:48:20.7141678+00:00",
+    "CreatedAt": "2026-10-20T13:38:00.3329915+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -273,7 +270,7 @@
       "/images/p4.png",
       "/images/i3.png"
     ],
-    "CreatedAt": "2026-10-04T08:48:20.7141655+00:00",
+    "CreatedAt": "2026-10-10T15:37:27.4382117+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -292,7 +289,7 @@
     "District": "Qu\u1EADn 1",
     "Ward": "B\u1EBFn Th\u00E0nh",
     "Address": "L\u00EA Du\u1EA9n",
-    "Status": 2,
+    "Status": 3,
     "PackageCode": "Standard",
     "SellerId": "seller-1",
     "SellerName": "Nguy\u1EC5n V\u0103n Minh",
@@ -300,7 +297,7 @@
     "Images": [
       "/images/p4.png"
     ],
-    "CreatedAt": "2026-10-08T08:48:20.7142367+00:00",
+    "CreatedAt": "2026-10-14T15:38:00.3330483+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
@@ -327,14 +324,14 @@
     "Images": [
       "/images/p1.png"
     ],
-    "CreatedAt": "2026-09-09T08:48:20.7142386+00:00",
+    "CreatedAt": "2026-09-15T15:38:00.3330536+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   },
   {
     "Id": "PN-1034",
     "Title": "Nh\u00E0 Ph\u1ED1 Kinh Doanh Ph\u1ED1 C\u1ED5 Ho\u00E0n Ki\u1EBFm",
-    "Description": "T\u1ECDa l\u1EA1c tr\u00EAn tuy\u1EBFn ph\u1ED1 s\u1EA7m u\u1EA5t, h\u1EA1 t\u1EA7ng \u0111\u1ED3ng b\u1ED9, an ninh 24/7. Th\u00EDch h\u1EE3p v\u1EEBa \u1EDF v\u1EEBa l\u00E0m v\u0103n ph\u00F2ng c\u00F4ng ty ho\u1EB7c kinh doanh nh\u00E0 h\u00E0ng \u1EA9m th\u1EF1c.",
+    "Description": "T\u1ECDa l\u1EA1c tr\u00EAn tuy\u1EBFn ph\u1ED1 s\u1EA7m u\u1EA5t, h\u1EA1 t\u1EA7ng \u0111\u1ED3ng b\u1ED9, an ninh 24/7. Th\u00EDch h\u1EE3p v\u1EEBa \u1EDF v\u1EEBa l\u00E0m v\u0103n ph\u00F2ng c\u00F4ng ty ho\u1EB7c kinh doanh.",
     "PropertyType": "Townhouse",
     "ListingType": "sale",
     "Price": 28000000000,
@@ -355,7 +352,7 @@
       "/images/p3.png",
       "/images/i1.png"
     ],
-    "CreatedAt": "2026-10-07T08:48:20.7141587+00:00",
+    "CreatedAt": "2026-10-13T15:38:00.3329747+00:00",
     "RejectReason": null,
     "RowVersion": "AAAAAA=="
   }

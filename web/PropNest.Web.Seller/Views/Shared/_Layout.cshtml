@@ -189,9 +189,39 @@
         </main>
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="sellerToast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-xl p-4 text-xs font-semibold shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2"></div>
+
     <!-- Lucide Icons & Scripts -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="~/js/seller.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <text>
+                showSellerToast("@Html.Raw(TempData["SuccessMessage"])", "success");
+                </text>
+            }
+            @if (TempData["WarningMessage"] != null)
+            {
+                <text>
+                showSellerToast("@Html.Raw(TempData["WarningMessage"])", "warning");
+                </text>
+            }
+        });
+
+        function showSellerToast(msg, type) {
+            const toast = document.getElementById("sellerToast");
+            if (!toast) return;
+            const bg = type === "success" ? "bg-emerald-600 text-white" : "bg-amber-600 text-white";
+            toast.className = `fixed bottom-6 right-6 z-50 rounded-xl p-4 text-xs font-semibold shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 ${bg}`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="size-4 shrink-0"></i><span>${msg}</span>`;
+            toast.classList.remove("hidden");
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => toast.classList.add("hidden"), 4500);
+        }
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
