@@ -21,5 +21,9 @@ public sealed class SellerPropertiesViewModel
     public string CurrentStatus { get; set; } = "all";
     public string? SearchTerm { get; set; }
     public string Layout { get; set; } = "table"; // 'table' | 'grid'
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 8;
+    public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 8));
     public int RejectedCount => Counts.Rejected;
 }

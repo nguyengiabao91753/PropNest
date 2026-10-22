@@ -135,6 +135,7 @@ public interface IListingService
     Task<ListingCollectionDto> GetPendingModerationAsync(CancellationToken cancellationToken = default);
 
     Task<ListingDto> UpdateAsync(UpdateListingCommand command, CancellationToken cancellationToken = default);
+    Task DeleteAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 
     Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 

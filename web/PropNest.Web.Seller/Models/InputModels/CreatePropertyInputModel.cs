@@ -1,55 +1,77 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace PropNest.Web.Seller.Models.InputModels;
 
 public sealed class CreatePropertyInputModel
 {
+    /// <summary>
+    /// ID tin đăng (null khi Tạo mới, có giá trị khi Chỉnh sửa)
+    /// </summary>
+    public long? Id { get; set; }
+
     [Required(ErrorMessage = "Vui lòng nhập tiêu đề tin đăng.")]
-    [StringLength(150, MinimumLength = 10, ErrorMessage = "Tiêu đề cần có từ 10 đến 150 ký tự.")]
+    [StringLength(500, MinimumLength = 10, ErrorMessage = "Tiêu đề phải từ 10 đến 500 ký tự.")]
+    [Display(Name = "Tiêu đề")]
     public string Title { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Vui lòng nhập mô tả chi tiết bất động sản.")]
     [MinLength(20, ErrorMessage = "Mô tả cần có ít nhất 20 ký tự để khách hàng nắm rõ thông tin.")]
+    [Display(Name = "Mô tả")]
     public string Description { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Vui lòng chọn loại bất động sản.")]
+    [StringLength(100)]
+    [Display(Name = "Loại bất động sản")]
     public string PropertyType { get; set; } = "Apartment";
 
     [Required(ErrorMessage = "Vui lòng chọn hình thức giao dịch.")]
+    [StringLength(50)]
+    [Display(Name = "Hình thức giao dịch")]
     public string ListingType { get; set; } = "sale"; // 'sale' | 'rent'
 
     [Required(ErrorMessage = "Vui lòng nhập giá bất động sản.")]
-    [Range(100_000, 1_000_000_000_000, ErrorMessage = "Giá không hợp lệ.")]
-    public decimal Price { get; set; } = 5_000_000_000m;
+    [Range(0, 1_000_000_000_000, ErrorMessage = "Mức giá phải lớn hơn hoặc bằng 0.")]
+    [Display(Name = "Mức giá (VNĐ)")]
+    public decimal? Price { get; set; }
 
     [Required(ErrorMessage = "Vui lòng nhập diện tích.")]
-    [Range(10, 10_000, ErrorMessage = "Diện tích phải từ 10m² đến 10.000m².")]
-    public decimal Area { get; set; } = 85m;
+    [Range(0.01, 100_000, ErrorMessage = "Diện tích phải từ 0.01 m² trở lên.")]
+    [Display(Name = "Diện tích (m²)")]
+    public decimal? Area { get; set; }
 
-    public int Beds { get; set; } = 2;
-    public int Baths { get; set; } = 2;
-    public int Carports { get; set; } = 1;
+    [Required(ErrorMessage = "Vui lòng nhập Tỉnh / Thành phố.")]
+    [StringLength(100)]
+    [Display(Name = "Tỉnh / Thành phố")]
+    public string City { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Vui lòng chọn Tỉnh / Thành phố.")]
-    public string City { get; set; } = "TP. Hồ Chí Minh";
+    [Required(ErrorMessage = "Vui lòng nhập Quận / Huyện.")]
+    [StringLength(100)]
+    [Display(Name = "Quận / Huyện")]
+    public string District { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Vui lòng chọn Quận / Huyện.")]
-    public string District { get; set; } = "Quận 2 (Thủ Đức)";
-
-    public string? Ward { get; set; } = "Thảo Điền";
+    [StringLength(100)]
+    [Display(Name = "Phường / Xã")]
+    public string? Ward { get; set; }
 
     [Required(ErrorMessage = "Vui lòng nhập địa chỉ cụ thể.")]
-    public string Address { get; set; } = "Đường Nguyễn Văn Hưởng";
+    [StringLength(500, ErrorMessage = "Địa chỉ tối đa 500 ký tự.")]
+    [Display(Name = "Địa chỉ chi tiết")]
+    public string Address { get; set; } = string.Empty;
 
-    public string PackageCode { get; set; } = "VIP"; // 'Standard' | 'VIP' | 'Boost'
+    /// <summary>
+    /// Base64 string của byte[] RowVersion - Bắt buộc khi Update để kiểm tra Optimistic Concurrency (409 Conflict)
+    /// </summary>
+    public string? RowVersion { get; set; }
 
-    public bool IsDraft { get; set; }
+    /// <summary>
+    /// Danh sách file ảnh mới tải lên từ form
+    /// </summary>
+    [Display(Name = "Hình ảnh tải lên")]
+    public List<IFormFile>? ImageFiles { get; set; } = new();
 
-    public string ImageUrl { get; set; } = "/images/p1.png";
-
-    public string? Banner { get; set; } = "VIP Nổi Bật";
-
-    public bool BannerOn { get; set; } = true;
-
-    public bool ShowAddress { get; set; } = true;
+    /// <summary>
+    /// Danh sách URL ảnh hiện có (được Backend trả về khi tải form Sửa để xem preview)
+    /// </summary>
+    public List<string> ExistingImages { get; set; } = new();
 }

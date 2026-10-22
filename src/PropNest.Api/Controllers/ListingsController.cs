@@ -100,6 +100,22 @@ public sealed class ListingsController(
         }
     }
 
+    [HttpDelete("{listingId:long}")]
+    [Authorize(Roles ="Seller")]
+    public async Task<IActionResult> Delete(long listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureOwner(listing.OwnerUserId);
+            await listingService.DeleteAsync(listingId, listing.OwnerUserId, cancellationToken);
+            return NoContent();
+        } catch(Exception ex)
+        {
+            return this.HandleException(ex);
+        }
+    }
+
     [HttpPost("{listingId:long}/submit")]
     [Authorize(Roles ="Seller")]
     public async Task<IActionResult> Submit(long listingId, CancellationToken cancellationToken)

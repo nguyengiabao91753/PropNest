@@ -1,8 +1,16 @@
-@inject PropNest.Web.Seller.Services.ISellerPropertyService SellerService
+@using PropNest.Web.Seller.Services.IServices
+@using PropNest.Web.Seller.Helpers
+@using PropNest.Web.Seller.Services
+@inject ISellerPropertyService SellerService
 
 @{
     var activeNav = ViewData["ActiveNav"]?.ToString() ?? "Properties";
     var rejectedCount = await SellerService.GetRejectedNoticesCountAsync();
+
+    var token = Context.Request.Cookies[AuthHeaderHandler.TokenCookieName];
+    var userProfile = Context.Items["UserProfile"] as SellerUserProfile ?? JwtUserHelper.GetProfileFromToken(token);
+    var sellerName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : "Người bán";
+    var sellerRoleName = userProfile?.IsSeller == true ? "Tài khoản Người bán" : (userProfile?.Role ?? "Tài khoản Người bán");
 }
 
 <!DOCTYPE html>
@@ -45,7 +53,7 @@
                     },
                     fontFamily: {
                         sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                        display: ['"Playfair Display"', 'Georgia', 'Cambria', 'serif']
+                        display: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
                     }
                 }
             }
@@ -132,8 +140,8 @@
                                     <i data-lucide="user-round" class="size-4"></i>
                                 </div>
                                 <div class="truncate">
-                                    <p class="truncate text-xs font-semibold text-neutral-900">Nguyễn Văn Minh</p>
-                                    <p class="text-[10px] text-muted-foreground">Tài khoản Người bán</p>
+                                    <p class="truncate text-xs font-semibold text-neutral-900">@sellerName</p>
+                                    <p class="text-[10px] text-muted-foreground">@sellerRoleName</p>
                                 </div>
                             </div>
                             <i data-lucide="chevron-down" class="size-3.5 text-muted-foreground"></i>
@@ -142,16 +150,13 @@
                         <!-- Dropdown Menu -->
                         <div id="userDropdownMenu" class="absolute bottom-full left-0 mb-2 w-full hidden rounded-xl border border-border bg-card p-1.5 shadow-lg z-50">
                             <div class="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground border-b border-border/60">
-                                Tài khoản Người bán
+                                @sellerRoleName
                             </div>
-                            <a asp-controller="Wallet" asp-action="Index" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
-                                <i data-lucide="wallet" class="size-3.5 text-primary"></i> Ví & Giao dịch
-                            </a>
-                            <a asp-controller="Properties" asp-action="Create" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
-                                <i data-lucide="plus-circle" class="size-3.5 text-primary"></i> Tạo tin mới
+                            <a asp-controller="Properties" asp-action="Index" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
+                                <i data-lucide="home" class="size-3.5 text-primary"></i> Tin đăng của tôi
                             </a>
                             <div class="border-t border-border/60 my-1"></div>
-                            <a href="https://localhost:7129/login" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-destructive hover:bg-rose-50 transition-colors">
+                            <a href="https://localhost:7129/logout" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-destructive hover:bg-rose-50 transition-colors">
                                 <i data-lucide="log-out" class="size-3.5"></i> Đăng xuất
                             </a>
                         </div>
@@ -162,32 +167,64 @@
 
         <!-- Main Content Container -->
         <main class="min-h-screen lg:ml-64 p-4 md:p-8">
-            <!-- Flash Notifications -->
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 shadow-xs transition-opacity duration-300">
-                    <i data-lucide="check-circle-2" class="size-4 shrink-0 text-emerald-600"></i>
-                    <span>@TempData["SuccessMessage"]</span>
-                </div>
-            }
-            @if (TempData["WarningMessage"] != null)
-            {
-                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-medium text-amber-800 shadow-xs transition-opacity duration-300">
-                    <i data-lucide="alert-triangle" class="size-4 shrink-0 text-amber-600"></i>
-                    <span>@TempData["WarningMessage"]</span>
-                </div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="flash-alert mb-6 flex items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs font-medium text-rose-800 shadow-xs transition-opacity duration-300">
-                    <i data-lucide="x-circle" class="size-4 shrink-0 text-rose-600"></i>
-                    <span>@TempData["ErrorMessage"]</span>
-                </div>
-            }
-
             @RenderBody()
         </main>
     </div>
+
+    <!-- Floating Toast Popups Container (Nổi trên bề mặt z-[9999], không làm xô lệch layout) -->
+    <div id="toastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-emerald-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/15 text-neutral-900 animate-[toastSlideIn_0.3s_ease-out]">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <i data-lucide="check-circle-2" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-emerald-900">Thành công</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["SuccessMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+        @if (TempData["WarningMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-amber-500/15 text-neutral-900 animate-[toastSlideIn_0.3s_ease-out]">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+                    <i data-lucide="alert-triangle" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-amber-900">Cảnh báo</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["WarningMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="toast-item pointer-events-auto flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-rose-500/15 text-neutral-900 animate-[toastSlideIn_0.3s_ease-out]">
+                <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-700">
+                    <i data-lucide="alert-triangle" class="size-5"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <p class="text-xs font-bold text-rose-900">Thông báo</p>
+                    <p class="text-xs text-neutral-700 mt-0.5 leading-relaxed">@TempData["ErrorMessage"]</p>
+                </div>
+                <button type="button" onclick="dismissToast(this)" class="shrink-0 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg cursor-pointer">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Global Back to Top Button -->
+    <button type="button" id="backToTopBtn" aria-label="Cuộn lên đầu trang"
+            class="fixed bottom-6 right-6 z-40 hidden size-11 place-items-center rounded-full bg-card/90 text-neutral-800 shadow-lg border border-border backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-white hover:scale-110 hover:shadow-xl hover:border-primary">
+        <i data-lucide="arrow-up" class="size-5"></i>
+    </button>
 
     <!-- Lucide Icons & Scripts -->
     <script src="https://unpkg.com/lucide@latest"></script>
