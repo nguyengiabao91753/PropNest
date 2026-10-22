@@ -110,6 +110,7 @@ if (app.Environment.IsDevelopment())
 }
 
 await SeedRolesAsync(app.Services);
+await SeedAdminUserAsync(app.Services);
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -151,6 +152,44 @@ public partial class Program
         }
     }
 
+    private static async Task SeedAdminUserAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<PropNest.Domain.Users.ApplicationUser>>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+        const string adminEmail = "admin@propnest.vn";
+        const string adminPassword = "Admin@123456";
+
+        var admin = await userManager.FindByEmailAsync(adminEmail);
+        if (admin is null)
+        {
+            admin = new PropNest.Domain.Users.ApplicationUser(adminEmail, "PropNest Administrator", "0901234567", "Admin");
+            var result = await userManager.CreateAsync(admin, adminPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                LogAdminSeedError(logger, errors);
+                return;
+            }
+
+            await userManager.AddToRolesAsync(admin, new[] { "Admin", "Moderator" });
+            LogAdminSeeded(logger, adminEmail);
+        }
+        else
+        {
+            var userRoles = await userManager.GetRolesAsync(admin);
+            if (!userRoles.Contains("Admin"))
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
+            }
+            if (!userRoles.Contains("Moderator"))
+            {
+                await userManager.AddToRoleAsync(admin, "Moderator");
+            }
+        }
+    }
+
     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Đang kiểm tra và áp dụng Database Migrations còn thiếu...")]
     private static partial void LogApplyingMigrations(ILogger logger);
 
@@ -165,4 +204,10 @@ public partial class Program
 
     [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Role already exists: {RoleName}")]
     private static partial void LogRoleAlreadyExists(ILogger logger, string roleName);
+
+    [LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "Khởi tạo thành công tài khoản Admin mặc định: {Email}")]
+    private static partial void LogAdminSeeded(ILogger logger, string email);
+
+    [LoggerMessage(EventId = 7, Level = LogLevel.Warning, Message = "Không thể seed tài khoản Admin mặc định: {Errors}")]
+    private static partial void LogAdminSeedError(ILogger logger, string errors);
 }

@@ -1,6 +1,6 @@
 using PropNest.Web.Admin.Models.ViewModels;
 
-namespace PropNest.Web.Admin.Services;
+namespace PropNest.Web.Admin.Services.IServices;
 
 public interface IAdminListingService
 {
