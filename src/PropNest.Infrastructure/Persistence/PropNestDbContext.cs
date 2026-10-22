@@ -32,5 +32,19 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(PropNestDbContext).Assembly);
+
+        if (string.Equals(Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal))
+        {
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (string.Equals(property.GetColumnType(), "nvarchar(max)", StringComparison.OrdinalIgnoreCase))
+                    {
+                        property.SetColumnType("TEXT");
+                    }
+                }
+            }
+        }
     }
 }

@@ -33,6 +33,10 @@ public interface IWorkflowRepository
     Task AddIdempotencyRequestAsync(IdempotencyRequest request, CancellationToken cancellationToken = default);
 
     Task AddOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WorkflowStep>> GetStepsByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default);
+
+    Task AddStepAsync(WorkflowStep workflowStep, CancellationToken cancellationToken = default);
 }
 
 public interface IWorkflowService
