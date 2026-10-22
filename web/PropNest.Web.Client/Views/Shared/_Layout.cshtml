@@ -1,5 +1,11 @@
 @{
     var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? "";
+    var authToken = Context.Request.Cookies[PropNest.Web.Client.Services.AuthHeaderHandler.TokenCookieName];
+    var isLoggedIn = !string.IsNullOrWhiteSpace(authToken);
+    var userProfile = isLoggedIn ? PropNest.Web.Client.Helpers.JwtUserHelper.GetProfileFromToken(authToken) : null;
+    var role = userProfile?.Role ?? string.Empty;
+    var isSeller = string.Equals(role, "Seller", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Moderator", StringComparison.OrdinalIgnoreCase);
 }
 
 <!DOCTYPE html>
@@ -110,15 +116,6 @@
 
             <!-- Right: Portal Switchers & Account -->
             <div class="flex items-center gap-3">
-                <!-- Auth links and Profile resolution -->
-                @{
-                    var authToken = Context.Request.Cookies[PropNest.Web.Client.Services.AuthHeaderHandler.TokenCookieName];
-                    var isLoggedIn = !string.IsNullOrWhiteSpace(authToken);
-                    var userProfile = isLoggedIn ? PropNest.Web.Client.Helpers.JwtUserHelper.GetProfileFromToken(authToken) : null;
-                    var role = userProfile?.Role ?? string.Empty;
-                    var isSeller = string.Equals(role, "Seller", StringComparison.OrdinalIgnoreCase);
-                    var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Moderator", StringComparison.OrdinalIgnoreCase);
-                }
 
                 <!-- Portal Switchers based on Roles -->
                 @if (isLoggedIn)
@@ -151,12 +148,6 @@
                     </span>
                 </a>
 
-                <!-- Auth links -->
-                @{
-                    var authToken = Context.Request.Cookies[PropNest.Web.Client.Services.AuthHeaderHandler.TokenCookieName];
-                    var isLoggedIn = !string.IsNullOrWhiteSpace(authToken);
-                    var userProfile = isLoggedIn ? PropNest.Web.Client.Helpers.JwtUserHelper.GetProfileFromToken(authToken) : null;
-                }
 
                 @if (isLoggedIn)
                 {
