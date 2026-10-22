@@ -61,11 +61,13 @@ public sealed class PropertyItemViewModel
     {
         get
         {
-            if (!string.IsNullOrWhiteSpace(RejectReason)) return RejectReason;
-            var lastReject = Histories.LastOrDefault(h => h.ActionType == "Reject");
-            return lastReject?.Note;
+            var raw = !string.IsNullOrWhiteSpace(RejectReason)
+                ? RejectReason
+                : Histories.LastOrDefault(h => string.Equals(h.ActionType, "Reject", StringComparison.OrdinalIgnoreCase))?.Note;
+
+            return PropNest.Web.Admin.Helpers.FormatHelper.CleanRejectionReason(raw);
         }
-        set => RejectReason = value;
+        set => RejectReason = PropNest.Web.Admin.Helpers.FormatHelper.CleanRejectionReason(value);
     }
 
     public bool IsResubmission =>

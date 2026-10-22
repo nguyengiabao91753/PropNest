@@ -67,16 +67,12 @@
 
         <!-- TWO PROMINENT ACTION BUTTONS -->
         <div class="flex items-center gap-3 shrink-0">
-            <!-- Form Approve -->
-            <form asp-controller="Moderation" asp-action="Approve" asp-route-id="@Model.Id" method="post" class="inline">
-                @Html.AntiForgeryToken()
-                <button type="submit" id="btnDetailApprove"
-                        onclick="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT và xuất bản tin đăng @Model.Id?')"
-                        class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-3 px-5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-                    <i data-lucide="check-circle-2" class="size-5"></i>
-                    <span>Phê duyệt tin đăng</span>
-                </button>
-            </form>
+            <!-- Button Approve with API handler & Toast -->
+            <button type="button" id="btnDetailApprove" onclick="handleDetailApprove('@Model.Id')"
+                    class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-3 px-5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all">
+                <i data-lucide="check-circle-2" class="size-5"></i>
+                <span>Phê duyệt tin đăng</span>
+            </button>
 
             <!-- Button Open Reject Modal -->
             <button type="button" id="btnDetailReject" onclick="openRejectModal('@Model.Id', '@Model.Title')"
@@ -556,6 +552,9 @@
     </div>
 </div>
 
+<!-- Global Toast Notification Container for Detail Page -->
+<div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2.5 border transition-all"></div>
+
 @section Scripts {
     <script>
         function selectDetailImage(url, index, total) {
@@ -578,6 +577,50 @@
                     btn.classList.add('border-border');
                 }
             });
+        }
+
+        async function handleDetailApprove(id) {
+            const btn = document.getElementById('btnDetailApprove');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.innerHTML = `<svg class="animate-spin size-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Đang phê duyệt...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/v1/moderation/listings/' + id + '/approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (res.ok) {
+                    showToast('Tin đăng đã được duyệt thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/Moderation';
+                    }, 1200);
+                } else {
+                    const data = await res.json().catch(() => null);
+                    showToast((data && data.message) ? data.message : 'Lỗi khi phê duyệt tin ' + id, 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        btn.innerHTML = `<i data-lucide="check-circle-2" class="size-5"></i><span>Phê duyệt tin đăng</span>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch (err) {
+                console.error('Approve error:', err);
+                showToast('Có lỗi xảy ra khi gọi API duyệt tin.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = `<i data-lucide="check-circle-2" class="size-5"></i><span>Phê duyệt tin đăng</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
         }
 
         function openRejectModal(id, title) {
@@ -604,16 +647,87 @@
             }
         }
 
-        document.getElementById('rejectForm')?.addEventListener('submit', function (e) {
+        document.getElementById('rejectForm')?.addEventListener('submit', async function (e) {
+            e.preventDefault();
             const input = document.getElementById('rejectReasonInput');
             const errorMsg = document.getElementById('rejectErrorMsg');
-            if (!input || input.value.trim().length < 5) {
-                e.preventDefault();
+            const reason = input?.value?.trim();
+            if (!reason || reason.length < 5) {
                 if (errorMsg) errorMsg.classList.remove('hidden');
                 return false;
             }
             if (errorMsg) errorMsg.classList.add('hidden');
+
+            const btn = document.getElementById('confirmRejectBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>Đang từ chối...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/v1/moderation/listings/@Model.Id/reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        reason: reason,
+                        reasons: [reason]
+                    })
+                });
+
+                if (res.ok) {
+                    closeRejectModal();
+                    showToast('Đã từ chối duyệt tin @Model.Id thành công!', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/Moderation';
+                    }, 1200);
+                } else {
+                    showToast('Lỗi khi từ chối tin đăng.', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="x-circle" class="size-4"></i><span>Xác nhận từ chối & Quay lại hàng đợi</span>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch (err) {
+                console.error('Reject error:', err);
+                showToast('Có lỗi xảy ra khi gọi API từ chối.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i data-lucide="x-circle" class="size-4"></i><span>Xác nhận từ chối & Quay lại hàng đợi</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
         });
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+
+            let bg = "bg-neutral-900 text-white border-neutral-700";
+            let iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+            if (type === "success") {
+                bg = "bg-emerald-600 text-white border-emerald-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+            } else if (type === "warning") {
+                bg = "bg-amber-600 text-white border-amber-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            } else if (type === "error") {
+                bg = "bg-destructive text-white border-red-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+            }
+
+            toast.className = `fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2.5 border animate-in fade-in slide-in-from-bottom-2 ${bg}`;
+            toast.innerHTML = `${iconHtml}<span>${message}</span>`;
+            toast.classList.remove("hidden");
+
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 4000);
+        }
 
         // Initialize Lucide icons on load
         if (window.lucide) {

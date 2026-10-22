@@ -5,9 +5,9 @@ public sealed class DashboardViewModel
     // 4 Core Required Metric Cards (TASK 217)
     public int PublishedCount { get; set; }
     public int PendingCount { get; set; }
-    public int TotalUsers { get; set; } = 158;
-    public int TotalWalletTransactions { get; set; } = 342;
-    public decimal TotalWalletVolume { get; set; } = 48_500_000m;
+    public int TotalUsers { get; set; }
+    public int TotalWalletTransactions { get; set; }
+    public decimal TotalWalletVolume { get; set; }
 
     // Additional System Overview Metrics
     public int TotalProperties { get; set; }
@@ -25,9 +25,9 @@ public sealed class DashboardViewModel
     public WalletDistributionViewModel WalletStats { get; set; } = new();
 
     // AI & Saga Engine Metrics
-    public int AmeAutoApprovedCount { get; set; } = 26;
-    public int AmeFlaggedCount { get; set; } = 3;
-    public double SagaSuccessRate { get; set; } = 99.8;
+    public int AmeAutoApprovedCount { get; set; }
+    public int AmeFlaggedCount { get; set; }
+    public double SagaSuccessRate { get; set; } = 100.0;
 }
 
 public sealed class MonthlyMetricItem
@@ -51,9 +51,10 @@ public sealed class WalletTransactionItemViewModel
 
 public sealed class WalletDistributionViewModel
 {
-    public int TopUpCount { get; set; } = 168;
-    public int PackagePurchaseCount { get; set; } = 142;
-    public int RefundCount { get; set; } = 32;
-    public decimal TotalTopUpAmount { get; set; } = 32_000_000m;
-    public decimal TotalSpentAmount { get; set; } = 16_500_000m;
+    public int TopUpCount { get; set; }
+    public int PackagePurchaseCount { get; set; }
+    public int RefundCount { get; set; }
+    public decimal TotalTopUpAmount { get; set; }
+    public decimal TotalSpentAmount { get; set; }
 }
+

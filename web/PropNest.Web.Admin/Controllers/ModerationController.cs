@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using PropNest.Web.Admin.Filters;
 using PropNest.Web.Admin.Models.InputModels;
-using PropNest.Web.Admin.Services;
+using PropNest.Web.Admin.Services.IServices;
 
 namespace PropNest.Web.Admin.Controllers;
 
+[AdminAuthorize]
 [Route("Moderation")]
+[Route("Admin/Moderation")]
 [Route("Admin/Approve")]
+[Route("Admin/Queue")]
 public class ModerationController : Controller
 {
     private readonly IAdminListingService _listingService;

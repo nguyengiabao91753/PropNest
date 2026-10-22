@@ -104,7 +104,7 @@ public class PropertiesController : Controller
     [HttpGet("Create")]
     public IActionResult Create()
     {
-        ViewData["ActiveNav"] = "Properties";
+        ViewData["ActiveNav"] = "Create";
         var model = new CreatePropertyInputModel();
         return View(model);
     }
@@ -112,7 +112,7 @@ public class PropertiesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreatePropertyInputModel model, [FromForm] string? submitAction, CancellationToken cancellationToken)
     {
-        ViewData["ActiveNav"] = "Properties";
+        ViewData["ActiveNav"] = "Create";
 
         // Xử lý khi user bấm nút "Lưu bản nháp (Draft)"
         if (string.Equals(submitAction, "save_draft", StringComparison.OrdinalIgnoreCase))
@@ -184,7 +184,7 @@ public class PropertiesController : Controller
     [HttpGet("UploadImages/{id}")]
     public async Task<IActionResult> UploadImages(long id, CancellationToken cancellationToken)
     {
-        ViewData["ActiveNav"] = "Properties";
+        ViewData["ActiveNav"] = "Create";
         var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
         if (item == null)
         {
@@ -199,7 +199,7 @@ public class PropertiesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadImages(long id, [FromForm] List<IFormFile> files, CancellationToken cancellationToken)
     {
-        ViewData["ActiveNav"] = "Properties";
+        ViewData["ActiveNav"] = "Create";
         if (files != null && files.Count > 0)
         {
             var success = await _sellerService.UploadPropertyImagesAsync(id, files, cancellationToken);

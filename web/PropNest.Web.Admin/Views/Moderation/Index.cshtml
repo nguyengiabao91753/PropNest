@@ -374,9 +374,87 @@
 
 @section Scripts {
 <script>
-    let currentQueue = window.INITIAL_MODERATION_QUEUE || [];
+    function normalizeListing(p) {
+        if (!p) return null;
+        const id = p.Id || p.id || p.ListingId || p.listingId || "";
+        const title = p.Title || p.title || "";
+        const description = p.Description || p.description || "";
+        const propertyType = p.PropertyType || p.propertyType || "Bất động sản";
+        const listingType = p.ListingType || p.listingType || "sale";
+        const price = Number(p.Price !== undefined ? p.Price : (p.price !== undefined ? p.price : 0)) || 0;
+        const area = Number(p.Area !== undefined ? p.Area : (p.area !== undefined ? p.area : 0)) || 0;
+        const beds = Number(p.Beds !== undefined ? p.Beds : (p.beds !== undefined ? p.beds : 0)) || 0;
+        const baths = Number(p.Baths !== undefined ? p.Baths : (p.baths !== undefined ? p.baths : 0)) || 0;
+        const city = p.City || p.city || "";
+        const district = p.District || p.district || "";
+        const ward = p.Ward || p.ward || "";
+        const address = p.Address || p.address || "";
+        
+        let fullAddress = p.FullAddress || p.fullAddress || "";
+        if (!fullAddress) {
+            const parts = [address, ward, district, city].filter(Boolean);
+            fullAddress = parts.join(", ");
+        }
+        let formattedLocation = p.FormattedLocation || p.formattedLocation || "";
+        if (!formattedLocation) {
+            const locParts = [district, city].filter(Boolean);
+            formattedLocation = locParts.length > 0 ? locParts.join(", ") : (address || fullAddress || "Chưa cập nhật");
+        }
+
+        const packageCode = p.PackageCode || p.packageCode || "Standard";
+        const sellerId = p.SellerId || p.sellerId || p.OwnerUserId || p.ownerUserId || "";
+        const sellerName = p.SellerName || p.sellerName || p.OwnerName || p.ownerName || (sellerId ? `Người bán #${sellerId}` : "Người bán");
+        const sellerEmail = p.SellerEmail || p.sellerEmail || p.OwnerEmail || p.ownerEmail || "";
+        const sellerPhone = p.SellerPhone || p.sellerPhone || p.OwnerPhoneNumber || p.ownerPhoneNumber || "";
+        const createdAt = p.CreatedAt || p.createdAt || p.CreatedDate || p.createdDate || "";
+        const status = p.Status !== undefined ? p.Status : (p.status !== undefined ? p.status : 1);
+        const isResubmission = Boolean(p.IsResubmission !== undefined ? p.IsResubmission : p.isResubmission);
+
+        const rawImages = p.Images || p.images || [];
+        const images = Array.isArray(rawImages) ? [...rawImages] : [];
+        let primaryImage = p.PrimaryImage || p.primaryImage || (images.length > 0 ? images[0] : null);
+        if (!primaryImage) {
+            primaryImage = "/images/p1.png";
+        }
+        if (images.length === 0 && primaryImage) {
+            images.push(primaryImage);
+        }
+        const histories = p.Histories || p.histories || [];
+
+        return {
+            ...p,
+            Id: id, id: id,
+            Title: title, title: title,
+            Description: description, description: description,
+            PropertyType: propertyType, propertyType: propertyType,
+            ListingType: listingType, listingType: listingType,
+            Price: price, price: price,
+            Area: area, area: area,
+            Beds: beds, beds: beds,
+            Baths: baths, baths: baths,
+            City: city, city: city,
+            District: district, district: district,
+            Ward: ward, ward: ward,
+            Address: address, address: address,
+            FullAddress: fullAddress, fullAddress: fullAddress,
+            FormattedLocation: formattedLocation, formattedLocation: formattedLocation,
+            PackageCode: packageCode, packageCode: packageCode,
+            SellerId: sellerId, sellerId: sellerId,
+            SellerName: sellerName, sellerName: sellerName,
+            SellerEmail: sellerEmail, sellerEmail: sellerEmail,
+            SellerPhone: sellerPhone, sellerPhone: sellerPhone,
+            CreatedAt: createdAt, createdAt: createdAt,
+            Status: status, status: status,
+            IsResubmission: isResubmission, isResubmission: isResubmission,
+            PrimaryImage: primaryImage, primaryImage: primaryImage,
+            Images: images, images: images,
+            Histories: histories, histories: histories
+        };
+    }
+
+    let currentQueue = (window.INITIAL_MODERATION_QUEUE || []).map(normalizeListing);
     let selectedId = window.SELECTED_LISTING_ID || (currentQueue.length > 0 ? currentQueue[0].Id : null);
-    let autoRefreshSeconds = 3;
+    let autoRefreshSeconds = 15;
     let refreshCountdown = autoRefreshSeconds;
     let refreshInterval = null;
 
@@ -445,7 +523,8 @@
             if (!res.ok) return;
 
             const data = await res.json();
-            const items = data.items || [];
+            const rawItems = data.items || [];
+            const items = rawItems.map(normalizeListing);
             
             const idsBefore = currentQueue.map(p => p.Id).join(",");
             const idsAfter = items.map(p => p.Id).join(",");
@@ -473,10 +552,12 @@
         }
     }
 
-    function renderQueueList(items) {
+    function renderQueueList(rawItems) {
         const container = document.getElementById("queueListContainer");
         const emptyState = document.getElementById("emptyQueueState");
         if (!container) return;
+
+        const items = (rawItems || []).map(normalizeListing);
 
         if (!items || items.length === 0) {
             container.innerHTML = "";
@@ -524,7 +605,7 @@
                             </div>
 
                             <h3 class="truncate font-semibold text-sm text-neutral-900 group-hover:text-primary transition-colors">
-                                ${escapeHtml(p.Title)}
+                                ${escapeHtml(p.Title || "Chưa có tiêu đề")}
                             </h3>
 
                             <p class="text-xs text-muted-foreground truncate mt-0.5">
@@ -543,6 +624,22 @@
                                     </span>
                                 </div>
                             </div>
+
+                            <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
+                                <a href="/Moderation/Detail/${p.Id}" onclick="event.stopPropagation()"
+                                   class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
+                                   title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                    <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
+                                </a>
+                                <button type="button" onclick="handleApproveClick('${p.Id}', event)"
+                                        class="flex-1 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-[11px] py-1.5 px-2 rounded-lg shadow-2xs transition-all">
+                                    <i data-lucide="check" class="size-3.5"></i> Duyệt
+                                </button>
+                                <button type="button" onclick="handleRejectClick('${p.Id}', '${escapeHtml(p.Title || '')}', event)"
+                                        class="flex-1 flex items-center justify-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all">
+                                    <i data-lucide="x" class="size-3.5"></i> Từ chối
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -557,10 +654,10 @@
     // Select Listing & Update Detail Panel
     // ----------------------------------------------------
     function selectListing(id) {
-        selectedId = id;
-        updateSelectedCardHighlight(id);
+        selectedId = id != null ? String(id) : null;
+        updateSelectedCardHighlight(selectedId);
 
-        const listing = currentQueue.find(p => p.Id === id);
+        const listing = currentQueue.find(p => String(p.Id) === String(id) || String(p.id) === String(id));
         if (listing) {
             renderDetailPanel(listing);
         } else {
@@ -574,7 +671,7 @@
             const res = await fetch("/api/v1/moderation/listings/" + id);
             if (res.ok) {
                 const data = await res.json();
-                renderDetailPanel(data);
+                renderDetailPanel(normalizeListing(data));
             }
         } catch (e) {
             console.error("Fetch detail error:", e);
@@ -591,7 +688,10 @@
         }
     }
 
-    function renderDetailPanel(item) {
+    function renderDetailPanel(rawItem) {
+        const item = normalizeListing(rawItem);
+        if (!item) return;
+
         const panel = document.getElementById("detailPanelSection");
         const placeholder = document.getElementById("noSelectionPlaceholder");
         if (!panel) return;
@@ -601,30 +701,32 @@
 
         // Main Image & Badges
         const mainImg = document.getElementById("detailMainImage");
-        if (mainImg) mainImg.src = item.PrimaryImage || (item.Images && item.Images[0]) || "/images/p1.png";
+        if (mainImg) mainImg.src = item.PrimaryImage || "/images/p1.png";
 
         const badgeType = document.getElementById("detailBadgeType");
         if (badgeType) {
-            const typeText = item.ListingType === "sale" ? "Cần bán" : "Cho thuê";
+            const typeText = (item.ListingType === "sale" || item.ListingType === "Sale") ? "Cần bán" : "Cho thuê";
             badgeType.textContent = typeText + " · " + (item.PropertyType || "Bất động sản");
         }
 
         // Thumbnails
         const thumbContainer = document.getElementById("detailThumbnailsContainer");
-        if (thumbContainer && item.Images) {
+        if (thumbContainer && item.Images && item.Images.length > 0) {
             thumbContainer.innerHTML = item.Images.map(img => `
                 <button type="button" onclick="setDetailMainImage('${img}')"
                         class="relative size-14 rounded-lg overflow-hidden shrink-0 border-2 border-border hover:border-primary transition-colors focus:border-primary">
                     <img src="${img}" class="size-full object-cover" />
                 </button>
             `).join("");
+        } else if (thumbContainer) {
+            thumbContainer.innerHTML = "";
         }
 
         // Header info
         setText("detailId", item.Id);
         setText("detailPackageBadge", item.PackageCode || "Standard");
-        setText("detailTitle", item.Title);
-        setText("detailAddress", "📍 " + (item.FullAddress || item.Address || ""));
+        setText("detailTitle", item.Title || "Chưa có tiêu đề");
+        setText("detailAddress", "📍 " + (item.FullAddress || item.Address || item.FormattedLocation || ""));
         setText("detailPrice", formatVnd(item.Price, item.ListingType));
 
         const openBtn = document.getElementById("detailOpenFullPageBtn");
@@ -634,9 +736,9 @@
 
         // Owner info
         setText("detailOwnerName", item.SellerName || "Người bán");
-        setText("detailOwnerId", "ID: " + (item.SellerId || item.OwnerUserId || ""));
-        setText("detailOwnerPhone", "📞 " + (item.SellerPhone || item.OwnerPhoneNumber || "0901 234 567"));
-        setText("detailOwnerEmail", "✉️ " + (item.SellerEmail || item.OwnerEmail || "contact@propnest.com"));
+        setText("detailOwnerId", "ID: " + (item.SellerId || ""));
+        setText("detailOwnerPhone", "📞 " + (item.SellerPhone || "Chưa cập nhật"));
+        setText("detailOwnerEmail", "✉️ " + (item.SellerEmail || "Chưa cập nhật"));
 
         // Specs
         setText("detailBeds", item.Beds || 0);
@@ -657,11 +759,11 @@
                         <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-semibold text-neutral-900">${h.ActionType}</span>
-                                <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate)}</span>
+                                <span class="font-semibold text-neutral-900">${h.ActionType || h.actionType || "Update"}</span>
+                                <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate || h.actionDate)}</span>
                             </div>
-                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || "Hệ thống"}</span></p>
-                            ${h.Note ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${h.Note}"</p>` : ""}
+                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || h.actor || "Hệ thống"}</span></p>
+                            ${(h.Note || h.note) ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${escapeHtml(h.Note || h.note)}"</p>` : ""}
                         </div>
                     </div>
                 `).join("");
@@ -726,8 +828,8 @@
 
     function handleDetailReject() {
         if (selectedId) {
-            const listing = currentQueue.find(p => p.Id === selectedId);
-            openRejectModal(selectedId, listing ? listing.Title : "");
+            const listing = currentQueue.find(p => String(p.Id) === String(selectedId) || String(p.id) === String(selectedId));
+            openRejectModal(selectedId, listing ? (listing.Title || listing.title) : "");
         }
     }
 
@@ -814,13 +916,13 @@
         }
 
         // Remove from memory queue
-        currentQueue = currentQueue.filter(p => p.Id !== id);
+        currentQueue = currentQueue.filter(p => String(p.Id) !== String(id) && String(p.id) !== String(id));
         updateQueueCountBadge(currentQueue.length);
 
         // If the removed item was currently selected, pick next item in FIFO queue
-        if (selectedId === id) {
+        if (String(selectedId) === String(id)) {
             if (currentQueue.length > 0) {
-                selectListing(currentQueue[0].Id);
+                selectListing(currentQueue[0].Id || currentQueue[0].id);
             } else {
                 showEmptyQueueState();
             }

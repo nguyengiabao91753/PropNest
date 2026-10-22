@@ -1,4 +1,4 @@
-@inject PropNest.Web.Admin.Services.IAdminListingService AdminService
+@inject PropNest.Web.Admin.Services.IServices.IAdminListingService AdminService
 
 @{
     var activeNav = ViewData["ActiveNav"]?.ToString() ?? "Dashboard";
@@ -129,17 +129,23 @@
                     </a>
                 </div>
 
+                @{
+                    var adminUser = Context.Items["AdminProfile"] as PropNest.Web.Admin.Helpers.AdminUserProfile;
+                    var adminDisplayName = adminUser?.FullName ?? "Quản trị viên";
+                    var adminDisplayEmail = adminUser?.Email ?? "admin@propnest.vn";
+                    var adminInitials = adminDisplayName.Length >= 2 ? adminDisplayName.Substring(0, 2).ToUpperInvariant() : "AD";
+                }
                 <div class="flex items-center justify-between p-2 rounded-xl bg-surface border border-border/60">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <div class="grid size-8 place-items-center rounded-full bg-destructive/15 text-destructive text-xs font-bold shrink-0">
-                            AD
+                            @adminInitials
                         </div>
                         <div class="truncate">
-                            <p class="text-xs font-semibold truncate text-neutral-900">Quản trị viên</p>
-                            <p class="text-[10px] text-muted-foreground truncate">admin@propnest.vn</p>
+                            <p class="text-xs font-semibold truncate text-neutral-900">@adminDisplayName</p>
+                            <p class="text-[10px] text-muted-foreground truncate">@adminDisplayEmail</p>
                         </div>
                     </div>
-                    <a href="https://localhost:7129/login" class="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors" title="Đăng xuất" aria-label="Đăng xuất">
+                    <a href="/admin/logout" class="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors" title="Đăng xuất khỏi hệ thống" aria-label="Đăng xuất">
                         <i data-lucide="log-out" class="size-4"></i>
                     </a>
                 </div>

@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using PropNest.Web.Admin.Services;
+using PropNest.Web.Admin.Filters;
+using PropNest.Web.Admin.Services.IServices;
 
 namespace PropNest.Web.Admin.Controllers;
 
+[AdminAuthorize]
 [Route("")]
+[Route("admin")]
 [Route("Dashboard")]
+[Route("admin/dashboard")]
 public class DashboardController : Controller
 {
     private readonly IAdminListingService _listingService;
@@ -33,11 +37,13 @@ public class DashboardController : Controller
             publishedCount = model.PublishedCount,
             pendingCount = model.PendingCount,
             totalUsers = model.TotalUsers,
+            activeSellersCount = model.ActiveSellersCount,
             totalWalletTransactions = model.TotalWalletTransactions,
             totalWalletVolume = model.TotalWalletVolume,
             totalProperties = model.TotalProperties,
             monthlyMetrics = model.MonthlyMetrics,
-            statusDistribution = model.StatusDistribution
+            statusDistribution = model.StatusDistribution,
+            recentTransactions = model.RecentTransactions
         });
     }
 }

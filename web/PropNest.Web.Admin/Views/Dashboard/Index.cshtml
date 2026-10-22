@@ -280,7 +280,7 @@
                         <p class="text-xs text-muted-foreground mt-0.5">Lịch sử nạp tiền, mua gói dịch vụ & bồi hoàn Saga</p>
                     </div>
                 </div>
-                <span class="rounded-full bg-emerald-500/10 text-emerald-800 font-bold px-2.5 py-1 text-xs border border-emerald-300">
+                <span id="tableWalletTxBadge" class="rounded-full bg-emerald-500/10 text-emerald-800 font-bold px-2.5 py-1 text-xs border border-emerald-300">
                     @Model.TotalWalletTransactions giao dịch
                 </span>
             </div>
@@ -296,50 +296,69 @@
                             <th class="p-3.5 text-center">Trạng thái</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-border">
-                        @foreach (var tx in Model.RecentTransactions)
+                    <tbody id="walletTransactionsTableBody" class="divide-y divide-border">
+                        @if (Model.RecentTransactions.Count == 0)
                         {
-                            var isTopUp = tx.TransactionType == "TopUp";
-                            var isRefund = tx.TransactionType == "Refund";
-                            var isCharge = tx.TransactionType == "Charge";
-
-                            <tr class="hover:bg-surface/40 transition-colors">
-                                <td class="p-3.5 font-mono font-bold text-neutral-800">
-                                    @tx.TransactionId
-                                    <span class="block text-[10px] text-muted-foreground font-sans font-normal">@tx.CreatedAt.ToString("HH:mm dd/MM")</span>
-                                </td>
-                                <td class="p-3.5 font-medium text-neutral-900">
-                                    @tx.UserName
-                                </td>
-                                <td class="p-3.5">
-                                    @if (isTopUp)
-                                    {
-                                        <span class="rounded-md bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-emerald-200">
-                                            <i data-lucide="arrow-down-left" class="size-3 text-emerald-600"></i> Nạp tiền ví
-                                        </span>
-                                    }
-                                    else if (isRefund)
-                                    {
-                                        <span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
-                                            <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">
-                                            <i data-lucide="arrow-up-right" class="size-3 text-amber-600"></i> Mua gói dịch vụ
-                                        </span>
-                                    }
-                                </td>
-                                <td class="p-3.5 text-right font-mono font-bold @(isTopUp || isRefund ? "text-emerald-700" : "text-neutral-900")">
-                                    @(isTopUp || isRefund ? "+" : "-")@PropNest.Web.Admin.Helpers.FormatHelper.FormatVnd(tx.Amount)
-                                </td>
-                                <td class="p-3.5 text-center">
-                                    <span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
-                                        @tx.Status
-                                    </span>
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-muted-foreground">
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <i data-lucide="receipt" class="size-8 text-muted-foreground/40"></i>
+                                        <p class="font-semibold text-sm text-neutral-700">Chưa có giao dịch ví nào</p>
+                                        <p class="text-xs text-muted-foreground">Khi người dùng nạp tiền hoặc giao dịch, lịch sử sẽ tự động hiển thị tại đây.</p>
+                                    </div>
                                 </td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var tx in Model.RecentTransactions)
+                            {
+                                var isTopUp = tx.TransactionType == "TopUp";
+                                var isRefund = tx.TransactionType == "Refund";
+                                var isCharge = tx.TransactionType == "Charge";
+
+                                <tr class="hover:bg-surface/40 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-neutral-800">
+                                        @tx.TransactionId
+                                        <span class="block text-[10px] text-muted-foreground font-sans font-normal">@tx.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                    </td>
+                                    <td class="p-3.5 font-medium text-neutral-900">
+                                        @tx.UserName
+                                        @if (!string.IsNullOrWhiteSpace(tx.Description))
+                                        {
+                                            <span class="block text-[10px] text-muted-foreground truncate max-w-xs">@tx.Description</span>
+                                        }
+                                    </td>
+                                    <td class="p-3.5">
+                                        @if (isTopUp)
+                                        {
+                                            <span class="rounded-md bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-emerald-200">
+                                                <i data-lucide="arrow-down-left" class="size-3 text-emerald-600"></i> Nạp tiền ví
+                                            </span>
+                                        }
+                                        else if (isRefund)
+                                        {
+                                            <span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
+                                                <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">
+                                                <i data-lucide="arrow-up-right" class="size-3 text-amber-600"></i> Mua gói dịch vụ
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="p-3.5 text-right font-mono font-bold @(isTopUp || isRefund ? "text-emerald-700" : "text-neutral-900")">
+                                        @(isTopUp || isRefund ? "+" : "-")@PropNest.Web.Admin.Helpers.FormatHelper.FormatVnd(tx.Amount)
+                                    </td>
+                                    <td class="p-3.5 text-center">
+                                        <span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                            @tx.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -521,9 +540,72 @@
                     setVal('metricPendingCount', data.pendingCount);
                     setVal('headerPendingBadge', data.pendingCount);
                     setVal('metricTotalUsers', data.totalUsers);
-                    setVal('metricWalletTx', data.totalWalletTransactions);
+                    setVal('metricActiveSellers', `${data.activeSellersCount || 0} người`);
+                    setVal('metricWalletTx', data.totalWalletTransactions || 0);
+                    setVal('tableWalletTxBadge', `${data.totalWalletTransactions || 0} giao dịch`);
+
+                    if (data.totalWalletVolume !== undefined) {
+                        const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.totalWalletVolume);
+                        setVal('metricWalletVolume', formatted);
+                    }
+
                     setVal('legendPublished', data.publishedCount);
                     setVal('legendPending', data.pendingCount);
+                    setVal('legendDraft', (data.statusDistribution && data.statusDistribution.Draft) || 0);
+                    setVal('legendRejected', (data.statusDistribution && data.statusDistribution.Rejected) || 0);
+
+                    // Re-render recent transactions table if items present
+                    if (data.recentTransactions && Array.isArray(data.recentTransactions) && data.recentTransactions.length > 0) {
+                        const tbody = document.getElementById('walletTransactionsTableBody');
+                        if (tbody) {
+                            tbody.innerHTML = data.recentTransactions.map(tx => {
+                                const isTopUp = tx.transactionType === 'TopUp';
+                                const isRefund = tx.transactionType === 'Refund';
+                                const amountFormatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.amount || 0);
+                                const dateFormatted = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
+                                
+                                let typeBadge = '';
+                                if (isTopUp) {
+                                    typeBadge = `<span class="rounded-md bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-emerald-200">
+                                        <i data-lucide="arrow-down-left" class="size-3 text-emerald-600"></i> Nạp tiền ví
+                                    </span>`;
+                                } else if (isRefund) {
+                                    typeBadge = `<span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
+                                        <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                    </span>`;
+                                } else {
+                                    typeBadge = `<span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">
+                                        <i data-lucide="arrow-up-right" class="size-3 text-amber-600"></i> Mua gói dịch vụ
+                                    </span>`;
+                                }
+
+                                return `
+                                    <tr class="hover:bg-surface/40 transition-colors">
+                                        <td class="p-3.5 font-mono font-bold text-neutral-800">
+                                            ${tx.transactionId || ''}
+                                            <span class="block text-[10px] text-muted-foreground font-sans font-normal">${dateFormatted}</span>
+                                        </td>
+                                        <td class="p-3.5 font-medium text-neutral-900">
+                                            ${tx.userName || 'Người dùng'}
+                                            ${tx.description ? `<span class="block text-[10px] text-muted-foreground truncate max-w-xs">${tx.description}</span>` : ''}
+                                        </td>
+                                        <td class="p-3.5">${typeBadge}</td>
+                                        <td class="p-3.5 text-right font-mono font-bold ${isTopUp || isRefund ? 'text-emerald-700' : 'text-neutral-900'}">
+                                            ${isTopUp || isRefund ? '+' : '-'}${amountFormatted}
+                                        </td>
+                                        <td class="p-3.5 text-center">
+                                            <span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                                ${tx.status || 'Thành công'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('');
+                            if (window.lucide) {
+                                lucide.createIcons();
+                            }
+                        }
+                    }
 
                     if (doughnutChartInstance && data.statusDistribution) {
                         const dist = data.statusDistribution;
@@ -536,6 +618,13 @@
                             dist.Hidden || 0
                         ];
                         doughnutChartInstance.update();
+                    }
+
+                    if (growthChartInstance && data.monthlyMetrics && data.monthlyMetrics.length > 0) {
+                        growthChartInstance.data.labels = data.monthlyMetrics.map(m => m.month || m.Month);
+                        growthChartInstance.data.datasets[0].data = data.monthlyMetrics.map(m => m.listingCount !== undefined ? m.listingCount : m.ListingCount);
+                        growthChartInstance.data.datasets[1].data = data.monthlyMetrics.map(m => m.walletTransactionCount !== undefined ? m.walletTransactionCount : m.WalletTransactionCount);
+                        growthChartInstance.update();
                     }
                 }
             } catch (err) {
