@@ -96,7 +96,6 @@ public class PropertiesController : Controller
         {
             TempData["ErrorMessage"] = $"Không tìm thấy thông tin bất động sản #{id}.";
             return RedirectToAction(nameof(Index));
->>>>>>> e3882219ab9b9505c0d33a0cffa5257379d52c13
         }
 
         return View(item);
