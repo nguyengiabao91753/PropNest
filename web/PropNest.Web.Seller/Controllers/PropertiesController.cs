@@ -271,4 +271,21 @@ public class PropertiesController : Controller
                 return View(model);
         }
     }
+
+    [HttpGet("History/{id:long}")]
+    public async Task<IActionResult> History(long id, CancellationToken cancellationToken)
+    {
+        ViewData["ActiveNav"] = "Properties";
+        // 1. Lấy thông tin cơ bản của tin đăng để hiển thị header
+        var property = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+        if (property == null)
+        {
+            TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id} để xem lịch sử.";
+            return RedirectToAction(nameof(Index));
+        }
+        ViewData["Property"] = property;
+        // 2. Lấy danh sách lịch sử thay đổi & timeline
+        var history = await _sellerService.GetHistoryDeltaAsync(id, cancellationToken);
+        return View(history);
+    }
 }
