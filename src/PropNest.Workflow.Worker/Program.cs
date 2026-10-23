@@ -9,6 +9,10 @@ using Quartz;
 using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
 builder.ConfigureSerilog();
 
 builder.Services.AddApplication();
