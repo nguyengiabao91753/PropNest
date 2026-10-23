@@ -1,4 +1,4 @@
-using PropNest.Web.Client.Models.ViewModels;
+﻿using PropNest.Web.Client.Models.ViewModels;
 using PropNest.Web.Client.Services.IServices;
 using System.Net;
 using System.Net.Http.Json;

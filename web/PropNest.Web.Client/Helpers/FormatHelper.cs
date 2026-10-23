@@ -44,9 +44,4 @@ public static class FormatHelper
     {
         return $"{area:N0} m²";
     }
-
-    public static string FormatVnd(decimal amount)
-    {
-        return $"{amount:N0} ₫";
-    }
 }

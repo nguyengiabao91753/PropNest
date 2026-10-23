@@ -33,32 +33,6 @@ public static class FormatHelper
         return $"{price.ToString("N0", ViCulture)} ₫";
     }
 
-    public static string FormatCompactPrice(decimal price, string listingType)
-    {
-        if (string.Equals(listingType, "rent", StringComparison.OrdinalIgnoreCase))
-        {
-            if (price >= 1_000_000)
-            {
-                var millions = price / 1_000_000m;
-                return $"{millions:0.#} tr/th";
-            }
-            return $"{price / 1_000m:0}k/th";
-        }
-
-        if (price >= 1_000_000_000)
-        {
-            var billions = price / 1_000_000_000m;
-            return $"{billions:0.#} tỷ";
-        }
-        if (price >= 1_000_000)
-        {
-            var millions = price / 1_000_000m;
-            return $"{millions:0} tr";
-        }
-
-        return $"{price.ToString("N0", ViCulture)} ₫";
-    }
-
     public static string FormatVnd(decimal amount)
     {
         return $"{amount.ToString("N0", ViCulture)} ₫";
