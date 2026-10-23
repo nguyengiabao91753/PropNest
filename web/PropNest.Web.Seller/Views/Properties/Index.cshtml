@@ -156,7 +156,17 @@
                                 <a asp-action="Details" asp-route-id="@p.Id" class="text-primary hover:underline font-semibold">
                                     Chi tiết
                                 </a>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <!-- Mua gói (Grid View) -->
+                                    @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                    {
+                                        <button type="button"
+                                                onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
+                                                class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
+                                                title="Nâng cấp gói dịch vụ (Task 213)">
+                                            <i data-lucide="sparkles" class="size-4"></i>
+                                        </button>
+                                    }
                                     <!-- Delete Button (Only for Draft) -->
                                     @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
                                     {
@@ -167,7 +177,7 @@
                                             </button>
                                         </form>
                                     }
-                                    <a asp-action="History" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900" title="Xem lịch sử Delta">
+                                    <a asp-action="History" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900 p-1.5" title="Xem lịch sử Delta">
                                         <i data-lucide="history" class="size-4"></i>
                                     </a>
                                 </div>
@@ -232,11 +242,22 @@
                                             <partial name="_StatusBadge" model="p.Status" />
                                         </td>
 
-                                        <!-- Column 3: Package -->
+                                        <!-- Column 3: Package (Task 213: Nút nâng cấp nhanh) -->
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
-                                                @p.PackageCode
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
+                                                    @p.PackageCode
+                                                </span>
+                                                @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                                {
+                                                    <button type="button"
+                                                            onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
+                                                            class="p-1 rounded-md text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                                                            title="Nâng cấp gói dịch vụ">
+                                                        <i data-lucide="sparkles" class="size-3.5"></i>
+                                                    </button>
+                                                }
+                                            </div>
                                         </td>
 
                                         <!-- Column 4: Price -->
@@ -293,6 +314,16 @@
                                                            class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
                                                             <i data-lucide="eye" class="size-3.5 text-primary"></i> Xem chi tiết (Preview)
                                                         </a>
+
+                                                        <!-- Mua / Nâng cấp gói (Task 213) -->
+                                                        @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                                        {
+                                                            <button type="button"
+                                                                    onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
+                                                                    class="flex w-full items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-amber-700 hover:bg-amber-50 transition-colors text-left font-medium">
+                                                                <i data-lucide="sparkles" class="size-3.5 text-amber-500"></i> Mua / Nâng cấp gói
+                                                            </button>
+                                                        }
 
                                                         <!-- Chỉnh sửa (Không cho sửa khi đang chờ duyệt) -->
                                                         @if (p.Status == PropNest.Domain.Listings.ListingStatus.PendingModeration)
@@ -432,6 +463,9 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Chọn Gói Dịch Vụ & Step Indicator Saga (Task 213) -->
+<partial name="_PurchasePackageModal" />
 
 @section Scripts {
     <script>

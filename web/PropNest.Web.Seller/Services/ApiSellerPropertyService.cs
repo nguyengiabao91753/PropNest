@@ -18,6 +18,11 @@ namespace PropNest.Web.Seller.Services
 
         [LoggerMessage(Level = LogLevel.Error, Message = "UploadPropertyImages thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogUploadImagesFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
+        [LoggerMessage(Level = LogLevel.Error, Message = "PurchasePackage thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
+        private static partial void LogPurchasePackageFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "CreateProperty thất bại. Status: {StatusCode}, Chi tiết: {Details}")]
+        private static partial void LogCreatePropertyFailed(ILogger logger, System.Net.HttpStatusCode statusCode, string details);
 
         public ApiSellerPropertyService(HttpClient httpClient, ILogger<ApiSellerPropertyService> logger, IConfiguration configuration)
         {
@@ -233,16 +238,6 @@ namespace PropNest.Web.Seller.Services
             return Task.FromResult(new List<HistoryDeltaViewModel>());
         }
 
-        public Task<WalletViewModel> GetWalletAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new WalletViewModel());
-        }
-
-        public Task<bool> TopUpWalletAsync(decimal amount, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(true);
-        }
-
         public async Task<long?> CreatePropertyAsync(CreatePropertyInputModel input, CancellationToken cancellationToken = default)
         {
             var url = "/api/v1/listings";
@@ -263,6 +258,8 @@ namespace PropNest.Web.Seller.Services
                 var response = await _httpClient.PostAsJsonAsync(url, request, _jsonOptions, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogCreatePropertyFailed(_logger, response.StatusCode, errorBody);
                     return null;
                 }
                 var created = await response.Content.ReadFromJsonAsync<ApiListingDto>(_jsonOptions, cancellationToken);
@@ -325,6 +322,95 @@ namespace PropNest.Web.Seller.Services
             {
                 LogApiConnectionError(_logger, ex, url);
                 return UpdatePropertyStatus.Failed;
+            }
+        }
+
+
+        public async Task<bool> UploadPropertyImagesAsync(long listingId, List<IFormFile> files, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{listingId}/images";
+            try
+            {
+                using var formData = new MultipartFormDataContent();
+                foreach (var file in files)
+                {
+                    if (file.Length == 0) continue;
+                    var streamContent = new StreamContent(file.OpenReadStream());
+                    if (!string.IsNullOrWhiteSpace(file.ContentType))
+                    {
+                        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                    }
+                    formData.Add(streamContent, "files", file.FileName);
+                }
+                var response = await _httpClient.PostAsync(url, formData, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogUploadImagesFailed(_logger, listingId, response.StatusCode, errorBody);
+                    return false;
+                }
+                return true;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return false;
+            }
+        }
+
+        public async Task<Guid?> PurchasePackageAsync(long listingId, string packageCode, decimal amount, string? idempotencyKey=null, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{listingId}/purchase-package";
+            try
+            {
+                var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
+                using var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Idempotency-Key", key);
+                request.Content = JsonContent.Create(new ApiPurchasePackageRequest(packageCode, amount));
+                var response = await _httpClient.SendAsync(request, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogPurchasePackageFailed(_logger, listingId, response.StatusCode, errorBody);
+                    return null;
+                }
+                var dto = await response.Content.ReadFromJsonAsync<ApiWorkflowDto>(_jsonOptions, cancellationToken);
+                return dto?.CorrelationId;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
+            }
+        }
+
+        public async Task<WorkflowStatusViewModel?> GetWorkflowStatusAsync(Guid correlationId, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/workflows/{correlationId}";
+            try
+            {
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    var dto = await response.Content.ReadFromJsonAsync<ApiWorkflowDto>(_jsonOptions, cancellationToken);
+                    if (dto == null) return null;
+
+                    return new WorkflowStatusViewModel
+                    {
+                        CorrelationId = dto.CorrelationId,
+                        ListingId = dto.ListingId,
+                        PackageCode = dto.PackageCode,
+                        ChargeAmount = dto.ChargeAmount,
+                        Status = dto.Status,
+                        ErrorMessage = dto.ErrorMessage
+                    };
+                }
+                return null;
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
             }
         }
 
@@ -392,37 +478,18 @@ namespace PropNest.Web.Seller.Services
             "Villa" => "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
             _ => "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
         };
-
-        public async Task<bool> UploadPropertyImagesAsync(long listingId, List<IFormFile> files, CancellationToken cancellationToken = default)
+        private sealed record ApiPurchasePackageRequest(string PackageCode, decimal ChargeAmount);
+        private sealed class ApiWorkflowDto
         {
-            var url = $"/api/v1/listings/{listingId}/images";
-            try
-            {
-                using var formData = new MultipartFormDataContent();
-                foreach (var file in files)
-                {
-                    if (file.Length == 0) continue;
-                    var streamContent = new StreamContent(file.OpenReadStream());
-                    if (!string.IsNullOrWhiteSpace(file.ContentType))
-                    {
-                        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-                    }
-                    formData.Add(streamContent, "files", file.FileName);
-                }
-                var response = await _httpClient.PostAsync(url, formData, cancellationToken);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                    LogUploadImagesFailed(_logger, listingId, response.StatusCode, errorBody);
-                    return false;
-                }
-                return true;
-            }
-            catch (HttpRequestException ex)
-            {
-                LogApiConnectionError(_logger, ex, url);
-                return false;
-            }
+            public Guid CorrelationId { get; set; }
+            public long ListingId { get; set; }
+            public long UserId { get; set; }
+            public string PackageCode { get; set; } = string.Empty;
+            public decimal ChargeAmount { get; set; }
+            public int Status { get; set; }
+            public int RetryCount { get; set; }
+            public string? ErrorMessage { get; set; }
+            public DateTimeOffset UpdatedAt { get; set; }
         }
     }
 }

@@ -365,6 +365,21 @@
         let quill = null;
         let isFormDirty = false;
 
+        function detectInitialStep() {
+            // Tự động phát hiện nếu có lỗi server-side validation ở bước nào thì mở đúng bước đó
+            for (let i = totalSteps - 1; i >= 0; i--) {
+                const stepEl = document.getElementById(`step-${i}`);
+                if (!stepEl) continue;
+                const errSpans = stepEl.querySelectorAll('.field-validation-error');
+                for (let span of errSpans) {
+                    if (span.textContent && span.textContent.trim().length > 0) {
+                        return i;
+                    }
+                }
+            }
+            return 0;
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             // 1. Khởi tạo Quill Editor
             quill = new Quill('#quillEditor', {
@@ -374,7 +389,7 @@
             });
 
             var hiddenDesc = document.getElementById('hiddenDescription');
-            if (hiddenDesc.value) {
+            if (hiddenDesc && hiddenDesc.value) {
                 quill.root.innerHTML = hiddenDesc.value;
             }
 
@@ -382,15 +397,23 @@
                 var html = quill.root.innerHTML;
                 hiddenDesc.value = (quill.getText().trim().length === 0) ? '' : html;
                 isFormDirty = true;
+                unmarkError(hiddenDesc);
             });
 
-            // Lắng nghe thay đổi form để kích hoạt Dirty State
+            // Lắng nghe thay đổi form để kích hoạt Dirty State và tự động xóa lỗi
             document.querySelectorAll('#wizardForm input, #wizardForm select').forEach(function (el) {
-                el.addEventListener('input', function () { isFormDirty = true; });
-                el.addEventListener('change', function () { isFormDirty = true; });
+                el.addEventListener('input', function () {
+                    isFormDirty = true;
+                    unmarkError(el);
+                });
+                el.addEventListener('change', function () {
+                    isFormDirty = true;
+                    unmarkError(el);
+                });
             });
 
             updateLivePreview();
+            currentStep = detectInitialStep();
             renderStep();
 
             if (window.lucide) {
@@ -403,7 +426,14 @@
             if (target < 0 || target >= totalSteps) return;
 
             if (target > currentStep) {
-                if (!validateStep(currentStep)) return;
+                // Kiểm tra tất cả các bước trước khi cho phép tiến tới
+                for (let s = currentStep; s < target; s++) {
+                    if (!validateStep(s)) {
+                        currentStep = s;
+                        renderStep();
+                        return;
+                    }
+                }
             }
 
             currentStep = target;
@@ -463,6 +493,45 @@
         }
 
         // 3. Client-side Validation cho từng bước
+        function getInputElementForError(el) {
+            if (!el) return null;
+            const addonContainer = el.closest('.focus-within\\:border-primary');
+            if (addonContainer) return addonContainer;
+            if (el.id === 'hiddenDescription') {
+                return document.getElementById('quillToolbar')?.parentElement || el;
+            }
+            return el;
+        }
+
+        function markError(el, msg) {
+            if (!el) return;
+            const targetEl = getInputElementForError(el);
+            if (targetEl) {
+                targetEl.classList.add('!border-rose-500', '!ring-1', '!ring-rose-500/30');
+            }
+
+            const fieldName = el.name || el.getAttribute('name') || el.id;
+            const span = document.querySelector(`[data-valmsg-for="${fieldName}"]`);
+            if (span) {
+                span.textContent = msg;
+                span.classList.remove('hidden');
+            }
+        }
+
+        function unmarkError(el) {
+            if (!el) return;
+            const targetEl = getInputElementForError(el);
+            if (targetEl) {
+                targetEl.classList.remove('!border-rose-500', '!ring-1', '!ring-rose-500/30');
+            }
+
+            const fieldName = el.name || el.getAttribute('name') || el.id;
+            const span = document.querySelector(`[data-valmsg-for="${fieldName}"]`);
+            if (span) {
+                span.textContent = '';
+            }
+        }
+
         function validateStep(step) {
             let isValid = true;
 
@@ -478,11 +547,11 @@
                 const price = document.getElementById('inputPrice');
                 const area = document.getElementById('inputArea');
 
-                if (parseFloat(price.value) < 0 || isNaN(parseFloat(price.value))) {
-                    markError(price, 'Mức giá không hợp lệ.'); isValid = false;
+                if (!price.value || isNaN(parseFloat(price.value)) || parseFloat(price.value) < 0) {
+                    markError(price, 'Mức giá không hợp lệ (phải >= 0).'); isValid = false;
                 } else unmarkError(price);
 
-                if (parseFloat(area.value) <= 0 || isNaN(parseFloat(area.value))) {
+                if (!area.value || isNaN(parseFloat(area.value)) || parseFloat(area.value) <= 0) {
                     markError(area, 'Diện tích phải lớn hơn 0 m².'); isValid = false;
                 } else unmarkError(area);
             } else if (step === 2) {
@@ -500,20 +569,6 @@
             }
 
             return isValid;
-        }
-
-        function markError(el, msg) {
-            const container = el.closest('.flex') || el;
-            container.classList.add('!border-rose-500');
-            const span = document.querySelector(`[data-valmsg-for="${el.name}"]`);
-            if (span) span.textContent = msg;
-        }
-
-        function unmarkError(el) {
-            const container = el.closest('.flex') || el;
-            container.classList.remove('!border-rose-500');
-            const span = document.querySelector(`[data-valmsg-for="${el.name}"]`);
-            if (span) span.textContent = '';
         }
 
         // 4. Cập nhật Live Preview thời gian thực
@@ -597,11 +652,34 @@
             document.getElementById('exitConfirmModal').classList.add('hidden');
         }
 
-        // Submit form chính: kiểm tra Rich Text
+        // Submit form chính: validate tất cả các bước trước khi gửi lên server
         document.getElementById('wizardForm').addEventListener('submit', function (e) {
+            const action = document.getElementById('submitAction').value;
+
             if (quill) {
                 var text = quill.getText().trim();
                 document.getElementById('hiddenDescription').value = (text.length === 0) ? '' : quill.root.innerHTML;
+            }
+
+            // Nếu người dùng chọn Lưu bản nháp (Draft) thì gửi form ngay mà không chặn
+            if (action === 'save_draft') {
+                return true;
+            }
+
+            // Kiểm tra tuần tự từng bước từ bước 0 đến bước cuối
+            for (let step = 0; step < totalSteps; step++) {
+                if (!validateStep(step)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    jumpToStep(step);
+                    const stepEl = document.getElementById(`step-${step}`);
+                    const firstError = stepEl?.querySelector('.!border-rose-500, input:invalid');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (typeof firstError.focus === 'function') firstError.focus();
+                    }
+                    return false;
+                }
             }
         });
     </script>
