@@ -191,6 +191,55 @@ public sealed class ListingTests
         return listing;
     }
 
+    [Fact]
+    public void UpgradePackageFromDraftShouldTransitionToPendingModeration()
+    {
+        var listing = CreateListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
+        Assert.Equal("VIP", listing.PackageCode);
+    }
+
+    [Fact]
+    public void UpgradePackageFromHiddenShouldTransitionToPublished()
+    {
+        var listing = CreateHiddenListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
+    }
+
+    [Fact]
+    public void UpgradePackageFromRejectedShouldTransitionToPendingModeration()
+    {
+        var listing = CreateRejectedListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
+    }
+
+    [Fact]
+    public void UpgradePackageFromPublishedShouldRemainPublished()
+    {
+        var listing = CreatePublishedListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
+    }
+
     private static Listing CreateListing() => new(
         1,
         "Apartment for sale",
