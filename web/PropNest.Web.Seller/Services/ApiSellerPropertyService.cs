@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using PropNest.Domain.Listings;
 using PropNest.Web.Seller.Models.InputModels;
@@ -11,7 +11,11 @@ namespace PropNest.Web.Seller.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ApiSellerPropertyService> _logger;
-        private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+        private static readonly JsonSerializerOptions s_jsonOptions = new() { PropertyNameCaseInsensitive = true };
+        private readonly JsonSerializerOptions _jsonOptions = s_jsonOptions;
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "GetHistoryDelta tháº¥t báº¡i cho tin Ä‘Äƒng {ListingId}. Status: {StatusCode}, Chi tiáº¿t: {Details}")]
+        private static partial void LogGetHistoryDeltaFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
 
         [LoggerMessage(Level = LogLevel.Error, Message = "Không thể kết nối tới Backend API tại {Url}")]
         private static partial void LogApiConnectionError(ILogger logger, Exception ex, string url);
@@ -233,9 +237,44 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public Task<List<HistoryDeltaViewModel>> GetHistoryDeltaAsync(long id, CancellationToken cancellationToken = default)
+        public async Task<List<HistoryDeltaViewModel>> GetHistoryDeltaAsync(long id, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new List<HistoryDeltaViewModel>());
+            var url = $"/api/v1/listings/{id}/history";
+            try
+            {
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogGetHistoryDeltaFailed(_logger, id, response.StatusCode, errorBody);
+                    return new List<HistoryDeltaViewModel>();
+                }
+                var histories = await response.Content.ReadFromJsonAsync<List<ApiListingHistoryDto>>(_jsonOptions, cancellationToken);
+                if (histories == null || histories.Count == 0)
+                {
+                    return new List<HistoryDeltaViewModel>();
+                }
+                var result = new List<HistoryDeltaViewModel>();
+                foreach (var h in histories)
+                {
+                    result.Add(new HistoryDeltaViewModel
+                    {
+                        ListingId = id,
+                        ActionType = NormalizeActionType(h.ActionType),
+                        Actor = FormatActor(h.ActorName, h.ActorRole),
+                        ActionDate = h.ActionDate,
+                        Note = FormatNote(h.ActionType, h.Note),
+                        DeltaChanges = ParseDeltas(h.DeltasJson)
+                    });
+                }
+                // Sắp xếp thời gian mới nhất lên đầu
+                return result.OrderBy(x => x.ActionDate).ToList();
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return new List<HistoryDeltaViewModel>();
+            }
         }
 
         public async Task<long?> CreatePropertyAsync(CreatePropertyInputModel input, CancellationToken cancellationToken = default)
@@ -490,6 +529,135 @@ namespace PropNest.Web.Seller.Services
             public int RetryCount { get; set; }
             public string? ErrorMessage { get; set; }
             public DateTimeOffset UpdatedAt { get; set; }
+        }
+
+        private static string NormalizeActionType(string actionType) => actionType switch
+        {
+            "Create" => "Tạo mới tin",
+            "UpdateContent" or "Update" => "Cập nhật thông tin",
+            "Submit" => "Gửi duyệt",
+            "Approve" => "Đã duyệt",
+            "Reject" => "Từ chối duyệt",
+            "Expire" => "Hết hạn",
+            "Hide" => "Tạm ẩn",
+            "UpgradePackage" => "Nâng cấp gói",
+            "Delete" => "Xóa tin",
+            _ => actionType
+        };
+        private static string FormatActor(string? actorName, string? actorRole)
+        {
+            if (string.IsNullOrWhiteSpace(actorName))
+            {
+                return "Hệ thống tự động";
+            }
+            var roleLabel = actorRole?.ToLowerInvariant() switch
+            {
+                "seller" => "Người bán",
+                "moderator" => "Kiểm duyệt viên",
+                "admin" => "Quản trị viên",
+                "system" => "Hệ thống",
+                _ => actorRole ?? "Người dùng"
+            };
+            return $"{actorName} ({roleLabel})";
+        }
+        private static string? FormatNote(string actionType, string? note)
+        {
+            if (string.IsNullOrWhiteSpace(note)) return null;
+            // Nếu là Reject và Note lưu dạng JSON array: ["Lý do 1", "Lý do 2"]
+            if (string.Equals(actionType, "Reject", StringComparison.OrdinalIgnoreCase) && note.TrimStart().StartsWith('['))
+            {
+                try
+                {
+                    var reasons = JsonSerializer.Deserialize<List<string>>(note, s_jsonOptions);
+                    if (reasons != null && reasons.Count > 0)
+                    {
+                        return string.Join("; ", reasons);
+                    }
+                }
+                catch
+                {
+                    // fallback nếu không parse được json
+                }
+            }
+            return note;
+        }
+        private static List<DeltaItemViewModel> ParseDeltas(string? deltasJson)
+        {
+            var list = new List<DeltaItemViewModel>();
+            if (string.IsNullOrWhiteSpace(deltasJson)) return list;
+            try
+            {
+                var deltas = JsonSerializer.Deserialize<List<ApiListingDeltaDto>>(deltasJson, s_jsonOptions);
+                if (deltas == null) return list;
+                foreach (var d in deltas)
+                {
+                    list.Add(new DeltaItemViewModel
+                    {
+                        Field = FormatFieldName(d.FieldName),
+                        OldValue = FormatFieldValue(d.FieldName, d.OldValue),
+                        NewValue = FormatFieldValue(d.FieldName, d.NewValue)
+                    });
+                }
+            }
+            catch
+            {
+                // Bỏ qua nếu json lỗi
+            }
+            return list;
+        }
+        private static string FormatFieldName(string fieldName) => fieldName switch
+        {
+            "Title" => "Tiêu đề tin",
+            "Description" => "Mô tả chi tiết",
+            "PropertyType" => "Loại bất động sản",
+            "ListingType" => "Hình thức (Bán/Cho thuê)",
+            "Price" => "Giá bán/cho thuê",
+            "Area" => "Diện tích",
+            "City" => "Tỉnh / Thành phố",
+            "District" => "Quận / Huyện",
+            "Ward" => "Phường / Xã",
+            "Address" => "Địa chỉ cụ thể",
+            "PackageCode" => "Gói dịch vụ",
+            _ => fieldName
+        };
+        private static string FormatFieldValue(string fieldName, object? value)
+        {
+            if (value == null) return "(Trống)";
+            var strValue = value.ToString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(strValue)) return "(Trống)";
+            // Format tiền VND
+            if (string.Equals(fieldName, "Price", StringComparison.OrdinalIgnoreCase) && decimal.TryParse(strValue, out var price))
+            {
+                return $"{price:N0} ₫";
+            }
+            // Format diện tích m²
+            if (string.Equals(fieldName, "Area", StringComparison.OrdinalIgnoreCase) && decimal.TryParse(strValue, out var area))
+            {
+                return $"{area:N1} m²";
+            }
+            // Format hình thức
+            if (string.Equals(fieldName, "ListingType", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Equals(strValue, "sale", StringComparison.OrdinalIgnoreCase) ? "Cần bán" : "Cho thuê";
+            }
+            return strValue;
+        }
+        private sealed class ApiListingHistoryDto
+        {
+            public string ActionType { get; set; } = string.Empty;
+            public DateTimeOffset ActionDate { get; set; }
+            public long? ActorUserId { get; set; }
+            public string? ActorName { get; set; }
+            public string? ActorRole { get; set; }
+            public string? SnapshotJson { get; set; }
+            public string? DeltasJson { get; set; }
+            public string? Note { get; set; }
+        }
+        private sealed class ApiListingDeltaDto
+        {
+            public string FieldName { get; set; } = string.Empty;
+            public object? OldValue { get; set; }
+            public object? NewValue { get; set; }
         }
     }
 }

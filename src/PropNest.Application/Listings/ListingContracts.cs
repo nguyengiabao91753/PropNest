@@ -170,6 +170,8 @@ public sealed record ListingHistoryDto(
     string ActionType,
     DateTimeOffset ActionDate,
     long? ActorUserId,
+    string? ActorName,
+    string? ActorRole,
     string? SnapshotJson,
     string? DeltasJson,
     string? Note

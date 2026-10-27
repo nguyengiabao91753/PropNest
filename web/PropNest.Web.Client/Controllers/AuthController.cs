@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using PropNest.Web.Client.Helpers;
 using PropNest.Web.Client.Models.ViewModels;
@@ -133,51 +131,5 @@ public class AuthController : Controller
         }
 
         return Json(profile);
-    }
-
-    /// <summary>
-    /// Trích xuất danh sách roles từ Payload của JWT Token
-    /// </summary>
-    private static List<string> GetRolesFromJwt(string jwt)
-    {
-        var roles = new List<string>();
-        try
-        {
-            var parts = jwt.Split('.');
-            if (parts.Length < 2) return roles;
-
-            var payload = parts[1].Replace('-', '+').Replace('_', '/');
-            switch (payload.Length % 4)
-            {
-                case 2: payload += "=="; break;
-                case 3: payload += "="; break;
-            }
-
-            var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-            using var doc = JsonDocument.Parse(json);
-
-            if (doc.RootElement.TryGetProperty("role", out var roleProp))
-            {
-                if (roleProp.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var el in roleProp.EnumerateArray())
-                    {
-                        var r = el.GetString();
-                        if (!string.IsNullOrWhiteSpace(r)) roles.Add(r);
-                    }
-                }
-                else if (roleProp.ValueKind == JsonValueKind.String)
-                {
-                    var r = roleProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(r)) roles.Add(r);
-                }
-            }
-        }
-        catch
-        {
-            // Bỏ qua lỗi parse nếu token không đúng định dạng
-        }
-
-        return roles;
     }
 }
