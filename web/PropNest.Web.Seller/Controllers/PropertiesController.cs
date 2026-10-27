@@ -328,6 +328,7 @@ public class PropertiesController : Controller
         // 2. Lấy danh sách lịch sử thay đổi & timeline
         var history = await _sellerService.GetHistoryDeltaAsync(id, cancellationToken);
         return View(history);
+    }
     // ==========================================
     // Task 213: Mua gói dịch vụ & Polling Saga
     // ==========================================
