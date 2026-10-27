@@ -11,7 +11,6 @@ using PropNest.Infrastructure.Persistence;
 namespace PropNest.Api.Controllers;
 
 [ApiController]
-[AllowAnonymous]
 [Route("api/v1/auth")]
 public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
@@ -22,6 +21,7 @@ public sealed class AuthController(
 {
     private const string SellerRole = "Seller";
 
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult<RegisterResponse>> Register(
         RegisterRequest request,
@@ -60,6 +60,7 @@ public sealed class AuthController(
             new RegisterResponse(user.Id, user.Email!));
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login(
         LoginRequest request,
