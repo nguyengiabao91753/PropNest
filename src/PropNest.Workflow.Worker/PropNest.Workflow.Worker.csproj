@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <UserSecretsId>c607d021-a083-403d-a5d0-e38a36243938</UserSecretsId>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PropNest.Application\PropNest.Application.csproj" />
     <ProjectReference Include="..\PropNest.Infrastructure\PropNest.Infrastructure.csproj" />
