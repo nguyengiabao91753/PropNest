@@ -83,6 +83,12 @@
                                     <span class="rounded-full bg-amber-500/15 text-amber-800 font-semibold px-2 py-0.2 text-[10px]">
                                         Chờ duyệt
                                     </span>
+                                    @if (p.IsResubmission)
+                                    {
+                                        <span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">
+                                            Gửi lại (Diff)
+                                        </span>
+                                    }
                                     @if (p.PackageCode == "VIP")
                                     {
                                         <span class="rounded bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2">
@@ -118,13 +124,18 @@
                                 </div>
 
                                 <!-- Action Buttons on Each Item -->
-                                <div class="flex items-center gap-2 mt-2.5 pt-2 border-t border-dashed border-border/60">
+                                <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
+                                    <a href="@Url.Action("Detail", "Moderation", new { id = p.Id })" onclick="event.stopPropagation()"
+                                       class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
+                                       title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                        <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
+                                    </a>
                                     <button type="button" onclick="handleApproveClick('@p.Id', event)"
-                                            class="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-[11px] py-1.5 px-3 rounded-lg shadow-2xs transition-all">
+                                            class="flex-1 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-[11px] py-1.5 px-2 rounded-lg shadow-2xs transition-all">
                                         <i data-lucide="check" class="size-3.5"></i> Duyệt
                                     </button>
                                     <button type="button" onclick="handleRejectClick('@p.Id', '@p.Title', event)"
-                                            class="flex-1 flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-semibold text-[11px] py-1.5 px-3 rounded-lg transition-all">
+                                            class="flex-1 flex items-center justify-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all">
                                         <i data-lucide="x" class="size-3.5"></i> Từ chối
                                     </button>
                                 </div>
@@ -163,11 +174,16 @@
                 <!-- Title, Full Address & Price -->
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span id="detailId" class="font-mono text-xs text-muted-foreground font-semibold">@selected.Id</span>
                             <span id="detailPackageBadge" class="rounded bg-amber-500/20 text-amber-800 text-[10px] font-bold px-2 py-0.5">
                                 @selected.PackageCode
                             </span>
+                            <a id="detailOpenFullPageBtn" href="@Url.Action("Detail", "Moderation", new { id = selected.Id })"
+                               class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary-hover bg-brand-soft/50 border border-primary/30 px-2.5 py-1 rounded-lg transition-colors ml-auto"
+                               title="Mở toàn màn hình xem chi tiết, gallery ảnh, lịch sử và so sánh diff">
+                                <i data-lucide="external-link" class="size-3"></i> Xem chi tiết & So sánh Diff
+                            </a>
                         </div>
                         <h2 id="detailTitle" class="font-display text-xl sm:text-2xl font-bold mt-1 text-neutral-900 leading-snug">
                             @selected.Title
@@ -358,7 +374,85 @@
 
 @section Scripts {
 <script>
-    let currentQueue = window.INITIAL_MODERATION_QUEUE || [];
+    function normalizeListing(p) {
+        if (!p) return null;
+        const id = p.Id || p.id || p.ListingId || p.listingId || "";
+        const title = p.Title || p.title || "";
+        const description = p.Description || p.description || "";
+        const propertyType = p.PropertyType || p.propertyType || "Bất động sản";
+        const listingType = p.ListingType || p.listingType || "sale";
+        const price = Number(p.Price !== undefined ? p.Price : (p.price !== undefined ? p.price : 0)) || 0;
+        const area = Number(p.Area !== undefined ? p.Area : (p.area !== undefined ? p.area : 0)) || 0;
+        const beds = Number(p.Beds !== undefined ? p.Beds : (p.beds !== undefined ? p.beds : 0)) || 0;
+        const baths = Number(p.Baths !== undefined ? p.Baths : (p.baths !== undefined ? p.baths : 0)) || 0;
+        const city = p.City || p.city || "";
+        const district = p.District || p.district || "";
+        const ward = p.Ward || p.ward || "";
+        const address = p.Address || p.address || "";
+        
+        let fullAddress = p.FullAddress || p.fullAddress || "";
+        if (!fullAddress) {
+            const parts = [address, ward, district, city].filter(Boolean);
+            fullAddress = parts.join(", ");
+        }
+        let formattedLocation = p.FormattedLocation || p.formattedLocation || "";
+        if (!formattedLocation) {
+            const locParts = [district, city].filter(Boolean);
+            formattedLocation = locParts.length > 0 ? locParts.join(", ") : (address || fullAddress || "Chưa cập nhật");
+        }
+
+        const packageCode = p.PackageCode || p.packageCode || "Standard";
+        const sellerId = p.SellerId || p.sellerId || p.OwnerUserId || p.ownerUserId || "";
+        const sellerName = p.SellerName || p.sellerName || p.OwnerName || p.ownerName || (sellerId ? `Người bán #${sellerId}` : "Người bán");
+        const sellerEmail = p.SellerEmail || p.sellerEmail || p.OwnerEmail || p.ownerEmail || "";
+        const sellerPhone = p.SellerPhone || p.sellerPhone || p.OwnerPhoneNumber || p.ownerPhoneNumber || "";
+        const createdAt = p.CreatedAt || p.createdAt || p.CreatedDate || p.createdDate || "";
+        const status = p.Status !== undefined ? p.Status : (p.status !== undefined ? p.status : 1);
+        const isResubmission = Boolean(p.IsResubmission !== undefined ? p.IsResubmission : p.isResubmission);
+
+        const rawImages = p.Images || p.images || [];
+        const images = Array.isArray(rawImages) ? [...rawImages] : [];
+        let primaryImage = p.PrimaryImage || p.primaryImage || (images.length > 0 ? images[0] : null);
+        if (!primaryImage) {
+            primaryImage = "/images/p1.png";
+        }
+        if (images.length === 0 && primaryImage) {
+            images.push(primaryImage);
+        }
+        const histories = p.Histories || p.histories || [];
+
+        return {
+            ...p,
+            Id: id, id: id,
+            Title: title, title: title,
+            Description: description, description: description,
+            PropertyType: propertyType, propertyType: propertyType,
+            ListingType: listingType, listingType: listingType,
+            Price: price, price: price,
+            Area: area, area: area,
+            Beds: beds, beds: beds,
+            Baths: baths, baths: baths,
+            City: city, city: city,
+            District: district, district: district,
+            Ward: ward, ward: ward,
+            Address: address, address: address,
+            FullAddress: fullAddress, fullAddress: fullAddress,
+            FormattedLocation: formattedLocation, formattedLocation: formattedLocation,
+            PackageCode: packageCode, packageCode: packageCode,
+            SellerId: sellerId, sellerId: sellerId,
+            SellerName: sellerName, sellerName: sellerName,
+            SellerEmail: sellerEmail, sellerEmail: sellerEmail,
+            SellerPhone: sellerPhone, sellerPhone: sellerPhone,
+            CreatedAt: createdAt, createdAt: createdAt,
+            Status: status, status: status,
+            IsResubmission: isResubmission, isResubmission: isResubmission,
+            PrimaryImage: primaryImage, primaryImage: primaryImage,
+            Images: images, images: images,
+            Histories: histories, histories: histories
+        };
+    }
+
+    let currentQueue = (window.INITIAL_MODERATION_QUEUE || []).map(normalizeListing);
     let selectedId = window.SELECTED_LISTING_ID || (currentQueue.length > 0 ? currentQueue[0].Id : null);
     let autoRefreshSeconds = 15;
     let refreshCountdown = autoRefreshSeconds;
@@ -368,6 +462,19 @@
         startAutoRefreshTimer();
         if (selectedId) {
             updateSelectedCardHighlight(selectedId);
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>showToast("@TempData["SuccessMessage"]", "success");</text>
+        }
+        @if (TempData["WarningMessage"] != null)
+        {
+            <text>showToast("@TempData["WarningMessage"]", "warning");</text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>showToast("@TempData["ErrorMessage"]", "error");</text>
         }
     });
 
@@ -416,12 +523,28 @@
             if (!res.ok) return;
 
             const data = await res.json();
-            const items = data.items || [];
+            const rawItems = data.items || [];
+            const items = rawItems.map(normalizeListing);
+            
+            const idsBefore = currentQueue.map(p => p.Id).join(",");
+            const idsAfter = items.map(p => p.Id).join(",");
+            
             currentQueue = items;
             updateQueueCountBadge(items.length);
 
-            // Re-render queue if items changed or empty
-            if (items.length === 0) {
+            if (idsBefore !== idsAfter) {
+                renderQueueList(items);
+
+                if (items.length > 0) {
+                    if (!selectedId || !items.some(p => p.Id === selectedId)) {
+                        selectListing(items[0].Id);
+                    } else {
+                        updateSelectedCardHighlight(selectedId);
+                    }
+                } else {
+                    showEmptyQueueState();
+                }
+            } else if (items.length === 0) {
                 showEmptyQueueState();
             }
         } catch (err) {
@@ -429,14 +552,112 @@
         }
     }
 
+    function renderQueueList(rawItems) {
+        const container = document.getElementById("queueListContainer");
+        const emptyState = document.getElementById("emptyQueueState");
+        if (!container) return;
+
+        const items = (rawItems || []).map(normalizeListing);
+
+        if (!items || items.length === 0) {
+            container.innerHTML = "";
+            showEmptyQueueState();
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add("hidden");
+
+        const cardsHtml = items.map((p, idx) => {
+            const isSelected = selectedId === p.Id;
+            const queueIndex = idx + 1;
+            const resubmissionBadge = p.IsResubmission
+                ? `<span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">Gửi lại (Diff)</span>`
+                : "";
+            const vipBadge = p.PackageCode === "VIP"
+                ? `<span class="rounded bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2">VIP</span>`
+                : "";
+            const priceFormatted = formatVnd(p.Price, p.ListingType);
+            const dateFormatted = formatDateShort(p.CreatedAt);
+
+            return `
+                <div id="queue-item-${p.Id}" data-listing-id="${p.Id}"
+                     onclick="selectListing('${p.Id}')"
+                     class="queue-card group relative p-4 transition cursor-pointer hover:bg-surface/70 ${isSelected ? 'bg-brand-soft/40 border-l-4 border-l-primary' : ''}">
+                    <div class="flex items-start gap-3.5">
+                        <div class="relative size-20 rounded-xl overflow-hidden shrink-0 border border-border bg-neutral-100">
+                            <img src="${p.PrimaryImage || '/images/p1.png'}" alt="${escapeHtml(p.Title)}" class="size-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            <span class="absolute top-1 left-1 bg-black/70 text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded">
+                                #${queueIndex}
+                            </span>
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="font-mono text-[11px] text-muted-foreground font-semibold">${p.Id}</span>
+                                <span class="rounded-full bg-amber-500/15 text-amber-800 font-semibold px-2 py-0.2 text-[10px]">
+                                    Chờ duyệt
+                                </span>
+                                ${resubmissionBadge}
+                                ${vipBadge}
+                                <span class="text-[10px] text-muted-foreground ml-auto">
+                                    ${dateFormatted}
+                                </span>
+                            </div>
+
+                            <h3 class="truncate font-semibold text-sm text-neutral-900 group-hover:text-primary transition-colors">
+                                ${escapeHtml(p.Title || "Chưa có tiêu đề")}
+                            </h3>
+
+                            <p class="text-xs text-muted-foreground truncate mt-0.5">
+                                📍 ${escapeHtml(p.FormattedLocation || p.Address || "")} · ${escapeHtml(p.PropertyType || "")}
+                            </p>
+
+                            <div class="flex items-center justify-between mt-2 pt-1 border-t border-border/40">
+                                <span class="text-xs font-bold text-primary font-display">
+                                    ${priceFormatted}
+                                </span>
+
+                                <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <i data-lucide="user" class="size-3.5 text-neutral-500"></i>
+                                    <span class="font-medium text-neutral-800 text-[11px] truncate max-w-[110px]" title="${escapeHtml(p.SellerName || '')}">
+                                        ${escapeHtml(p.SellerName || 'Người bán')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
+                                <a href="/Moderation/Detail/${p.Id}" onclick="event.stopPropagation()"
+                                   class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
+                                   title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                    <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
+                                </a>
+                                <button type="button" onclick="handleApproveClick('${p.Id}', event)"
+                                        class="flex-1 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-[11px] py-1.5 px-2 rounded-lg shadow-2xs transition-all">
+                                    <i data-lucide="check" class="size-3.5"></i> Duyệt
+                                </button>
+                                <button type="button" onclick="handleRejectClick('${p.Id}', '${escapeHtml(p.Title || '')}', event)"
+                                        class="flex-1 flex items-center justify-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all">
+                                    <i data-lucide="x" class="size-3.5"></i> Từ chối
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        container.innerHTML = cardsHtml;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
     // ----------------------------------------------------
     // Select Listing & Update Detail Panel
     // ----------------------------------------------------
     function selectListing(id) {
-        selectedId = id;
-        updateSelectedCardHighlight(id);
+        selectedId = id != null ? String(id) : null;
+        updateSelectedCardHighlight(selectedId);
 
-        const listing = currentQueue.find(p => p.Id === id);
+        const listing = currentQueue.find(p => String(p.Id) === String(id) || String(p.id) === String(id));
         if (listing) {
             renderDetailPanel(listing);
         } else {
@@ -450,7 +671,7 @@
             const res = await fetch("/api/v1/moderation/listings/" + id);
             if (res.ok) {
                 const data = await res.json();
-                renderDetailPanel(data);
+                renderDetailPanel(normalizeListing(data));
             }
         } catch (e) {
             console.error("Fetch detail error:", e);
@@ -467,7 +688,10 @@
         }
     }
 
-    function renderDetailPanel(item) {
+    function renderDetailPanel(rawItem) {
+        const item = normalizeListing(rawItem);
+        if (!item) return;
+
         const panel = document.getElementById("detailPanelSection");
         const placeholder = document.getElementById("noSelectionPlaceholder");
         if (!panel) return;
@@ -477,37 +701,44 @@
 
         // Main Image & Badges
         const mainImg = document.getElementById("detailMainImage");
-        if (mainImg) mainImg.src = item.PrimaryImage || (item.Images && item.Images[0]) || "/images/p1.png";
+        if (mainImg) mainImg.src = item.PrimaryImage || "/images/p1.png";
 
         const badgeType = document.getElementById("detailBadgeType");
         if (badgeType) {
-            const typeText = item.ListingType === "sale" ? "Cần bán" : "Cho thuê";
+            const typeText = (item.ListingType === "sale" || item.ListingType === "Sale") ? "Cần bán" : "Cho thuê";
             badgeType.textContent = typeText + " · " + (item.PropertyType || "Bất động sản");
         }
 
         // Thumbnails
         const thumbContainer = document.getElementById("detailThumbnailsContainer");
-        if (thumbContainer && item.Images) {
+        if (thumbContainer && item.Images && item.Images.length > 0) {
             thumbContainer.innerHTML = item.Images.map(img => `
                 <button type="button" onclick="setDetailMainImage('${img}')"
                         class="relative size-14 rounded-lg overflow-hidden shrink-0 border-2 border-border hover:border-primary transition-colors focus:border-primary">
                     <img src="${img}" class="size-full object-cover" />
                 </button>
             `).join("");
+        } else if (thumbContainer) {
+            thumbContainer.innerHTML = "";
         }
 
         // Header info
         setText("detailId", item.Id);
         setText("detailPackageBadge", item.PackageCode || "Standard");
-        setText("detailTitle", item.Title);
-        setText("detailAddress", "📍 " + (item.FullAddress || item.Address || ""));
+        setText("detailTitle", item.Title || "Chưa có tiêu đề");
+        setText("detailAddress", "📍 " + (item.FullAddress || item.Address || item.FormattedLocation || ""));
         setText("detailPrice", formatVnd(item.Price, item.ListingType));
+
+        const openBtn = document.getElementById("detailOpenFullPageBtn");
+        if (openBtn) {
+            openBtn.href = "/Moderation/Detail/" + item.Id;
+        }
 
         // Owner info
         setText("detailOwnerName", item.SellerName || "Người bán");
-        setText("detailOwnerId", "ID: " + (item.SellerId || item.OwnerUserId || ""));
-        setText("detailOwnerPhone", "📞 " + (item.SellerPhone || item.OwnerPhoneNumber || "0901 234 567"));
-        setText("detailOwnerEmail", "✉️ " + (item.SellerEmail || item.OwnerEmail || "contact@propnest.com"));
+        setText("detailOwnerId", "ID: " + (item.SellerId || ""));
+        setText("detailOwnerPhone", "📞 " + (item.SellerPhone || "Chưa cập nhật"));
+        setText("detailOwnerEmail", "✉️ " + (item.SellerEmail || "Chưa cập nhật"));
 
         // Specs
         setText("detailBeds", item.Beds || 0);
@@ -528,11 +759,11 @@
                         <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-semibold text-neutral-900">${h.ActionType}</span>
-                                <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate)}</span>
+                                <span class="font-semibold text-neutral-900">${h.ActionType || h.actionType || "Update"}</span>
+                                <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate || h.actionDate)}</span>
                             </div>
-                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || "Hệ thống"}</span></p>
-                            ${h.Note ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${h.Note}"</p>` : ""}
+                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || h.actor || "Hệ thống"}</span></p>
+                            ${(h.Note || h.note) ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${escapeHtml(h.Note || h.note)}"</p>` : ""}
                         </div>
                     </div>
                 `).join("");
@@ -575,7 +806,7 @@
 
             if (res.ok) {
                 removeListingFromUi(id);
-                showToast("Đã phê duyệt và xuất bản tin " + id + " thành công!", "success");
+                showToast("Tin đăng đã được duyệt thành công!", "success");
             } else {
                 showToast("Lỗi khi phê duyệt tin " + id, "error");
             }
@@ -597,8 +828,8 @@
 
     function handleDetailReject() {
         if (selectedId) {
-            const listing = currentQueue.find(p => p.Id === selectedId);
-            openRejectModal(selectedId, listing ? listing.Title : "");
+            const listing = currentQueue.find(p => String(p.Id) === String(selectedId) || String(p.id) === String(selectedId));
+            openRejectModal(selectedId, listing ? (listing.Title || listing.title) : "");
         }
     }
 
@@ -662,7 +893,7 @@
                 const targetId = rejectingListingId;
                 closeRejectModal();
                 removeListingFromUi(targetId);
-                showToast("Đã từ chối duyệt tin " + targetId + "!", "warning");
+                showToast("Đã từ chối duyệt tin " + targetId + " thành công!", "warning");
             } else {
                 showToast("Lỗi khi từ chối tin đăng.", "error");
             }
@@ -685,13 +916,13 @@
         }
 
         // Remove from memory queue
-        currentQueue = currentQueue.filter(p => p.Id !== id);
+        currentQueue = currentQueue.filter(p => String(p.Id) !== String(id) && String(p.id) !== String(id));
         updateQueueCountBadge(currentQueue.length);
 
         // If the removed item was currently selected, pick next item in FIFO queue
-        if (selectedId === id) {
+        if (String(selectedId) === String(id)) {
             if (currentQueue.length > 0) {
-                selectListing(currentQueue[0].Id);
+                selectListing(currentQueue[0].Id || currentQueue[0].id);
             } else {
                 showEmptyQueueState();
             }
@@ -712,6 +943,26 @@
     function updateQueueCountBadge(count) {
         const badge = document.getElementById("queueBadgeCount");
         if (badge) badge.textContent = count + " tin";
+
+        const topBadge = document.getElementById("topHeaderPendingCount");
+        if (topBadge) topBadge.textContent = count;
+
+        const pulse = document.getElementById("topHeaderPendingPulse");
+        if (pulse) {
+            pulse.className = count > 0 
+                ? "size-2 rounded-full bg-amber-500 animate-pulse" 
+                : "size-2 rounded-full bg-emerald-500";
+        }
+
+        const sidebarBadge = document.getElementById("sidebarPendingCount");
+        if (sidebarBadge) {
+            sidebarBadge.textContent = count;
+            if (count > 0) {
+                sidebarBadge.classList.remove("hidden");
+            } else {
+                sidebarBadge.classList.add("hidden");
+            }
+        }
     }
 
     function showEmptyQueueState() {
@@ -723,7 +974,8 @@
         if (panel) panel.classList.add("hidden");
         if (placeholder) {
             placeholder.classList.remove("hidden");
-            placeholder.querySelector("span.text-sm").textContent = "Tất cả các tin trong hàng đợi đã được xử lý xong!";
+            const txt = placeholder.querySelector("span.text-sm");
+            if (txt) txt.textContent = "Tất cả các tin trong hàng đợi đã được xử lý xong!";
         }
     }
 
@@ -731,18 +983,27 @@
         const toast = document.getElementById("toastNotification");
         if (!toast) return;
 
-        let bg = "bg-neutral-900 text-white";
-        if (type === "success") bg = "bg-emerald-600 text-white";
-        if (type === "warning") bg = "bg-amber-600 text-white";
-        if (type === "error") bg = "bg-destructive text-white";
+        let bg = "bg-neutral-900 text-white border-neutral-700";
+        let iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+        
+        if (type === "success") {
+            bg = "bg-emerald-600 text-white border-emerald-500";
+            iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+        } else if (type === "warning") {
+            bg = "bg-amber-600 text-white border-amber-500";
+            iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+        } else if (type === "error") {
+            bg = "bg-destructive text-white border-red-500";
+            iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+        }
 
-        toast.className = `fixed bottom-6 right-6 z-50 rounded-xl p-4 text-xs font-semibold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${bg}`;
-        toast.innerHTML = `<span>${message}</span>`;
+        toast.className = `fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2.5 border animate-in fade-in slide-in-from-bottom-2 ${bg}`;
+        toast.innerHTML = `${iconHtml}<span>${message}</span>`;
         toast.classList.remove("hidden");
 
         setTimeout(() => {
             toast.classList.add("hidden");
-        }, 3500);
+        }, 4000);
     }
 
     function setText(id, text) {
@@ -774,6 +1035,29 @@
         } catch {
             return dateStr;
         }
+    }
+
+    function formatDateShort(dateStr) {
+        if (!dateStr) return "";
+        try {
+            const d = new Date(dateStr);
+            return d.getHours().toString().padStart(2, "0") + ":" +
+                   d.getMinutes().toString().padStart(2, "0") + " " +
+                   d.getDate().toString().padStart(2, "0") + "/" +
+                   (d.getMonth() + 1).toString().padStart(2, "0");
+        } catch {
+            return dateStr;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>
 }

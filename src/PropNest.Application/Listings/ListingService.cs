@@ -23,7 +23,6 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             command.Ward,
             command.Address);
 
-        listing.SubmitForModeration();
 
         await listingRepository.AddAsync(listing, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

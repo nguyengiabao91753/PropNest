@@ -1,0 +1,535 @@
+@* Partial View: Modal Chọn Gói Dịch Vụ & Step Indicator Tiến Trình Saga (Task 213) *@
+
+<div id="purchasePackageModal"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-200"
+     aria-modal="true" role="dialog" aria-labelledby="modalTitle">
+
+    <div class="relative w-full max-w-xl rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col transition-transform transform duration-200 scale-95 opacity-0"
+         id="modalContent">
+
+        <!-- ================= 1. VIEW CHỌN GÓI ================= -->
+        <div id="packageSelectView" class="flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-6 py-5 border-b border-border bg-surface/50 flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20 shadow-2xs">
+                        <i data-lucide="sparkles" class="size-5"></i>
+                    </div>
+                    <div>
+                        <h3 id="modalTitle" class="text-base font-bold text-neutral-900">Nâng cấp gói dịch vụ</h3>
+                        <p class="text-xs text-muted-foreground mt-0.5">
+                            Áp dụng cho tin: <span id="modalListingTitle" class="font-semibold text-neutral-800"></span>
+                            <span class="font-mono text-muted-foreground font-normal">(PN-<span id="modalListingId"></span>)</span>
+                        </p>
+                    </div>
+                </div>
+                <button type="button"
+                        onclick="closePurchasePackageModal()"
+                        class="p-1.5 rounded-xl border border-border text-muted-foreground hover:text-neutral-900 hover:bg-surface transition-colors"
+                        title="Đóng">
+                    <i data-lucide="x" class="size-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Lựa chọn 3 gói -->
+            <div class="p-6 space-y-4 max-h-[68vh] overflow-y-auto">
+                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Chọn gói phù hợp với nhu cầu tiếp cận của bạn:</span>
+                    <span>Gói hiện tại: <strong id="modalCurrentPackage" class="text-neutral-900">Standard</strong></span>
+                </div>
+
+                <div class="space-y-3" id="packageOptionsContainer">
+                    <!-- Gói 1: Standard -->
+                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/40 cursor-pointer transition-all shadow-2xs">
+                        <div class="flex items-start gap-3">
+                            <input type="radio" name="selectedPackageCode" value="Standard"
+                                   data-name="Gói Tiêu Chuẩn" data-price="50000" data-days="30"
+                                   class="mt-1 size-4 text-primary border-border focus:ring-primary"
+                                   onchange="onPackageSelected(this)">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-bold text-neutral-900">Gói Tiêu Chuẩn (Standard)</h4>
+                                    <span class="rounded-md bg-surface text-muted-foreground text-[10px] font-semibold px-2 py-0.5 border border-border">30 ngày</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Đăng tin tiêu chuẩn, đầy đủ hình ảnh và thông số kỹ thuật.</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-bold text-neutral-900">50.000 ₫</span>
+                            <span class="block text-[11px] text-muted-foreground">/ 30 ngày</span>
+                        </div>
+                    </label>
+
+                    <!-- Gói 2: VIP (Khuyên dùng) -->
+                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-amber-500/80 bg-amber-50/20 hover:border-amber-500 cursor-pointer transition-all shadow-xs ring-1 ring-amber-500/20">
+                        <div class="absolute -top-2.5 right-4 rounded-full bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-xs uppercase tracking-wide">
+                            Khuyên dùng • Tăng 300% tương tác
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <input type="radio" name="selectedPackageCode" value="VIP" checked
+                                   data-name="Gói VIP Đẳng Cấp" data-price="150000" data-days="30"
+                                   class="mt-1 size-4 text-amber-600 border-amber-400 focus:ring-amber-500"
+                                   onchange="onPackageSelected(this)">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                                        <i data-lucide="crown" class="size-4 text-amber-500"></i>
+                                        Gói VIP Đẳng Cấp
+                                    </h4>
+                                    <span class="rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-200">30 ngày</span>
+                                </div>
+                                <p class="text-xs text-amber-900/80 mt-1">Gắn huy hiệu VIP vàng, hiển thị ưu tiên đầu trang chủ & danh mục tìm kiếm.</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-base font-black text-amber-700">150.000 ₫</span>
+                            <span class="block text-[11px] text-amber-900/70">/ 30 ngày</span>
+                        </div>
+                    </label>
+
+                    <!-- Gói 3: Boost -->
+                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/40 cursor-pointer transition-all shadow-2xs">
+                        <div class="flex items-start gap-3">
+                            <input type="radio" name="selectedPackageCode" value="Boost"
+                                   data-name="Gói Đẩy Tin (Boost)" data-price="30000" data-days="7"
+                                   class="mt-1 size-4 text-primary border-border focus:ring-primary"
+                                   onchange="onPackageSelected(this)">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                                        <i data-lucide="zap" class="size-4 text-primary"></i>
+                                        Gói Đẩy Tin (Boost)
+                                    </h4>
+                                    <span class="rounded-md bg-surface text-muted-foreground text-[10px] font-semibold px-2 py-0.5 border border-border">7 ngày</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Đưa tin đăng lên vị trí top đầu mục tìm kiếm ngay lập tức trong 7 ngày.</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-bold text-neutral-900">30.000 ₫</span>
+                            <span class="block text-[11px] text-muted-foreground">/ 7 ngày</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Tóm tắt thanh toán -->
+                <div class="rounded-2xl border border-border bg-surface/60 p-4 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground">Gói dịch vụ đã chọn:</span>
+                        <span id="summaryPackageName" class="font-bold text-neutral-900">Gói VIP Đẳng Cấp</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground">Thời hạn áp dụng:</span>
+                        <span id="summaryDuration" class="font-semibold text-neutral-800">30 ngày</span>
+                    </div>
+                    <div class="border-t border-border/80 pt-2 flex items-center justify-between text-xs">
+                        <span class="font-semibold text-neutral-900">Tổng thanh toán:</span>
+                        <span id="summaryPrice" class="text-base font-black text-primary">150.000 ₫</span>
+                    </div>
+                    <p class="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                        <i data-lucide="info" class="size-3.5 text-muted-foreground/80 shrink-0"></i>
+                        <span>Số tiền sẽ được trừ trực tiếp từ số dư ví PropNest của bạn.</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-border bg-surface/40 flex items-center justify-end gap-3">
+                <button type="button"
+                        onclick="closePurchasePackageModal()"
+                        class="h-10 px-4 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors">
+                    Hủy bỏ
+                </button>
+                <button type="button"
+                        id="btnConfirmPurchase"
+                        onclick="startPurchasePackageWorkflow()"
+                        class="h-10 px-5 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+                    <i data-lucide="credit-card" class="size-4"></i>
+                    <span>Xác nhận mua gói</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= 2. VIEW STEP INDICATOR SAGA ================= -->
+        <div id="packageWorkflowView" class="hidden flex-col p-6 sm:p-8 space-y-6">
+            <div class="text-center space-y-1">
+                <div class="size-12 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center border border-primary/20 shadow-xs mb-3">
+                    <i data-lucide="loader-2" class="size-6 animate-spin"></i>
+                </div>
+                <h3 class="text-base font-bold text-neutral-900">Đang xử lý giao dịch mua gói</h3>
+                <p class="text-xs text-muted-foreground max-w-sm mx-auto">
+                    Quy trình Saga Orchestrator đang thực thi các bước theo thời gian thực...
+                </p>
+            </div>
+
+            <!-- Thanh tiến trình (Progress Bar) -->
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Tiến độ xử lý</span>
+                    <span id="workflowProgressPercent" class="font-bold text-primary">25%</span>
+                </div>
+                <div class="h-2 w-full bg-surface rounded-full overflow-hidden border border-border/40">
+                    <div id="workflowProgressBar" class="h-full bg-primary transition-all duration-500 rounded-full" style="width: 25%"></div>
+                </div>
+            </div>
+
+            <!-- Step Indicator (4 Bước) -->
+            <div class="space-y-3" id="sagaStepsList">
+                <!-- Step 1: Khởi tạo -->
+                <div id="sagaStep1" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-surface/30 transition-colors">
+                    <div class="step-icon size-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                        <i data-lucide="loader-2" class="size-4 animate-spin"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 1: Khởi tạo yêu cầu</h5>
+                        <p class="text-[11px] text-muted-foreground step-desc">Xác thực quyền sở hữu tin đăng và đăng ký giao dịch Idempotent.</p>
+                    </div>
+                </div>
+
+                <!-- Step 2: Trừ tiền ví -->
+                <div id="sagaStep2" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
+                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                        2
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 2: Khấu trừ số dư ví</h5>
+                        <p class="text-[11px] text-muted-foreground step-desc">Khấu trừ PromoBalance / MainBalance và ghi sổ cái giao dịch.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Nâng cấp tin -->
+                <div id="sagaStep3" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
+                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                        3
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 3: Nâng cấp gói & gia hạn tin</h5>
+                        <p class="text-[11px] text-muted-foreground step-desc">Cập nhật PackageCode và tự động tính lại StartDate - EndDate.</p>
+                    </div>
+                </div>
+
+                <!-- Step 4: Hoàn tất -->
+                <div id="sagaStep4" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
+                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                        4
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 4: Hoàn tất giao dịch</h5>
+                        <p class="text-[11px] text-muted-foreground step-desc">Lưu vết lịch sử kiểm toán ListingHistory và hoàn tất Saga.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Text -->
+            <div class="text-center pt-2">
+                <span id="workflowStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                    <span class="size-2 rounded-full bg-primary animate-ping"></span>
+                    <span id="workflowStatusText">Đang khởi tạo yêu cầu...</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- ================= 3. VIEW KẾT QUẢ THÀNH CÔNG ================= -->
+        <div id="packageResultSuccessView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
+            <div class="size-16 rounded-3xl bg-emerald-500/10 text-emerald-600 mx-auto flex items-center justify-center border border-emerald-500/20 shadow-xs">
+                <i data-lucide="check-circle-2" class="size-10"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-lg font-black text-neutral-900">Nâng cấp gói thành công!</h3>
+                <p class="text-xs text-muted-foreground max-w-sm mx-auto">
+                    Tin đăng của bạn đã được nâng cấp lên <span id="resSuccessPackageName" class="font-bold text-emerald-700">Gói VIP</span> thành công.
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 text-xs text-emerald-800 text-left space-y-1.5">
+                <div class="flex items-center gap-2 font-semibold">
+                    <i data-lucide="sparkles" class="size-4 text-emerald-600"></i>
+                    <span>Quyền lợi đã được kích hoạt:</span>
+                </div>
+                <p class="text-muted-foreground">Tin đăng đã được gia hạn thời hạn hiển thị và gắn nhãn theo quyền lợi của gói.</p>
+            </div>
+
+            <div class="pt-2">
+                <button type="button"
+                        onclick="window.location.reload()"
+                        class="w-full h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                    <i data-lucide="check" class="size-4"></i>
+                    <span>Hoàn tất & Làm mới danh sách</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= 4. VIEW KẾT QUẢ THẤT BẠI / BỒI HOÀN ================= -->
+        <div id="packageResultFailedView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
+            <div class="size-16 rounded-3xl bg-destructive/10 text-destructive mx-auto flex items-center justify-center border border-destructive/20 shadow-xs">
+                <i data-lucide="alert-triangle" class="size-10"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-lg font-black text-neutral-900">Giao dịch không thành công</h3>
+                <div id="resErrorMessage" class="p-3.5 rounded-2xl border border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium max-w-md mx-auto text-left">
+                    Không thể thực hiện giao dịch.
+                </div>
+            </div>
+
+            <!-- Cam kết hoàn tiền an tâm (Yêu cầu Blueprint) -->
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 text-left flex items-start gap-3">
+                <i data-lucide="shield-check" class="size-5 text-amber-600 shrink-0 mt-0.5"></i>
+                <div class="space-y-0.5">
+                    <strong class="font-bold text-neutral-900">Bảo vệ số dư ví:</strong>
+                    <p class="text-muted-foreground">Theo cơ chế bồi hoàn Saga, số tiền của bạn không bị khấu trừ hoặc đã được bồi hoàn 100% vào ví.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="button"
+                        onclick="closePurchasePackageModal()"
+                        class="flex-1 h-11 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors">
+                    Đóng
+                </button>
+                <a asp-controller="Wallet" asp-action="Index"
+                   class="flex-1 h-11 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                    <i data-lucide="wallet" class="size-4"></i>
+                    <span>Nạp tiền vào ví</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= JAVASCRIPT LOGIC POLLING & MODAL (Task 213) ================= -->
+<script>
+    let currentListingId = 0;
+    let selectedPackageCode = 'VIP';
+    let selectedPackagePrice = 150000;
+    let selectedPackageName = 'Gói VIP Đẳng Cấp';
+    let pollIntervalTimer = null;
+
+    function openPurchasePackageModal(listingId, listingTitle, currentPackage) {
+        currentListingId = listingId;
+        document.getElementById('modalListingId').innerText = listingId;
+        document.getElementById('modalListingTitle').innerText = listingTitle || ('Tin đăng #' + listingId);
+        document.getElementById('modalCurrentPackage').innerText = currentPackage || 'Standard';
+
+        // Reset về view chọn gói
+        document.getElementById('packageSelectView').classList.remove('hidden');
+        document.getElementById('packageWorkflowView').classList.add('hidden');
+        document.getElementById('packageResultSuccessView').classList.add('hidden');
+        document.getElementById('packageResultFailedView').classList.add('hidden');
+
+        // Mặc định chọn gói VIP
+        const vipRadio = document.querySelector('input[name="selectedPackageCode"][value="VIP"]');
+        if (vipRadio) {
+            vipRadio.checked = true;
+            onPackageSelected(vipRadio);
+        }
+
+        // Hiển thị modal kèm animation
+        const modal = document.getElementById('purchasePackageModal');
+        const content = document.getElementById('modalContent');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    function closePurchasePackageModal() {
+        if (pollIntervalTimer) {
+            clearInterval(pollIntervalTimer);
+            pollIntervalTimer = null;
+        }
+
+        const modal = document.getElementById('purchasePackageModal');
+        const content = document.getElementById('modalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 200);
+    }
+
+    function onPackageSelected(radio) {
+        selectedPackageCode = radio.value;
+        selectedPackagePrice = parseFloat(radio.dataset.price);
+        selectedPackageName = radio.dataset.name;
+        const days = radio.dataset.days;
+
+        document.getElementById('summaryPackageName').innerText = selectedPackageName;
+        document.getElementById('summaryDuration').innerText = `${days} ngày`;
+        document.getElementById('summaryPrice').innerText = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedPackagePrice);
+    }
+
+    async function startPurchasePackageWorkflow() {
+        if (!currentListingId || !selectedPackageCode) return;
+
+        // Sinh Idempotency-Key chuẩn UUIDv4 chống duplicate charge
+        const idempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('idemp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9));
+
+        // Chuyển sang View Step Indicator
+        document.getElementById('packageSelectView').classList.add('hidden');
+        document.getElementById('packageWorkflowView').classList.remove('hidden');
+        resetStepIndicator();
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        try {
+            // Gửi POST mua gói sang BFF Controller
+            const response = await fetch('/Properties/PurchasePackage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    listingId: currentListingId,
+                    packageCode: selectedPackageCode,
+                    amount: selectedPackagePrice,
+                    idempotencyKey: idempotencyKey
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success || !data.correlationId) {
+                showFailedResult(data.message || 'Không thể bắt đầu tiến trình mua gói. Vui lòng thử lại.');
+                return;
+            }
+
+            // Bắt đầu chu kỳ Polling theo CorrelationId (mỗi 1.2s)
+            startWorkflowPolling(data.correlationId);
+
+        } catch (err) {
+            showFailedResult('Đã xảy ra lỗi kết nối khi gửi yêu cầu. Vui lòng kiểm tra lại mạng.');
+        }
+    }
+
+    function startWorkflowPolling(correlationId) {
+        let attempts = 0;
+        const maxAttempts = 60; // Timeout sau ~70 giây
+
+        pollIntervalTimer = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts) {
+                clearInterval(pollIntervalTimer);
+                showFailedResult('Quá thời gian chờ phản hồi từ hệ thống. Vui lòng kiểm tra lại lịch sử giao dịch trong ví.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/Properties/WorkflowStatus/${correlationId}`);
+                if (!res.ok) {
+                    if (res.status === 404) return; // Đang chờ worker ghi db
+                    clearInterval(pollIntervalTimer);
+                    showFailedResult('Không thể kiểm tra trạng thái tiến trình xử lý.');
+                    return;
+                }
+
+                const workflow = await res.json();
+                updateStepUI(workflow);
+
+                // Nếu Completed
+                if (workflow.isCompleted || workflow.status === 5) {
+                    clearInterval(pollIntervalTimer);
+                    setTimeout(() => {
+                        showSuccessResult();
+                    }, 800);
+                }
+                // Nếu Failed hoặc Compensated
+                else if (workflow.isFailed || workflow.status === 7 || workflow.status === 8) {
+                    clearInterval(pollIntervalTimer);
+                    setTimeout(() => {
+                        const errMsg = workflow.errorMessage || (workflow.status === 7 
+                            ? 'Giao dịch bồi hoàn: Số dư ví không đủ để thanh toán. Tiền đã được hoàn lại ví.'
+                            : 'Giao dịch thất bại. Tiền không bị trừ.');
+                        showFailedResult(errMsg);
+                    }, 800);
+                }
+
+            } catch (error) {
+                console.error('Lỗi khi polling workflow:', error);
+            }
+        }, 1200);
+    }
+
+    function resetStepIndicator() {
+        updateStepUI({
+            status: 0,
+            currentStepIndex: 1,
+            statusText: 'Đang khởi tạo yêu cầu...'
+        });
+    }
+
+    function updateStepUI(workflow) {
+        const stepIndex = workflow.currentStepIndex || 1;
+        const statusText = workflow.statusText || 'Đang xử lý...';
+
+        document.getElementById('workflowStatusText').innerText = statusText;
+
+        // Tính % thanh tiến trình: Step 1 (25%), Step 2 (50%), Step 3 (75%), Step 4 (100%)
+        let percent = 25;
+        if (stepIndex === 2) percent = 50;
+        else if (stepIndex === 3) percent = 75;
+        else if (stepIndex >= 4) percent = 100;
+
+        document.getElementById('workflowProgressPercent').innerText = `${percent}%`;
+        document.getElementById('workflowProgressBar').style.width = `${percent}%`;
+
+        // Cập nhật từng step icon và highlight
+        for (let i = 1; i <= 4; i++) {
+            const stepEl = document.getElementById(`sagaStep${i}`);
+            const iconEl = stepEl.querySelector('.step-icon');
+
+            if (i < stepIndex || (stepIndex === 4 && workflow.isCompleted)) {
+                // Đã xong
+                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/30 transition-colors';
+                iconEl.className = 'step-icon size-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
+                iconEl.innerHTML = '<i data-lucide="check" class="size-4"></i>';
+            } else if (i === stepIndex) {
+                // Đang chạy
+                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-primary/40 bg-surface/80 transition-colors shadow-2xs';
+                iconEl.className = 'step-icon size-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
+                iconEl.innerHTML = '<i data-lucide="loader-2" class="size-4 animate-spin"></i>';
+            } else {
+                // Chưa tới
+                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-50 transition-colors';
+                iconEl.className = 'step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
+                iconEl.innerText = i;
+            }
+        }
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    function showSuccessResult() {
+        document.getElementById('packageWorkflowView').classList.add('hidden');
+        document.getElementById('packageResultSuccessView').classList.remove('hidden');
+        document.getElementById('resSuccessPackageName').innerText = selectedPackageName;
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    function showFailedResult(errorMessage) {
+        document.getElementById('packageWorkflowView').classList.add('hidden');
+        document.getElementById('packageSelectView').classList.add('hidden');
+        document.getElementById('packageResultFailedView').classList.remove('hidden');
+        document.getElementById('resErrorMessage').innerText = errorMessage || 'Giao dịch không thành công. Vui lòng thử lại sau.';
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+</script>

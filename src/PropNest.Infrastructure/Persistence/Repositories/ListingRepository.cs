@@ -77,7 +77,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        null);
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
 
         return await query.ToListAsync(cancellationToken);
     }

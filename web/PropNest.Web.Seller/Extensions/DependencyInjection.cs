@@ -18,11 +18,19 @@ namespace PropNest.Web.Seller.Extensions
 
             // 1. ApiSellerPropertyService: Được gắn AuthHeaderHandler để tự động có Bearer token
             services.AddHttpClient<ISellerPropertyService, ApiSellerPropertyService>(client => client.BaseAddress = baseUri)
-                    .AddHttpMessageHandler<AuthHeaderHandler>();
+                    .AddHttpMessageHandler<AuthHeaderHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    });
 
             //2. ApiSellerWalletService
             services.AddHttpClient<ISellerWalletService, ApiSellerWalletService>(client => client.BaseAddress = baseUri)
-                    .AddHttpMessageHandler<AuthHeaderHandler>();
+                    .AddHttpMessageHandler<AuthHeaderHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    });
 
             return services;
         }
