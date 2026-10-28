@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
@@ -76,7 +77,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        null);
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
 
         return await query.ToListAsync(cancellationToken);
     }
@@ -164,20 +165,22 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default)
     {
-        var histories = await dbContext.ListingHistories.AsNoTracking()
-                        .Where(x=>x.ListingId == listingId)
-                        .OrderByDescending(x=>x.ActionDate)
-                        .Select(x=> new ListingHistoryDto
-                        (
-                            x.ActionType,
-                            x.ActionDate,
-                            x.ActorUserId,
-                            x.SnapshotJson,
-                            x.DeltasJson,
-                            x.Note
-                        ))
-                        .ToListAsync(cancellationToken);
-        return histories;
+        var query = from history in dbContext.ListingHistories.AsNoTracking()
+                    where history.ListingId == listingId
+                    join user in dbContext.Users.AsNoTracking() on history.ActorUserId equals user.Id into userGroup
+                    from actor in userGroup.DefaultIfEmpty()
+                    orderby history.ActionDate ascending, history.HistoryId ascending
+                    select new ListingHistoryDto(
+                        history.ActionType,
+                        history.ActionDate,
+                        history.ActorUserId,
+                        actor != null ? (actor.FullName ?? actor.UserName) : "Hệ thống",
+                        actor != null ? actor.Role : "System",
+                        history.SnapshotJson,
+                        history.DeltasJson,
+                        history.Note
+                    );
+        return await query.ToListAsync(cancellationToken);
     }
 
     public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) =>

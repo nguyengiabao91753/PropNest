@@ -130,7 +130,10 @@
                     }
                     else if (isAdmin)
                     {
-                        <!-- Admin: Chỉ thấy Kênh Quản trị, Chặn Kênh Người bán -->
+                        <a href="https://localhost:7006/"
+                           class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
+                            <i data-lucide="store" class="size-3.5 text-primary"></i> Kênh Người bán
+                        </a>
                         <a href="https://localhost:7215/"
                            class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-neutral-900 border border-border rounded-full px-3.5 py-1.5 hover:bg-surface transition-colors">
                             <i data-lucide="layout-dashboard" class="size-3.5 text-destructive"></i> Kênh Quản trị

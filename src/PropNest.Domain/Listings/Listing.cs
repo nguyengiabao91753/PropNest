@@ -184,6 +184,16 @@ public sealed class Listing : AuditableEntity
         PackageCode = packageCode;
         StartDate = startDate;
         EndDate = endDate;
+
+        if (ModerationDecision == ModerationDecision.Approved)
+        {
+            Status = ListingStatus.Published;
+        }
+        else
+        {
+            Status = ListingStatus.PendingModeration;
+            ModerationDecision = ModerationDecision.Pending;
+        }
         Touch();
     }
 
