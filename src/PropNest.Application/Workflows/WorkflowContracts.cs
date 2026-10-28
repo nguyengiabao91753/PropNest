@@ -11,6 +11,14 @@ public sealed record PurchasePackageCommand(
     string RequestPath,
     string RequestHash);
 
+public sealed record WorkflowStepDto(
+    string StepName,
+    string Status,
+    int Attempt,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? FinishedAt,
+    string? Error);
+
 public sealed record WorkflowDto(
     Guid CorrelationId,
     long ListingId,
@@ -20,7 +28,9 @@ public sealed record WorkflowDto(
     WorkflowStatus Status,
     int RetryCount,
     string? ErrorMessage,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    IReadOnlyList<WorkflowStepDto> Steps);
 
 public interface IWorkflowRepository
 {

@@ -275,4 +275,56 @@ public sealed class WorkflowStepTests : IDisposable
         Assert.NotNull(finalSteps[2].FinishedAt);
         Assert.Equal(WorkflowStatus.Compensated, workflow.Status);
     }
+
+    [Fact]
+    public async Task WorkflowServiceGetByCorrelationIdAsyncMapsWorkflowAndStepsChronologically()
+    {
+        var correlationId = Guid.NewGuid();
+        var workflow = new WorkflowInstance(correlationId, listingId: 10, userId: 100, packageCode: "VIP", chargeAmount: 150000m);
+        await _dbContext.WorkflowInstances.AddAsync(workflow);
+
+        var repo = new WorkflowRepository(_dbContext);
+        var deductStep = new WorkflowStep(correlationId, "DeductWallet");
+        deductStep.Complete();
+        await repo.AddStepAsync(deductStep);
+
+        var upgradeStep = new WorkflowStep(correlationId, "UpgradeListing");
+        await repo.AddStepAsync(upgradeStep);
+
+        await _dbContext.SaveChangesAsync();
+
+        var service = new WorkflowService(repo, _dbContext);
+        var result = await service.GetByCorrelationIdAsync(correlationId);
+
+        Assert.NotNull(result);
+        Assert.Equal(correlationId, result.CorrelationId);
+        Assert.Equal(10, result.ListingId);
+        Assert.Equal(100, result.UserId);
+        Assert.Equal("VIP", result.PackageCode);
+        Assert.Equal(150000m, result.ChargeAmount);
+        Assert.Equal(WorkflowStatus.Started, result.Status);
+        Assert.True(result.CreatedAt <= DateTimeOffset.UtcNow);
+        Assert.True(result.UpdatedAt <= DateTimeOffset.UtcNow);
+
+        Assert.Equal(2, result.Steps.Count);
+        Assert.Equal("DeductWallet", result.Steps[0].StepName);
+        Assert.Equal("Completed", result.Steps[0].Status);
+        Assert.NotNull(result.Steps[0].FinishedAt);
+
+        Assert.Equal("UpgradeListing", result.Steps[1].StepName);
+        Assert.Equal("Started", result.Steps[1].Status);
+        Assert.Null(result.Steps[1].FinishedAt);
+        Assert.True(result.Steps[0].StartedAt <= result.Steps[1].StartedAt);
+    }
+
+    [Fact]
+    public async Task WorkflowServiceGetByCorrelationIdAsyncReturnsNullWhenNotFound()
+    {
+        var repo = new WorkflowRepository(_dbContext);
+        var service = new WorkflowService(repo, _dbContext);
+
+        var result = await service.GetByCorrelationIdAsync(Guid.NewGuid());
+
+        Assert.Null(result);
+    }
 }
