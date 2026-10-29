@@ -6,3 +6,5 @@ TestResults/
 appsettings.Local.json
 *.user
 /docs/Báo cáo chung Các công nghệ LTHĐ.docx
+/scripts/seed_listings.sql
+logs/

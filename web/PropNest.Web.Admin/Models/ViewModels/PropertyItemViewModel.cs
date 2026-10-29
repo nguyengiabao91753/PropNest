@@ -11,6 +11,23 @@ public sealed class AmeRecommendationViewModel
     public bool ImageQualityPassed { get; set; } = true;
 }
 
+public sealed class ListingDeltaViewModel
+{
+    public string FieldName { get; set; } = string.Empty;
+    public string FieldDisplayName { get; set; } = string.Empty;
+    public string? OldValue { get; set; }
+    public string? NewValue { get; set; }
+}
+
+public sealed class PropertyHistoryItemViewModel
+{
+    public string ActionType { get; set; } = "Submit";
+    public DateTimeOffset ActionDate { get; set; } = DateTimeOffset.UtcNow;
+    public string Actor { get; set; } = "Người bán";
+    public string? Note { get; set; }
+    public string? DeltasJson { get; set; }
+}
+
 public sealed class PropertyItemViewModel
 {
     public string Id { get; set; } = string.Empty;
@@ -31,11 +48,33 @@ public sealed class PropertyItemViewModel
     public string SellerId { get; set; } = string.Empty;
     public string SellerName { get; set; } = string.Empty;
     public string? SellerAvatar { get; set; }
+    public string SellerEmail { get; set; } = "nguyenvanminh@gmail.com";
+    public string SellerPhone { get; set; } = "0908 123 456";
     public List<string> Images { get; set; } = new();
+    public List<PropertyHistoryItemViewModel> Histories { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? RejectReason { get; set; }
     public string RowVersion { get; set; } = "AAAAAA==";
     public AmeRecommendationViewModel AmeRecommendation { get; set; } = new();
+
+    public string? PreviousRejectReason
+    {
+        get
+        {
+            var raw = !string.IsNullOrWhiteSpace(RejectReason)
+                ? RejectReason
+                : Histories.LastOrDefault(h => string.Equals(h.ActionType, "Reject", StringComparison.OrdinalIgnoreCase))?.Note;
+
+            return PropNest.Web.Admin.Helpers.FormatHelper.CleanRejectionReason(raw);
+        }
+        set => RejectReason = PropNest.Web.Admin.Helpers.FormatHelper.CleanRejectionReason(value);
+    }
+
+    public bool IsResubmission =>
+        !string.IsNullOrWhiteSpace(PreviousRejectReason)
+        || Histories.Any(h => h.ActionType == "Reject" || h.ActionType == "UpdateContent");
+
+    public List<ListingDeltaViewModel> ResubmissionDeltas { get; set; } = new();
 
     public string FormattedLocation =>
         string.Join(", ", new[] { District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -46,3 +85,4 @@ public sealed class PropertyItemViewModel
     public string PrimaryImage =>
         Images.Count > 0 ? Images[0] : "/images/p1.png";
 }
+

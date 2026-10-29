@@ -1,4 +1,4 @@
-﻿using PropNest.Domain.Listings;
+using PropNest.Domain.Listings;
 
 namespace PropNest.Domain.Tests;
 
@@ -113,6 +113,52 @@ public sealed class ListingTests
         Assert.Throws<InvalidOperationException>(() => listing.Reject());
     }
 
+    [Fact]
+    public void ExpireFromPublishedWithPastEndDateShouldMoveToExpired()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+
+        listing.Expire(now);
+
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireParameterlessShouldMoveToExpiredWhenEndDatePast()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+
+        listing.Expire();
+
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireFromPublishedWithFutureEndDateShouldRemainPublished()
+    {
+        var listing = CreatePendingListing();
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now, now.AddDays(7));
+
+        listing.Expire(now);
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+    }
+
+    [Fact]
+    public void ExpireFromDraftShouldRemainDraft()
+    {
+        var listing = CreateListing();
+
+        listing.Expire();
+
+        Assert.Equal(ListingStatus.Draft, listing.Status);
+    }
+
     //Tạo tin đăng đang chờ duyệt
     private static Listing CreatePendingListing()
     {
@@ -143,6 +189,55 @@ public sealed class ListingTests
         var listing = CreatePublishedListing();
         listing.Hide();
         return listing;
+    }
+
+    [Fact]
+    public void UpgradePackageFromDraftShouldTransitionToPendingModeration()
+    {
+        var listing = CreateListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
+        Assert.Equal("VIP", listing.PackageCode);
+    }
+
+    [Fact]
+    public void UpgradePackageFromHiddenShouldTransitionToPublished()
+    {
+        var listing = CreateHiddenListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
+    }
+
+    [Fact]
+    public void UpgradePackageFromRejectedShouldTransitionToPendingModeration()
+    {
+        var listing = CreateRejectedListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
+    }
+
+    [Fact]
+    public void UpgradePackageFromPublishedShouldRemainPublished()
+    {
+        var listing = CreatePublishedListing();
+        var now = DateTimeOffset.UtcNow;
+
+        listing.UpgradePackage("VIP", now, now.AddDays(30));
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
     }
 
     private static Listing CreateListing() => new(

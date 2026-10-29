@@ -4,138 +4,174 @@
     ViewData["Title"] = "Bảng điều khiển";
 }
 
-<div class="mx-auto max-w-[1440px] space-y-8">
+<div class="mx-auto max-w-[1500px] space-y-8 pb-12">
     <!-- Dashboard Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/80 pb-5">
         <div>
             <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <i data-lucide="layout-dashboard" class="size-4 text-primary"></i>
                 <span>Cổng Quản Trị Hệ Thống PropNest</span>
             </div>
-            <h1 class="font-display text-3xl font-bold mt-1 text-neutral-900">Bảng Điều Khiển Tổng Quan</h1>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Bảng Điều Khiển Tổng Quan</h1>
             <p class="text-xs text-muted-foreground mt-1">
-                Giám sát vòng đời tin đăng (F02), lưu lượng kiểm duyệt (F03), doanh thu Saga (F05-F06) và chỉ số AME AI (F09).
+                Theo dõi thời gian thực số tin Published, tin chờ duyệt F03, lưu lượng người dùng và giao dịch ví điện tử.
             </p>
         </div>
-        <div class="flex items-center gap-3">
+
+        <div class="flex items-center gap-2.5">
             <a asp-controller="Moderation" asp-action="Index"
-               class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
-                <i data-lucide="check-square" class="size-4"></i> Hàng đợi duyệt (@Model.PendingCount)
+               class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-all active:scale-95">
+                <i data-lucide="check-square" class="size-4"></i>
+                <span>Hàng đợi duyệt (<span id="headerPendingBadge">@Model.PendingCount</span>)</span>
             </a>
-            <a asp-action="Index"
-               class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-medium text-neutral-800 hover:bg-surface transition-colors shadow-2xs">
-                <i data-lucide="refresh-cw" class="size-3.5 text-muted-foreground"></i> Làm mới
-            </a>
+            <button type="button" onclick="refreshDashboardData()" id="btnRefreshDashboard"
+                    class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-medium text-neutral-800 hover:bg-surface transition-all shadow-2xs active:scale-95">
+                <i data-lucide="refresh-cw" id="iconRefresh" class="size-3.5 text-muted-foreground"></i>
+                <span>Làm mới dữ liệu</span>
+            </button>
         </div>
     </div>
 
-    <!-- 4 KPI Cards Grid -->
+    <!-- 4 CORE METRIC CARDS (TASK 217 REQUIREMENT) -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <!-- Card 1: Total Properties -->
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-primary/40">
+        <!-- Card 1: Số tin đang Published -->
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-emerald-500/60 hover:shadow-sm group">
             <div class="flex items-center justify-between text-muted-foreground">
-                <span class="font-semibold text-xs text-neutral-700">Tổng tin đăng toàn sàn</span>
-                <div class="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <i data-lucide="building-2" class="size-4"></i>
+                <span class="font-semibold text-xs text-neutral-700">Tin đăng đang hiển thị</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 group-hover:scale-105 transition-transform">
+                    <i data-lucide="check-circle-2" class="size-5"></i>
                 </div>
             </div>
-            <p class="mt-3 font-display text-3xl font-bold text-neutral-900">@Model.TotalProperties</p>
-            <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2">
-                <span>Đang hiển thị công khai:</span>
-                <strong class="text-emerald-700">@Model.PublishedCount tin</strong>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span id="metricPublishedCount" class="font-display text-3xl sm:text-4xl font-extrabold text-neutral-900">
+                    @Model.PublishedCount
+                </span>
+                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Published
+                </span>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2.5">
+                <span>Tổng tin toàn sàn:</span>
+                <strong id="metricTotalProperties" class="text-neutral-900 font-semibold">@Model.TotalProperties tin</strong>
             </div>
         </div>
 
-        <!-- Card 2: Pending Moderation -->
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-amber-400">
+        <!-- Card 2: Số tin chờ duyệt (Pending Moderation) -->
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-amber-500/60 hover:shadow-sm group">
             <div class="flex items-center justify-between text-muted-foreground">
-                <span class="font-semibold text-xs text-neutral-700">Chờ duyệt (Pending F03)</span>
-                <div class="grid size-9 place-items-center rounded-xl bg-amber-500/15 text-amber-600">
-                    <i data-lucide="clock" class="size-4"></i>
+                <span class="font-semibold text-xs text-neutral-700">Tin đăng chờ duyệt (F03)</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-amber-500/15 text-amber-600 group-hover:scale-105 transition-transform">
+                    <i data-lucide="clock-3" class="size-5"></i>
                 </div>
             </div>
-            <p class="mt-3 font-display text-3xl font-bold text-neutral-900">@Model.PendingCount</p>
-            <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2">
-                <span>Trạng thái xử lý:</span>
-                @if (Model.PendingCount > 0)
-                {
-                    <span class="font-semibold text-amber-700 flex items-center gap-1">
-                        <span class="size-2 rounded-full bg-amber-500 animate-pulse"></span> Cần duyệt ngay
-                    </span>
-                }
-                else
-                {
-                    <span class="font-semibold text-emerald-600">Đã thông suốt</span>
-                }
+            <div class="mt-3 flex items-baseline gap-2">
+                <span id="metricPendingCount" class="font-display text-3xl sm:text-4xl font-extrabold text-amber-700">
+                    @Model.PendingCount
+                </span>
+                <span class="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                    <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    Pending
+                </span>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2.5">
+                <span>Kiểm định nội dung:</span>
+                <a asp-controller="Moderation" asp-action="Index" class="font-bold text-primary hover:underline flex items-center gap-1">
+                    <span>Xử lý ngay</span>
+                    <i data-lucide="chevron-right" class="size-3"></i>
+                </a>
             </div>
         </div>
 
-        <!-- Card 3: Service Revenue -->
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-emerald-400">
+        <!-- Card 3: Tổng người dùng (Total Users) -->
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-blue-500/60 hover:shadow-sm group">
             <div class="flex items-center justify-between text-muted-foreground">
-                <span class="font-semibold text-xs text-neutral-700">Doanh thu gói tin (F05)</span>
-                <div class="grid size-9 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
-                    <i data-lucide="wallet" class="size-4"></i>
+                <span class="font-semibold text-xs text-neutral-700">Tổng người dùng (Users)</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-600 group-hover:scale-105 transition-transform">
+                    <i data-lucide="users" class="size-5"></i>
                 </div>
             </div>
-            <p class="mt-3 font-display text-3xl font-bold text-neutral-900">@FormatHelper.FormatVnd(Model.TotalRevenue)</p>
-            <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2">
-                <span>Gói VIP & Boost tự động:</span>
-                <span class="text-neutral-800 font-medium">Saga Orchestrated</span>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span id="metricTotalUsers" class="font-display text-3xl sm:text-4xl font-extrabold text-neutral-900">
+                    @Model.TotalUsers
+                </span>
+                <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Thành viên
+                </span>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2.5">
+                <span>Người bán & Môi giới:</span>
+                <strong id="metricActiveSellers" class="text-neutral-900 font-semibold">@Model.ActiveSellersCount người</strong>
             </div>
         </div>
 
-        <!-- Card 4: Active Sellers & AME -->
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-blue-400">
+        <!-- Card 4: Tổng giao dịch ví (Wallet Transactions) -->
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-primary/60 hover:shadow-sm group">
             <div class="flex items-center justify-between text-muted-foreground">
-                <span class="font-semibold text-xs text-neutral-700">Môi giới & Auto AME</span>
-                <div class="grid size-9 place-items-center rounded-xl bg-blue-500/15 text-blue-600">
-                    <i data-lucide="shield-check" class="size-4"></i>
+                <span class="font-semibold text-xs text-neutral-700">Tổng giao dịch ví (Wallet)</span>
+                <div class="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary group-hover:scale-105 transition-transform">
+                    <i data-lucide="wallet-cards" class="size-5"></i>
                 </div>
             </div>
-            <p class="mt-3 font-display text-3xl font-bold text-neutral-900">@Model.ActiveSellersCount <span class="text-base font-normal text-muted-foreground">người bán</span></p>
-            <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2">
-                <span>Tỷ lệ Saga thành công:</span>
-                <strong class="text-emerald-700 font-mono">@Model.SagaSuccessRate%</strong>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span id="metricWalletTx" class="font-display text-3xl sm:text-4xl font-extrabold text-neutral-900">
+                    @Model.TotalWalletTransactions
+                </span>
+                <span class="text-xs font-bold text-primary bg-brand-soft/60 px-2 py-0.5 rounded-full border border-primary/20">
+                    Giao dịch
+                </span>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2.5">
+                <span>Khối lượng giao dịch:</span>
+                <strong id="metricWalletVolume" class="text-emerald-700 font-semibold font-mono">
+                    @PropNest.Web.Admin.Helpers.FormatHelper.FormatVnd(Model.TotalWalletVolume)
+                </strong>
             </div>
         </div>
     </div>
 
-    <!-- Charts Section: Revenue Trend & Lifecycle Distribution -->
+    <!-- CHARTS SECTION: Visualizing Overview Data with Bar/Line Chart -->
     <div class="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
-        <!-- Chart 1: Revenue & Volume Combo Chart -->
+        <!-- Chart 1: Line & Bar Combo Chart (Xu hướng tin đăng & giao dịch ví theo tháng) -->
         <div class="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
                 <div>
-                    <h2 class="text-base font-semibold text-neutral-900">Xu hướng Doanh thu & Lưu lượng Tin đăng</h2>
+                    <h2 class="text-base font-bold text-neutral-900 flex items-center gap-2">
+                        <i data-lucide="trending-up" class="size-4 text-primary"></i>
+                        <span>Xu Hướng Tin Đăng & Giao Dịch Ví (Biểu đồ Tăng trưởng)</span>
+                    </h2>
                     <p class="text-xs text-muted-foreground mt-0.5">
-                        Thống kê 6 tháng gần nhất - Gói Standard, VIP (500k) và Boost (200k) phối hợp Saga Orchestrator F06
+                        Trực quan hóa lượng tin đăng mới song hành cùng số lượng giao dịch nạp ví và mua gói tin
                     </p>
                 </div>
+
+                <!-- Custom Chart Legend -->
                 <div class="flex items-center gap-3 text-xs">
                     <div class="flex items-center gap-1.5 text-neutral-700">
-                        <span class="size-3 rounded bg-[#d7730c]"></span>
-                        <span>Doanh thu (triệu ₫)</span>
+                        <span class="size-3 rounded-full bg-emerald-600"></span>
+                        <span class="font-medium">Tin đăng mới (Line)</span>
                     </div>
                     <div class="flex items-center gap-1.5 text-neutral-700">
-                        <span class="size-3 rounded-full bg-[#059669]"></span>
-                        <span>Số tin đăng</span>
+                        <span class="size-3 rounded bg-primary"></span>
+                        <span class="font-medium">Giao dịch ví (Bar)</span>
                     </div>
                 </div>
             </div>
 
             <!-- Canvas Container -->
-            <div class="pt-4 relative min-h-[300px] w-full">
-                <canvas id="revenueVolumeChart" class="w-full"></canvas>
+            <div class="pt-4 relative min-h-[320px] w-full">
+                <canvas id="overviewGrowthChart" class="w-full"></canvas>
             </div>
         </div>
 
-        <!-- Chart 2: 8 Lifecycle States Doughnut Chart -->
+        <!-- Chart 2: Status & Wallet Breakdown (Phân bổ Trạng thái & Cơ cấu ví) -->
         <div class="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
             <div class="border-b border-border/80 pb-4">
-                <h2 class="text-base font-semibold text-neutral-900">Vòng đời Tin đăng (Blueprint F02)</h2>
+                <h2 class="text-base font-bold text-neutral-900 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="size-4 text-primary"></i>
+                    <span>Cơ Cấu Trạng Thái Tin Đăng (F02)</span>
+                </h2>
                 <p class="text-xs text-muted-foreground mt-0.5">
-                    Phân bổ 8 trạng thái hệ thống: Published, Pending, Draft, Rejected...
+                    Tỷ trọng các trạng thái tin: Đang hiển thị, Chờ duyệt, Bản nháp, Từ chối...
                 </p>
             </div>
 
@@ -146,92 +182,83 @@
 
             <!-- Status Breakdown Legend List -->
             <div class="grid grid-cols-2 gap-2 border-t border-border/60 pt-3 text-xs">
-                <div class="flex items-center justify-between p-1.5 rounded-lg bg-surface">
-                    <span class="flex items-center gap-1.5 text-emerald-800 font-medium">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-surface">
+                    <span class="flex items-center gap-1.5 text-emerald-800 font-semibold">
                         <span class="size-2 rounded-full bg-emerald-500"></span> Published
                     </span>
-                    <strong class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("Published", 0)</strong>
+                    <strong id="legendPublished" class="text-neutral-900">@Model.PublishedCount</strong>
                 </div>
-                <div class="flex items-center justify-between p-1.5 rounded-lg bg-surface">
-                    <span class="flex items-center gap-1.5 text-amber-800 font-medium">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-surface">
+                    <span class="flex items-center gap-1.5 text-amber-800 font-semibold">
                         <span class="size-2 rounded-full bg-amber-500"></span> Pending
                     </span>
-                    <strong class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("PendingModeration", 0)</strong>
+                    <strong id="legendPending" class="text-neutral-900">@Model.PendingCount</strong>
                 </div>
-                <div class="flex items-center justify-between p-1.5 rounded-lg bg-surface">
-                    <span class="flex items-center gap-1.5 text-neutral-700 font-medium">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-surface">
+                    <span class="flex items-center gap-1.5 text-neutral-700 font-semibold">
                         <span class="size-2 rounded-full bg-neutral-400"></span> Draft
                     </span>
-                    <strong class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("Draft", 0)</strong>
+                    <strong id="legendDraft" class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("Draft", 0)</strong>
                 </div>
-                <div class="flex items-center justify-between p-1.5 rounded-lg bg-surface">
-                    <span class="flex items-center gap-1.5 text-rose-800 font-medium">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-surface">
+                    <span class="flex items-center gap-1.5 text-rose-800 font-semibold">
                         <span class="size-2 rounded-full bg-rose-500"></span> Rejected
                     </span>
-                    <strong class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("Rejected", 0)</strong>
+                    <strong id="legendRejected" class="text-neutral-900">@Model.StatusDistribution.GetValueOrDefault("Rejected", 0)</strong>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Operational Grid: Moderation Queue & System Engine Monitor -->
-    <div class="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <!-- Pending Moderation Queue (F03 Urgent Actions) -->
+    <!-- LOWER SECTION: Pending Moderation Queue & Recent Wallet Transactions -->
+    <div class="grid gap-6 xl:grid-cols-[1.4fr_1.6fr]">
+        <!-- Pending Moderation Queue Preview -->
         <section class="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
             <div class="flex items-center justify-between border-b border-border p-5 bg-surface/50">
                 <div>
                     <div class="flex items-center gap-2">
                         <span class="size-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                        <h2 class="font-semibold text-base text-neutral-900">Hàng Đợi Kiểm Duyệt Cần Xử Lý (F03)</h2>
+                        <h2 class="font-bold text-sm sm:text-base text-neutral-900">Tin Đang Chờ Duyệt (Pending Queue)</h2>
                     </div>
-                    <p class="text-xs text-muted-foreground mt-0.5">Các tin đăng đang chờ xét duyệt tính hợp lệ trước khi công khai</p>
+                    <p class="text-xs text-muted-foreground mt-0.5">Ưu tiên xử lý duyệt tin cho người bán</p>
                 </div>
-                <a asp-controller="Moderation" asp-action="Index" class="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline">
-                    Mở toàn bộ hàng đợi <i data-lucide="arrow-right" class="size-3.5"></i>
+                <a asp-controller="Moderation" asp-action="Index" class="inline-flex items-center gap-1 text-xs text-primary font-bold hover:underline">
+                    Xem tất cả (@Model.PendingCount) <i data-lucide="arrow-right" class="size-3.5"></i>
                 </a>
             </div>
 
-            <div class="divide-y divide-border">
+            <div class="divide-y divide-border" id="dashboardPendingList">
                 @if (Model.PendingQueue.Count == 0)
                 {
                     <div class="p-8 text-center text-xs text-muted-foreground">
                         <i data-lucide="check-circle" class="size-8 mx-auto mb-2 text-emerald-500"></i>
-                        <p class="font-semibold text-neutral-900">Hàng đợi kiểm duyệt hiện đang trống</p>
-                        <p class="text-[11px] mt-0.5">Tất cả tin đăng đều đã được xử lý xong.</p>
+                        <p class="font-semibold text-neutral-900">Không có tin đăng nào chờ duyệt</p>
+                        <p class="text-[11px] mt-0.5">Tất cả tin mới đã được kiểm duyệt xong.</p>
                     </div>
                 }
                 else
                 {
                     @foreach (var p in Model.PendingQueue)
                     {
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 text-sm hover:bg-surface/50 transition-colors">
+                        <div class="flex items-center justify-between gap-3 p-4 hover:bg-surface/50 transition-colors">
                             <div class="min-w-0 space-y-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="font-mono text-xs font-bold text-primary">@p.Id</span>
-                                    <partial name="_StatusBadge" model="p.Status" />
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-xs font-bold text-neutral-800">@p.Id</span>
                                     @if (p.PackageCode == "VIP")
                                     {
-                                        <span class="rounded bg-amber-500/20 text-amber-800 border border-amber-500/30 px-1.5 py-0.2 text-[10px] font-bold">
-                                            VIP Ưu Tiên
-                                        </span>
+                                        <span class="rounded bg-amber-500 text-white px-1.5 py-0.2 text-[9px] font-bold">VIP</span>
                                     }
-                                    <span class="text-[11px] text-muted-foreground">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                    <span class="text-[10px] text-muted-foreground">@p.CreatedAt.ToString("HH:mm dd/MM")</span>
                                 </div>
-                                <h3 class="font-medium text-neutral-900 truncate">@p.Title</h3>
-                                <p class="text-xs text-muted-foreground">
+                                <h3 class="font-semibold text-xs sm:text-sm text-neutral-900 truncate">@p.Title</h3>
+                                <p class="text-xs text-muted-foreground truncate">
                                     📍 @p.FormattedLocation · Người bán: <strong>@p.SellerName</strong>
                                 </p>
                             </div>
-                            <div class="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                                <div class="text-right">
-                                    <span class="font-semibold text-neutral-900 block font-display text-sm">
-                                        @FormatHelper.FormatCompactPrice(p.Price, p.ListingType)
-                                    </span>
-                                    <span class="text-[11px] text-muted-foreground">@FormatHelper.FormatArea(p.Area)</span>
-                                </div>
-                                <a asp-controller="Moderation" asp-action="Index" asp-route-selectedId="@p.Id"
+                            <div class="flex items-center gap-2 shrink-0">
+                                <a asp-controller="Moderation" asp-action="Detail" asp-route-id="@p.Id"
                                    class="inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover transition-colors shadow-2xs">
-                                    <span>Xét duyệt</span>
+                                    <span>Chi tiết duyệt</span>
                                     <i data-lucide="chevron-right" class="size-3.5"></i>
                                 </a>
                             </div>
@@ -241,75 +268,100 @@
             </div>
         </section>
 
-        <!-- Right Side: AME AI Engine & Blueprint Saga Architecture Monitor -->
-        <section class="space-y-6">
-            <!-- AME Engine Card (Blueprint F09) -->
-            <div class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
-                <div class="flex items-center justify-between border-b border-border/80 pb-3">
-                    <div class="flex items-center gap-2">
-                        <div class="grid size-8 place-items-center rounded-lg bg-blue-500/15 text-blue-600">
-                            <i data-lucide="bot" class="size-4"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-sm text-neutral-900">Auto-Moderation Engine (AME F09)</h3>
-                            <p class="text-[11px] text-muted-foreground">FastAPI + Ollama AI Content Verification</p>
-                        </div>
+        <!-- Recent Wallet Transactions Table -->
+        <section class="rounded-2xl border border-border bg-card overflow-hidden shadow-xs space-y-0">
+            <div class="flex items-center justify-between border-b border-border p-5 bg-surface/50">
+                <div class="flex items-center gap-2">
+                    <div class="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 grid place-items-center">
+                        <i data-lucide="receipt" class="size-4"></i>
                     </div>
-                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        <span class="size-1.5 rounded-full bg-emerald-500"></span> Online
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="rounded-xl border border-border bg-surface p-3 text-center">
-                        <span class="text-[11px] text-muted-foreground block mb-0.5">Tự động duyệt (AME)</span>
-                        <strong class="text-xl font-bold font-display text-emerald-700">@Model.AmeAutoApprovedCount</strong>
-                        <span class="text-[10px] text-muted-foreground block mt-0.5">Đạt chuẩn giá & nội dung</span>
-                    </div>
-                    <div class="rounded-xl border border-border bg-surface p-3 text-center">
-                        <span class="text-[11px] text-muted-foreground block mb-0.5">Cảnh báo nghi vấn</span>
-                        <strong class="text-xl font-bold font-display text-amber-700">@Model.AmeFlaggedCount</strong>
-                        <span class="text-[10px] text-muted-foreground block mt-0.5">Chuyển kiểm duyệt tay</span>
+                    <div>
+                        <h2 class="font-bold text-sm sm:text-base text-neutral-900">Giao Dịch Ví Điện Tử Gần Đây</h2>
+                        <p class="text-xs text-muted-foreground mt-0.5">Lịch sử nạp tiền, mua gói dịch vụ & bồi hoàn Saga</p>
                     </div>
                 </div>
-
-                <div class="text-[11px] text-muted-foreground bg-surface rounded-xl p-3 border border-border/60 space-y-1">
-                    <p>✓ <strong>MarketPriceBenchmarks:</strong> Tự động đối soát khoảng giá thị trường theo Quận/Huyện.</p>
-                    <p>✓ <strong>ContentRules:</strong> Quét từ cấm, ký tự spam và số điện thoại ẩn trong mô tả.</p>
-                </div>
+                <span id="tableWalletTxBadge" class="rounded-full bg-emerald-500/10 text-emerald-800 font-bold px-2.5 py-1 text-xs border border-emerald-300">
+                    @Model.TotalWalletTransactions giao dịch
+                </span>
             </div>
 
-            <!-- Saga Orchestrator Card (Blueprint F06) -->
-            <div class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
-                <div class="flex items-center justify-between border-b border-border/80 pb-3">
-                    <div class="flex items-center gap-2">
-                        <div class="grid size-8 place-items-center rounded-lg bg-amber-500/15 text-amber-600">
-                            <i data-lucide="git-merge" class="size-4"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-sm text-neutral-900">Saga MassTransit (F06)</h3>
-                            <p class="text-[11px] text-muted-foreground">Orchestrator & Compensation Ledger</p>
-                        </div>
-                    </div>
-                    <span class="rounded bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
-                        Transactional Outbox
-                    </span>
-                </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-surface/60 text-muted-foreground font-semibold border-b border-border text-[11px] uppercase tracking-wider">
+                        <tr>
+                            <th class="p-3.5">Mã GD</th>
+                            <th class="p-3.5">Người dùng</th>
+                            <th class="p-3.5">Loại giao dịch</th>
+                            <th class="p-3.5 text-right">Số tiền</th>
+                            <th class="p-3.5 text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="walletTransactionsTableBody" class="divide-y divide-border">
+                        @if (Model.RecentTransactions.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-muted-foreground">
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <i data-lucide="receipt" class="size-8 text-muted-foreground/40"></i>
+                                        <p class="font-semibold text-sm text-neutral-700">Chưa có giao dịch ví nào</p>
+                                        <p class="text-xs text-muted-foreground">Khi người dùng nạp tiền hoặc giao dịch, lịch sử sẽ tự động hiển thị tại đây.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var tx in Model.RecentTransactions)
+                            {
+                                var isTopUp = tx.TransactionType == "TopUp";
+                                var isRefund = tx.TransactionType == "Refund";
+                                var isCharge = tx.TransactionType == "Charge";
 
-                <ul class="text-xs text-neutral-700 space-y-2 pt-1">
-                    <li class="flex items-center justify-between">
-                        <span class="text-muted-foreground">Chu trình Saga:</span>
-                        <span class="font-mono text-[11px] font-semibold text-neutral-800">Deduct → Upgrade → Audit</span>
-                    </li>
-                    <li class="flex items-center justify-between">
-                        <span class="text-muted-foreground">Tỷ lệ bồi hoàn (Compensation):</span>
-                        <span class="text-emerald-700 font-semibold font-mono">100% Hoàn tiền khi lỗi</span>
-                    </li>
-                    <li class="flex items-center justify-between">
-                        <span class="text-muted-foreground">Khóa chống lặp (Idempotency):</span>
-                        <span class="text-blue-700 font-semibold font-mono">Idempotency-Key Active</span>
-                    </li>
-                </ul>
+                                <tr class="hover:bg-surface/40 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-neutral-800">
+                                        @tx.TransactionId
+                                        <span class="block text-[10px] text-muted-foreground font-sans font-normal">@tx.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                    </td>
+                                    <td class="p-3.5 font-medium text-neutral-900">
+                                        @tx.UserName
+                                        @if (!string.IsNullOrWhiteSpace(tx.Description))
+                                        {
+                                            <span class="block text-[10px] text-muted-foreground truncate max-w-xs">@tx.Description</span>
+                                        }
+                                    </td>
+                                    <td class="p-3.5">
+                                        @if (isTopUp)
+                                        {
+                                            <span class="rounded-md bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-emerald-200">
+                                                <i data-lucide="arrow-down-left" class="size-3 text-emerald-600"></i> Nạp tiền ví
+                                            </span>
+                                        }
+                                        else if (isRefund)
+                                        {
+                                            <span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
+                                                <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">
+                                                <i data-lucide="arrow-up-right" class="size-3 text-amber-600"></i> Mua gói dịch vụ
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="p-3.5 text-right font-mono font-bold @(isTopUp || isRefund ? "text-emerald-700" : "text-neutral-900")">
+                                        @(isTopUp || isRefund ? "+" : "-")@PropNest.Web.Admin.Helpers.FormatHelper.FormatVnd(tx.Amount)
+                                    </td>
+                                    <td class="p-3.5 text-center">
+                                        <span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                            @tx.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
             </div>
         </section>
     </div>
@@ -317,44 +369,48 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 1. Data from Razor ViewModel for Revenue & Listing Count Chart
-            const monthlyLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.Month)));
-            const monthlyRevenue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.Revenue / 1_000_000m))); // in millions
-            const monthlyListings = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.ListingCount)));
+        let growthChartInstance = null;
+        let doughnutChartInstance = null;
 
-            // Initialize Combo Bar & Line Chart
-            const ctxRev = document.getElementById('revenueVolumeChart');
-            if (ctxRev && window.Chart) {
-                new Chart(ctxRev, {
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Initialize Growth Chart (Bar & Line Combo)
+            const monthlyLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.Month)));
+            const monthlyListings = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.ListingCount)));
+            const monthlyWalletTx = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyMetrics.Select(m => m.WalletTransactionCount)));
+
+            const ctxGrowth = document.getElementById('overviewGrowthChart');
+            if (ctxGrowth && window.Chart) {
+                growthChartInstance = new Chart(ctxGrowth, {
                     type: 'bar',
                     data: {
                         labels: monthlyLabels,
                         datasets: [
                             {
                                 type: 'line',
-                                label: 'Lượng tin đăng',
+                                label: 'Tin đăng mới',
                                 data: monthlyListings,
                                 borderColor: '#059669',
                                 backgroundColor: '#059669',
-                                borderWidth: 2.5,
+                                borderWidth: 3,
                                 pointRadius: 4,
+                                pointHoverRadius: 6,
                                 pointBackgroundColor: '#ffffff',
                                 pointBorderWidth: 2,
                                 pointBorderColor: '#059669',
                                 yAxisID: 'yListings',
-                                tension: 0.3
+                                tension: 0.35,
+                                fill: false
                             },
                             {
                                 type: 'bar',
-                                label: 'Doanh thu (Triệu ₫)',
-                                data: monthlyRevenue,
+                                label: 'Giao dịch ví',
+                                data: monthlyWalletTx,
                                 backgroundColor: 'rgba(215, 115, 12, 0.85)',
                                 hoverBackgroundColor: '#b85e07',
                                 borderRadius: 8,
                                 borderSkipped: false,
-                                yAxisID: 'yRevenue',
-                                maxBarThickness: 38
+                                yAxisID: 'yTransactions',
+                                maxBarThickness: 36
                             }
                         ]
                     },
@@ -371,14 +427,14 @@
                                 backgroundColor: '#1c1917',
                                 titleFont: { family: "'Be Vietnam Pro', sans-serif", size: 12, weight: 'bold' },
                                 bodyFont: { family: "'Be Vietnam Pro', sans-serif", size: 12 },
-                                padding: 10,
+                                padding: 12,
                                 cornerRadius: 8,
                                 callbacks: {
-                                    label: function(context) {
+                                    label: function (context) {
                                         if (context.dataset.type === 'bar') {
-                                            return ` Doanh thu: ${context.raw} triệu ₫`;
+                                            return ` Giao dịch ví: ${context.raw} lượt`;
                                         }
-                                        return ` Lượng tin: ${context.raw} tin`;
+                                        return ` Tin đăng mới: ${context.raw} tin`;
                                     }
                                 }
                             }
@@ -391,14 +447,14 @@
                                     color: '#78716c'
                                 }
                             },
-                            yRevenue: {
+                            yTransactions: {
                                 type: 'linear',
                                 position: 'left',
                                 grid: { color: 'rgba(232, 227, 213, 0.6)' },
                                 ticks: {
                                     font: { family: "'Be Vietnam Pro', sans-serif", size: 11 },
                                     color: '#78716c',
-                                    callback: function(val) { return val + ' tr'; }
+                                    callback: function (val) { return val + ' GD'; }
                                 }
                             },
                             yListings: {
@@ -408,7 +464,7 @@
                                 ticks: {
                                     font: { family: "'Be Vietnam Pro', sans-serif", size: 11 },
                                     color: '#78716c',
-                                    stepSize: 20
+                                    stepSize: 25
                                 }
                             }
                         }
@@ -416,20 +472,20 @@
                 });
             }
 
-            // 2. Data for 8 Listing States Doughnut Chart
+            // 2. Initialize Status Doughnut Chart
             const ctxDoughnut = document.getElementById('statusDoughnutChart');
             if (ctxDoughnut && window.Chart) {
-                const pub = @Model.StatusDistribution.GetValueOrDefault("Published", 0);
-                const pend = @Model.StatusDistribution.GetValueOrDefault("PendingModeration", 0);
+                const pub = @Model.PublishedCount;
+                const pend = @Model.PendingCount;
                 const draft = @Model.StatusDistribution.GetValueOrDefault("Draft", 0);
                 const rej = @Model.StatusDistribution.GetValueOrDefault("Rejected", 0);
                 const exp = @Model.StatusDistribution.GetValueOrDefault("Expired", 0);
                 const hid = @Model.StatusDistribution.GetValueOrDefault("Hidden", 0);
 
-                new Chart(ctxDoughnut, {
+                doughnutChartInstance = new Chart(ctxDoughnut, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Published (Đang hiển thị)', 'Pending (Chờ duyệt)', 'Draft (Bản nháp)', 'Rejected (Từ chối)', 'Expired (Hết hạn)', 'Hidden (Tạm ẩn)'],
+                        labels: ['Published (Hiển thị)', 'Pending (Chờ duyệt)', 'Draft (Bản nháp)', 'Rejected (Từ chối)', 'Expired (Hết hạn)', 'Hidden (Tạm ẩn)'],
                         datasets: [{
                             data: [pub, pend, draft, rej, exp, hid],
                             backgroundColor: [
@@ -462,6 +518,127 @@
                     }
                 });
             }
+
+            // Trigger auto-refresh on load
+            fetchRealtimeStats();
         });
+
+        // 3. Helper fetch & auto-update dashboard data
+        async function fetchRealtimeStats() {
+            try {
+                const res = await fetch('/api/v1/admin/dashboard-stats');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data) {
+                    const setVal = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = val;
+                    };
+
+                    setVal('metricPublishedCount', data.publishedCount);
+                    setVal('metricPendingCount', data.pendingCount);
+                    setVal('headerPendingBadge', data.pendingCount);
+                    setVal('metricTotalUsers', data.totalUsers);
+                    setVal('metricActiveSellers', `${data.activeSellersCount || 0} người`);
+                    setVal('metricWalletTx', data.totalWalletTransactions || 0);
+                    setVal('tableWalletTxBadge', `${data.totalWalletTransactions || 0} giao dịch`);
+
+                    if (data.totalWalletVolume !== undefined) {
+                        const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.totalWalletVolume);
+                        setVal('metricWalletVolume', formatted);
+                    }
+
+                    setVal('legendPublished', data.publishedCount);
+                    setVal('legendPending', data.pendingCount);
+                    setVal('legendDraft', (data.statusDistribution && data.statusDistribution.Draft) || 0);
+                    setVal('legendRejected', (data.statusDistribution && data.statusDistribution.Rejected) || 0);
+
+                    // Re-render recent transactions table if items present
+                    if (data.recentTransactions && Array.isArray(data.recentTransactions) && data.recentTransactions.length > 0) {
+                        const tbody = document.getElementById('walletTransactionsTableBody');
+                        if (tbody) {
+                            tbody.innerHTML = data.recentTransactions.map(tx => {
+                                const isTopUp = tx.transactionType === 'TopUp';
+                                const isRefund = tx.transactionType === 'Refund';
+                                const amountFormatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.amount || 0);
+                                const dateFormatted = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
+                                
+                                let typeBadge = '';
+                                if (isTopUp) {
+                                    typeBadge = `<span class="rounded-md bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-emerald-200">
+                                        <i data-lucide="arrow-down-left" class="size-3 text-emerald-600"></i> Nạp tiền ví
+                                    </span>`;
+                                } else if (isRefund) {
+                                    typeBadge = `<span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
+                                        <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                    </span>`;
+                                } else {
+                                    typeBadge = `<span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">
+                                        <i data-lucide="arrow-up-right" class="size-3 text-amber-600"></i> Mua gói dịch vụ
+                                    </span>`;
+                                }
+
+                                return `
+                                    <tr class="hover:bg-surface/40 transition-colors">
+                                        <td class="p-3.5 font-mono font-bold text-neutral-800">
+                                            ${tx.transactionId || ''}
+                                            <span class="block text-[10px] text-muted-foreground font-sans font-normal">${dateFormatted}</span>
+                                        </td>
+                                        <td class="p-3.5 font-medium text-neutral-900">
+                                            ${tx.userName || 'Người dùng'}
+                                            ${tx.description ? `<span class="block text-[10px] text-muted-foreground truncate max-w-xs">${tx.description}</span>` : ''}
+                                        </td>
+                                        <td class="p-3.5">${typeBadge}</td>
+                                        <td class="p-3.5 text-right font-mono font-bold ${isTopUp || isRefund ? 'text-emerald-700' : 'text-neutral-900'}">
+                                            ${isTopUp || isRefund ? '+' : '-'}${amountFormatted}
+                                        </td>
+                                        <td class="p-3.5 text-center">
+                                            <span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                                ${tx.status || 'Thành công'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('');
+                            if (window.lucide) {
+                                lucide.createIcons();
+                            }
+                        }
+                    }
+
+                    if (doughnutChartInstance && data.statusDistribution) {
+                        const dist = data.statusDistribution;
+                        doughnutChartInstance.data.datasets[0].data = [
+                            data.publishedCount,
+                            data.pendingCount,
+                            dist.Draft || 0,
+                            dist.Rejected || 0,
+                            dist.Expired || 0,
+                            dist.Hidden || 0
+                        ];
+                        doughnutChartInstance.update();
+                    }
+
+                    if (growthChartInstance && data.monthlyMetrics && data.monthlyMetrics.length > 0) {
+                        growthChartInstance.data.labels = data.monthlyMetrics.map(m => m.month || m.Month);
+                        growthChartInstance.data.datasets[0].data = data.monthlyMetrics.map(m => m.listingCount !== undefined ? m.listingCount : m.ListingCount);
+                        growthChartInstance.data.datasets[1].data = data.monthlyMetrics.map(m => m.walletTransactionCount !== undefined ? m.walletTransactionCount : m.WalletTransactionCount);
+                        growthChartInstance.update();
+                    }
+                }
+            } catch (err) {
+                console.warn('Dashboard live update:', err);
+            }
+        }
+
+        async function refreshDashboardData() {
+            const icon = document.getElementById('iconRefresh');
+            if (icon) icon.classList.add('animate-spin');
+            await fetchRealtimeStats();
+            setTimeout(() => {
+                if (icon) icon.classList.remove('animate-spin');
+            }, 600);
+        }
     </script>
 }

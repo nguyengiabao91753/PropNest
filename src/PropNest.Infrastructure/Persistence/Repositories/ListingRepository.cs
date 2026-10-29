@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
@@ -9,11 +10,30 @@ namespace PropNest.Infrastructure.Persistence.Repositories;
 
 public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRepository
 {
-    public Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default) =>
-        dbContext.Listings.SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+    public async Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Listings
+        .Include(x => x.Images.OrderBy(img => img.SortOrder)) // Load kèm danh sách ảnh (sắp xếp theo thứ tự)
+        .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+    }
+
+    public async Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == ownerUserId)
+            .Select(u => new ListingOwnerContactDto(
+                u.Id,
+                u.FullName,
+                u.PhoneNumber ?? string.Empty,
+                u.Email ?? string.Empty))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
 
     public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
         await dbContext.Listings
+            .Include(x => x.Images.OrderBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.OwnerUserId == ownerUserId)
             .OrderByDescending(x => x.CreatedAt)
@@ -21,9 +41,52 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) =>
         await dbContext.Listings
+            .Include(x => x.Images.OrderBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.Status == ListingStatus.PendingModeration)
             .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default)
+    {
+        var query = from l in dbContext.Listings.AsNoTracking()
+                    where l.Status == ListingStatus.PendingModeration
+                    join u in dbContext.Users.AsNoTracking() on l.OwnerUserId equals u.Id into userGroup
+                    from user in userGroup.DefaultIfEmpty()
+                    orderby l.CreatedAt ascending
+                    select new ListingDto(
+                        l.ListingId,
+                        l.OwnerUserId,
+                        l.Title,
+                        l.Description,
+                        l.PropertyType,
+                        l.ListingType,
+                        l.Price,
+                        l.Area,
+                        l.City,
+                        l.District,
+                        l.Ward,
+                        l.Address,
+                        l.Status,
+                        l.ModerationDecision,
+                        l.PackageCode,
+                        l.StartDate,
+                        l.EndDate,
+                        l.RowVersion,
+                        user != null ? (user.FullName ?? user.UserName) : null,
+                        user != null ? user.Email : null,
+                        user != null ? user.PhoneNumber : null,
+                        l.CreatedAt,
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default) =>
+        await dbContext.Listings
+            .Where(x => x.Status == ListingStatus.Published && x.EndDate <= now)
+            .OrderBy(x => x.EndDate)
+            .Take(batchSize)
             .ToListAsync(cancellationToken);
 
     public Task AddAsync(Listing listing, CancellationToken cancellationToken = default) =>
@@ -50,14 +113,29 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
+        var targetType = query.ListingType ?? query.Type;
+        if (!string.IsNullOrWhiteSpace(targetType))
+        {
+            targetType = targetType.Trim().ToLowerInvariant() switch
+            {
+                "rent" => "Rent",
+                "sale" => "Sale",
+                _ => targetType
+            };
+        }
+
         var queryable = dbContext.Listings.AsNoTracking()
                            .Where(x => x.Status == ListingStatus.Published)
+                           .Where(x => string.IsNullOrWhiteSpace(query.Q) || x.Title.Contains(query.Q) || x.Address.Contains(query.Q))
                            .Where(x => query.District == null || x.District == query.District)
                            .Where(x => query.City == null || x.City == query.City)
                            .Where(x => query.Ward == null || x.Ward == query.Ward)
                            .Where(x => query.PropertyType == null || x.PropertyType == query.PropertyType)
-                           .Where(x => query.ListingType == null || x.ListingType == query.ListingType);
-                          
+                           .Where(x => targetType == null || x.ListingType == targetType)
+                           .Where(x => query.MinPrice == null || x.Price >= query.MinPrice)
+                           .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice);
+
+
         var totalCount = await queryable.CountAsync(cancellationToken);
 
         var items = await queryable
@@ -87,20 +165,22 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default)
     {
-        var histories = await dbContext.ListingHistories.AsNoTracking()
-                        .Where(x=>x.ListingId == listingId)
-                        .OrderByDescending(x=>x.ActionDate)
-                        .Select(x=> new ListingHistoryDto
-                        (
-                            x.ActionType,
-                            x.ActionDate,
-                            x.ActorUserId,
-                            x.SnapshotJson,
-                            x.DeltasJson,
-                            x.Note
-                        ))
-                        .ToListAsync(cancellationToken);
-        return histories;
+        var query = from history in dbContext.ListingHistories.AsNoTracking()
+                    where history.ListingId == listingId
+                    join user in dbContext.Users.AsNoTracking() on history.ActorUserId equals user.Id into userGroup
+                    from actor in userGroup.DefaultIfEmpty()
+                    orderby history.ActionDate ascending, history.HistoryId ascending
+                    select new ListingHistoryDto(
+                        history.ActionType,
+                        history.ActionDate,
+                        history.ActorUserId,
+                        actor != null ? (actor.FullName ?? actor.UserName) : "Hệ thống",
+                        actor != null ? actor.Role : "System",
+                        history.SnapshotJson,
+                        history.DeltasJson,
+                        history.Note
+                    );
+        return await query.ToListAsync(cancellationToken);
     }
 
     public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) =>

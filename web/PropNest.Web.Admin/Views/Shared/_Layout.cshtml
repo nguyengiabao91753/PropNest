@@ -1,4 +1,4 @@
-@inject PropNest.Web.Admin.Services.IAdminListingService AdminService
+@inject PropNest.Web.Admin.Services.IServices.IAdminListingService AdminService
 
 @{
     var activeNav = ViewData["ActiveNav"]?.ToString() ?? "Dashboard";
@@ -101,12 +101,9 @@
                                 <i data-lucide="check-square" class="size-4 shrink-0"></i>
                                 <span>Duyệt tin đăng</span>
                             </div>
-                            @if (pendingCount > 0)
-                            {
-                                <span class="rounded-full px-2 py-0.5 text-xs font-bold @(activeNav == "Moderation" ? "bg-white text-primary" : "bg-destructive text-white")">
-                                    @pendingCount
-                                </span>
-                            }
+                            <span id="sidebarPendingCount" class="rounded-full px-2 py-0.5 text-xs font-bold @(activeNav == "Moderation" ? "bg-white text-primary" : "bg-destructive text-white") @(pendingCount > 0 ? "" : "hidden")">
+                                @pendingCount
+                            </span>
                         </a>
 
                         <!-- Properties -->
@@ -132,17 +129,23 @@
                     </a>
                 </div>
 
+                @{
+                    var adminUser = Context.Items["AdminProfile"] as PropNest.Web.Admin.Helpers.AdminUserProfile;
+                    var adminDisplayName = adminUser?.FullName ?? "Quản trị viên";
+                    var adminDisplayEmail = adminUser?.Email ?? "admin@propnest.vn";
+                    var adminInitials = adminDisplayName.Length >= 2 ? adminDisplayName.Substring(0, 2).ToUpperInvariant() : "AD";
+                }
                 <div class="flex items-center justify-between p-2 rounded-xl bg-surface border border-border/60">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <div class="grid size-8 place-items-center rounded-full bg-destructive/15 text-destructive text-xs font-bold shrink-0">
-                            AD
+                            @adminInitials
                         </div>
                         <div class="truncate">
-                            <p class="text-xs font-semibold truncate text-neutral-900">Quản trị viên</p>
-                            <p class="text-[10px] text-muted-foreground truncate">admin@propnest.vn</p>
+                            <p class="text-xs font-semibold truncate text-neutral-900">@adminDisplayName</p>
+                            <p class="text-[10px] text-muted-foreground truncate">@adminDisplayEmail</p>
                         </div>
                     </div>
-                    <a href="https://localhost:7129/login" class="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors" title="Đăng xuất" aria-label="Đăng xuất">
+                    <a href="/admin/logout" class="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors" title="Đăng xuất khỏi hệ thống" aria-label="Đăng xuất">
                         <i data-lucide="log-out" class="size-4"></i>
                     </a>
                 </div>
@@ -157,8 +160,8 @@
             </div>
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-surface border border-border px-3 py-1 rounded-full">
-                    <span class="size-2 rounded-full @(pendingCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500")"></span>
-                    <strong>@pendingCount</strong> tin đang đợi phê duyệt
+                    <span id="topHeaderPendingPulse" class="size-2 rounded-full @(pendingCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500")"></span>
+                    <strong id="topHeaderPendingCount">@pendingCount</strong> tin đang đợi phê duyệt
                 </span>
             </div>
         </header>
@@ -191,6 +194,12 @@
             @RenderBody()
         </main>
     </div>
+
+    <!-- Global Back to Top Button -->
+    <button type="button" id="backToTopBtn" aria-label="Cuộn lên đầu trang"
+            class="fixed bottom-6 right-6 z-40 hidden size-11 place-items-center rounded-full bg-card/90 text-neutral-800 shadow-lg border border-border backdrop-blur-md transition-all duration-300 hover:bg-primary hover:text-white hover:scale-110 hover:shadow-xl hover:border-primary">
+        <i data-lucide="arrow-up" class="size-5"></i>
+    </button>
 
     <!-- Lucide Icons Script -->
     <script src="https://unpkg.com/lucide@latest"></script>

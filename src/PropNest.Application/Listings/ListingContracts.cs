@@ -50,7 +50,19 @@ public sealed record ListingDto(
     string PackageCode,
     DateTimeOffset? StartDate,
     DateTimeOffset? EndDate,
-    byte[] RowVersion);
+    byte[] RowVersion,
+    string? OwnerName = null,
+    string? OwnerEmail = null,
+    string? OwnerPhoneNumber = null,
+    DateTimeOffset? CreatedAt = null,
+    IReadOnlyList<string>? Images = null
+    );
+
+public sealed record ListingOwnerContactDto(
+    long UserId,
+    string FullName,
+    string PhoneNumber,
+    string Email);
 
 public sealed record ListingSummaryDto(
     long ListingId,
@@ -75,10 +87,15 @@ public sealed record ListingCollectionDto(
 public interface IListingRepository
 {
     Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default);
+    Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
 
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
 
@@ -118,6 +135,7 @@ public interface IListingService
     Task<ListingCollectionDto> GetPendingModerationAsync(CancellationToken cancellationToken = default);
 
     Task<ListingDto> UpdateAsync(UpdateListingCommand command, CancellationToken cancellationToken = default);
+    Task DeleteAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 
     Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 
@@ -138,6 +156,10 @@ public sealed record GetPublicListingsQuery(
     string? Ward = null,
     string? PropertyType = null,
     string? ListingType = null,
+    string? Type = null,
+    string? Q = null,
+    decimal? MinPrice = null,
+    decimal? MaxPrice = null,
     [FromQuery(Name ="page")] int? Page = null,
     int PageNumber = 1,
     int PageSize = 20
@@ -148,6 +170,8 @@ public sealed record ListingHistoryDto(
     string ActionType,
     DateTimeOffset ActionDate,
     long? ActorUserId,
+    string? ActorName,
+    string? ActorRole,
     string? SnapshotJson,
     string? DeltasJson,
     string? Note
