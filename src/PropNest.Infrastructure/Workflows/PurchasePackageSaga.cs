@@ -1,4 +1,4 @@
-﻿using MassTransit;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -61,7 +61,7 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.DeductingWallet, "DeductWallet", isCompleted: false);
+                        await StartStepAsync(context, "DeductWallet", WorkflowStatus.DeductingWallet);
                     })
                     .TransitionTo(DeductingWallet)
                     .Publish(context => new DeductWalletCommand(
@@ -81,8 +81,7 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.WalletDeducted, "DeductWallet", isCompleted: true);
-                        await RecordStepAsync(context, WorkflowStatus.UpgradingListing, "UpgradeListing", isCompleted: false);
+                        await CompleteAndStartStepAsync(context, completedStepName: "DeductWallet", nextStepName: "UpgradeListing", WorkflowStatus.UpgradingListing);
                     })
                     .TransitionTo(UpgradingListing)
                     .Publish(context => new UpgradeListingCommand(
@@ -98,7 +97,7 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.Failed, "DeductWallet", isCompleted: false, error: context.Message.Reason);
+                        await FailStepAsync(context, "DeductWallet", context.Message.Reason, WorkflowStatus.Failed);
                     })
                     .TransitionTo(Failed)
             );
@@ -112,8 +111,7 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.RecordingHistory, "UpgradeListing", isCompleted: true);
-                        await RecordStepAsync(context, WorkflowStatus.Completed, "RecordHistory", isCompleted: true);
+                        await CompleteStepAndRecordHistoryAsync(context, completedStepName: "UpgradeListing", historyStepName: "RecordHistory", WorkflowStatus.Completed);
                     })
                     .TransitionTo(Completed),
 
@@ -126,8 +124,7 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.Compensating, "UpgradeListing", isCompleted: false, error: context.Message.Reason);
-                        await RecordStepAsync(context, WorkflowStatus.Compensating, "RefundWallet", isCompleted: false);
+                        await FailAndStartCompensationStepAsync(context, failedStepName: "UpgradeListing", error: context.Message.Reason, compensationStepName: "RefundWallet", WorkflowStatus.Compensating);
                     })
                     .TransitionTo(Compensating)
                     .Publish(context => new RefundWalletCommand(
@@ -145,17 +142,292 @@ namespace PropNest.Infrastructure.Workflows
                     })
                     .ThenAsync(async context =>
                     {
-                        await RecordStepAsync(context, WorkflowStatus.Compensated, "RefundWallet", isCompleted: true);
+                        await CompleteStepAsync(context, "RefundWallet", WorkflowStatus.Compensated);
                     })
                     .TransitionTo(Compensated)
             );
         }
 
-
-       [LoggerMessage(
-       Level = LogLevel.Information,
-       Message = "PurchasePackageSaga [{CorrelationId}]: Transitioning to {Status}, Step: {StepName}, Completed: {IsCompleted}, Error: {Error}")]
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "PurchasePackageSaga [{CorrelationId}]: Transitioning to {Status}, Step: {StepName}, Completed: {IsCompleted}, Error: {Error}")]
         private static partial void LogStepTransition(ILogger logger, Guid correlationId, WorkflowStatus status, string stepName, bool isCompleted, string? error);
+
+        private static async Task StartStepAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string stepName,
+            WorkflowStatus status)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, status, stepName, isCompleted: false, error: null);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(status);
+            }
+
+            var existingStarted = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == stepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (existingStarted is null)
+            {
+                var step = new WorkflowStep(context.Saga.CorrelationId, stepName);
+                await dbContext.WorkflowSteps.AddAsync(step, context.CancellationToken);
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
+        private static async Task CompleteAndStartStepAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string completedStepName,
+            string nextStepName,
+            WorkflowStatus nextStatus)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, nextStatus, completedStepName, isCompleted: true, error: null);
+                LogStepTransition(logger, context.Saga.CorrelationId, nextStatus, nextStepName, isCompleted: false, error: null);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(nextStatus);
+            }
+
+            var completedStep = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == completedStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (completedStep is null)
+            {
+                completedStep = new WorkflowStep(context.Saga.CorrelationId, completedStepName);
+                completedStep.Complete();
+                await dbContext.WorkflowSteps.AddAsync(completedStep, context.CancellationToken);
+            }
+            else
+            {
+                completedStep.Complete();
+            }
+
+            var nextStepStarted = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == nextStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (nextStepStarted is null)
+            {
+                var nextStep = new WorkflowStep(context.Saga.CorrelationId, nextStepName);
+                await dbContext.WorkflowSteps.AddAsync(nextStep, context.CancellationToken);
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
+        private static async Task FailStepAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string stepName,
+            string error,
+            WorkflowStatus status)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, status, stepName, isCompleted: false, error: error);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(status, error);
+            }
+
+            var step = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == stepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (step is null)
+            {
+                step = new WorkflowStep(context.Saga.CorrelationId, stepName);
+                step.Fail(error);
+                await dbContext.WorkflowSteps.AddAsync(step, context.CancellationToken);
+            }
+            else
+            {
+                step.Fail(error);
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
+        private static async Task FailAndStartCompensationStepAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string failedStepName,
+            string error,
+            string compensationStepName,
+            WorkflowStatus status)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, status, failedStepName, isCompleted: false, error: error);
+                LogStepTransition(logger, context.Saga.CorrelationId, status, compensationStepName, isCompleted: false, error: null);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(status, error);
+            }
+
+            var failedStep = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == failedStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (failedStep is null)
+            {
+                failedStep = new WorkflowStep(context.Saga.CorrelationId, failedStepName);
+                failedStep.Fail(error);
+                await dbContext.WorkflowSteps.AddAsync(failedStep, context.CancellationToken);
+            }
+            else
+            {
+                failedStep.Fail(error);
+            }
+
+            var compensationStarted = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == compensationStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (compensationStarted is null)
+            {
+                var compStep = new WorkflowStep(context.Saga.CorrelationId, compensationStepName);
+                await dbContext.WorkflowSteps.AddAsync(compStep, context.CancellationToken);
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
+        private static async Task CompleteStepAndRecordHistoryAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string completedStepName,
+            string historyStepName,
+            WorkflowStatus status)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, status, completedStepName, isCompleted: true, error: null);
+                LogStepTransition(logger, context.Saga.CorrelationId, status, historyStepName, isCompleted: true, error: null);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(status);
+            }
+
+            var step = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == completedStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (step is null)
+            {
+                step = new WorkflowStep(context.Saga.CorrelationId, completedStepName);
+                step.Complete();
+                await dbContext.WorkflowSteps.AddAsync(step, context.CancellationToken);
+            }
+            else
+            {
+                step.Complete();
+            }
+
+            var historyStep = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == historyStepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (historyStep is null)
+            {
+                historyStep = new WorkflowStep(context.Saga.CorrelationId, historyStepName);
+                historyStep.Complete();
+                await dbContext.WorkflowSteps.AddAsync(historyStep, context.CancellationToken);
+            }
+            else
+            {
+                historyStep.Complete();
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
+        private static async Task CompleteStepAsync<TData>(
+            BehaviorContext<PurchasePackageSagaState, TData> context,
+            string stepName,
+            WorkflowStatus status)
+            where TData : class
+        {
+            var serviceProvider = context.GetPayload<IServiceProvider>();
+            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
+            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
+            if (logger is not null)
+            {
+                LogStepTransition(logger, context.Saga.CorrelationId, status, stepName, isCompleted: true, error: null);
+            }
+
+            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId, context.CancellationToken);
+            if (workflow is not null)
+            {
+                workflow.MoveTo(status);
+            }
+
+            var step = await dbContext.WorkflowSteps
+                .Where(s => s.CorrelationId == context.Saga.CorrelationId && s.StepName == stepName && s.Status == "Started")
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(context.CancellationToken);
+
+            if (step is null)
+            {
+                step = new WorkflowStep(context.Saga.CorrelationId, stepName);
+                step.Complete();
+                await dbContext.WorkflowSteps.AddAsync(step, context.CancellationToken);
+            }
+            else
+            {
+                step.Complete();
+            }
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+        }
+
         private static async Task RecordStepAsync<TData>(
             BehaviorContext<PurchasePackageSagaState, TData> context,
             WorkflowStatus status,
@@ -164,29 +436,18 @@ namespace PropNest.Infrastructure.Workflows
             string? error = null)
             where TData : class
         {
-            var serviceProvider = context.GetPayload<IServiceProvider>();
-            var dbContext = serviceProvider.GetRequiredService<PropNestDbContext>();
-            var logger = serviceProvider.GetService<ILogger<PurchasePackageSaga>>();
-            if (logger is not null)
-            {
-                LogStepTransition(logger, context.Saga.CorrelationId, status, stepName, isCompleted, error);
-            }
-            var workflow = await dbContext.WorkflowInstances.FirstOrDefaultAsync(w => w.CorrelationId == context.Saga.CorrelationId);
-            if (workflow is not null)
-            {
-                workflow.MoveTo(status, error);
-            }
-            var step = new WorkflowStep(context.Saga.CorrelationId, stepName);
             if (isCompleted)
             {
-                step.Complete();
+                await CompleteStepAsync(context, stepName, status);
             }
             else if (!string.IsNullOrEmpty(error))
             {
-                step.Fail(error);
+                await FailStepAsync(context, stepName, error, status);
             }
-            await dbContext.WorkflowSteps.AddAsync(step);
-            await dbContext.SaveChangesAsync();
+            else
+            {
+                await StartStepAsync(context, stepName, status);
+            }
         }
     }
 }

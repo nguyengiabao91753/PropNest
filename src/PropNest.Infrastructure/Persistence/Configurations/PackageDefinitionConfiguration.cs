@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PropNest.Domain.Packages;
 using System;
@@ -34,8 +34,8 @@ namespace PropNest.Infrastructure.Persistence.Configurations
            new PackageDefinitions(
                packageId: 1,
                packageCode: "Standard",
-               name: "Gói Tiêu Chuẩn",
-               price: 50000m,
+               name: "Gói Tiêu Chuẩn (Miễn phí)",
+               price: 0m,
                durationDays: 30,
                kind: "Standard",
                isActive: true),

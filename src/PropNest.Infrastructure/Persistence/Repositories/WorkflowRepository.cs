@@ -20,4 +20,17 @@ public sealed class WorkflowRepository(PropNestDbContext dbContext) : IWorkflowR
 
     public Task AddOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken = default) =>
         dbContext.OutboxMessages.AddAsync(message, cancellationToken).AsTask();
+
+    public async Task<IReadOnlyList<WorkflowStep>> GetStepsByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
+    {
+        var steps = await dbContext.WorkflowSteps
+            .Where(x => x.CorrelationId == correlationId)
+            .OrderBy(x => x.StepId)
+            .ToListAsync(cancellationToken);
+
+        return steps.OrderBy(x => x.StartedAt).ThenBy(x => x.StepId).ToList();
+    }
+
+    public Task AddStepAsync(WorkflowStep workflowStep, CancellationToken cancellationToken = default) =>
+        dbContext.WorkflowSteps.AddAsync(workflowStep, cancellationToken).AsTask();
 }

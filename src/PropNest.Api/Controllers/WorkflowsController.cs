@@ -19,8 +19,13 @@ public sealed class WorkflowsController(ICurrentUser currentUser, IWorkflowServi
             return NotFound();
         }
 
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("A valid user identifier claim is required.");
-        if (workflow.UserId != userId && !currentUser.IsInRole("Admin"))
+        var userId = currentUser.UserId;
+        if (!userId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        if (workflow.UserId != userId.Value && !currentUser.IsInRole("Admin"))
         {
             return Forbid();
         }

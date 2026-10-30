@@ -5,7 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PropNest.Application\PropNest.Application.csproj" />
     <ProjectReference Include="..\..\src\PropNest.Domain\PropNest.Domain.csproj" />
-    <ProjectReference Include="..\..\src\PropNest.Application\PropNest.Application.csproj" />
+    <ProjectReference Include="..\..\src\PropNest.Infrastructure\PropNest.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\PropNest.Api\PropNest.Api.csproj" />
     <ProjectReference Include="..\..\src\PropNest.Workflow.Worker\PropNest.Workflow.Worker.csproj" />
   </ItemGroup>

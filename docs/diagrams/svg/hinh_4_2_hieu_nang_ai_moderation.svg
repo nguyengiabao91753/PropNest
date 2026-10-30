@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 500" width="100%" height="100%">
+  <!-- Definitions -->
+  <defs>
+    <style>
+      .bg { fill: #FAFAFA; }
+      .header-rect { fill: #232F3E; rx: 8; ry: 8; }
+      .header-text { fill: #FFFFFF; font-family: 'Arial, Helvetica, sans-serif'; font-size: 16px; font-weight: bold; }
+      .chart-bg { fill: #FFFFFF; stroke: #D5DBDB; rx: 8; ry: 8; }
+      .axis { stroke: #545B64; stroke-width: 2; }
+      .grid { stroke: #D5DBDB; stroke-width: 1; stroke-dasharray: 4,4; }
+      .tick-text { fill: #545B64; font-family: 'Arial, Helvetica, sans-serif'; font-size: 11px; }
+      .axis-label { fill: #232F3E; font-family: 'Arial, Helvetica, sans-serif'; font-size: 13px; font-weight: bold; }
+      .bar-rule { fill: #AAB7B8; }
+      .bar-hybrid { fill: #1A8C8C; }
+      .bar-label { fill: #FFFFFF; font-family: 'Arial, Helvetica, sans-serif'; font-size: 11px; font-weight: bold; }
+      .legend-text { fill: #333333; font-family: 'Arial, Helvetica, sans-serif'; font-size: 12px; }
+      .pie-slice-1 { fill: #3F8624; }
+      .pie-slice-2 { fill: #FF9900; }
+      .pie-slice-3 { fill: #DD344C; }
+      .pie-label { fill: #232F3E; font-family: 'Arial, Helvetica, sans-serif'; font-size: 12px; font-weight: bold; }
+    </style>
+    <filter id="shadow9" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" class="bg"/>
+
+  <!-- Left Chart: Bar Chart -->
+  <g transform="translate(20, 20)">
+    <rect width="520" height="460" class="chart-bg" filter="url(#shadow9)"/>
+    <rect width="520" height="40" class="header-rect"/>
+    <text x="260" y="26" class="header-text" text-anchor="middle">Độ chính xác kiểm duyệt theo từng hạng mục</text>
+    
+    <g transform="translate(60, 80)">
+      <!-- Grid 0 to 100, step 20. 300px height. 1% = 3px -->
+      <line x1="0" y1="0" x2="400" y2="0" class="grid"/>
+      <line x1="0" y1="60" x2="400" y2="60" class="grid"/>
+      <line x1="0" y1="120" x2="400" y2="120" class="grid"/>
+      <line x1="0" y1="180" x2="400" y2="180" class="grid"/>
+      <line x1="0" y1="240" x2="400" y2="240" class="grid"/>
+      <line x1="0" y1="300" x2="400" y2="300" class="grid"/>
+
+      <text x="-10" y="5" class="tick-text" text-anchor="end">100%</text>
+      <text x="-10" y="65" class="tick-text" text-anchor="end">80%</text>
+      <text x="-10" y="125" class="tick-text" text-anchor="end">60%</text>
+      <text x="-10" y="185" class="tick-text" text-anchor="end">40%</text>
+      <text x="-10" y="245" class="tick-text" text-anchor="end">20%</text>
+      <text x="-10" y="305" class="tick-text" text-anchor="end">0%</text>
+
+      <line x1="0" y1="0" x2="0" y2="300" class="axis"/>
+      <line x1="0" y1="300" x2="400" y2="300" class="axis"/>
+      <text x="-40" y="150" class="axis-label" transform="rotate(-90, -40, 150)" text-anchor="middle">Độ chính xác F1-Score (%)</text>
+
+      <!-- Bars -->
+      <!-- Cat 1: Từ cấm/Spam. Rule: 88.5%, Hybrid: 98.2% -->
+      <rect x="20" y="34.5" width="30" height="265.5" class="bar-rule"/>
+      <rect x="50" y="5.4" width="30" height="294.6" class="bar-hybrid"/>
+      <text x="35" y="50" class="bar-label" text-anchor="middle" transform="rotate(-90, 35, 50)">88.5%</text>
+      <text x="65" y="20" class="bar-label" text-anchor="middle" transform="rotate(-90, 65, 20)">98.2%</text>
+      <text x="50" y="325" class="tick-text" text-anchor="middle" font-weight="bold">Phát hiện</text>
+      <text x="50" y="340" class="tick-text" text-anchor="middle" font-weight="bold">Từ cấm/Spam</text>
+
+      <!-- Cat 2: SĐT ẩn trong ảnh. Rule: 42.0%, Hybrid: 94.6% -->
+      <rect x="120" y="174" width="30" height="126" class="bar-rule"/>
+      <rect x="150" y="16.2" width="30" height="283.8" class="bar-hybrid"/>
+      <text x="135" y="190" class="bar-label" text-anchor="middle" transform="rotate(-90, 135, 190)">42.0%</text>
+      <text x="165" y="30" class="bar-label" text-anchor="middle" transform="rotate(-90, 165, 30)">94.6%</text>
+      <text x="150" y="325" class="tick-text" text-anchor="middle" font-weight="bold">Nhận diện</text>
+      <text x="150" y="340" class="tick-text" text-anchor="middle" font-weight="bold">SĐT ẩn trong ảnh</text>
+
+      <!-- Cat 3: Lệch giá. Rule: 65.0%, Hybrid: 91.5% -->
+      <rect x="220" y="105" width="30" height="195" class="bar-rule"/>
+      <rect x="250" y="25.5" width="30" height="274.5" class="bar-hybrid"/>
+      <text x="235" y="120" class="bar-label" text-anchor="middle" transform="rotate(-90, 235, 120)">65.0%</text>
+      <text x="265" y="40" class="bar-label" text-anchor="middle" transform="rotate(-90, 265, 40)">91.5%</text>
+      <text x="250" y="325" class="tick-text" text-anchor="middle" font-weight="bold">Phát hiện</text>
+      <text x="250" y="340" class="tick-text" text-anchor="middle" font-weight="bold">Lệch giá bất thường</text>
+
+      <!-- Cat 4: Tổng thể. Rule: 62.5%, Hybrid: 95.8% -->
+      <rect x="320" y="112.5" width="30" height="187.5" class="bar-rule"/>
+      <rect x="350" y="12.6" width="30" height="287.4" class="bar-hybrid"/>
+      <text x="335" y="130" class="bar-label" text-anchor="middle" transform="rotate(-90, 335, 130)">62.5%</text>
+      <text x="365" y="25" class="bar-label" text-anchor="middle" transform="rotate(-90, 365, 25)">95.8%</text>
+      <text x="350" y="325" class="tick-text" text-anchor="middle" font-weight="bold">Tổng thể</text>
+      <text x="350" y="340" class="tick-text" text-anchor="middle" font-weight="bold">(Toàn Pipeline)</text>
+    </g>
+
+    <!-- Legend -->
+    <rect x="80" y="435" width="15" height="15" class="bar-rule"/>
+    <text x="100" y="447" class="legend-text">Chỉ dùng Rule-based cơ bản</text>
+    
+    <rect x="280" y="435" width="15" height="15" class="bar-hybrid"/>
+    <text x="300" y="447" class="legend-text">Hybrid AI (Rule + AME Model)</text>
+  </g>
+
+  <!-- Right Chart: Pie Chart -->
+  <g transform="translate(560, 20)">
+    <rect width="520" height="460" class="chart-bg" filter="url(#shadow9)"/>
+    <rect width="520" height="40" class="header-rect"/>
+    <text x="260" y="26" class="header-text" text-anchor="middle">Tỷ lệ phân luồng tin đăng trong thực nghiệm 1.000 tin</text>
+    
+    <!-- Pie Chart Center at (260, 230), r=120 -->
+    <!-- 72% green, 24% orange, 4% red -->
+    <g transform="translate(260, 210)">
+      <!-- 72% slice -->
+      <path d="M 0 0 L 0 -120 A 120 120 0 1 1 -117.8 22.4 Z" class="pie-slice-1" stroke="#FFFFFF" stroke-width="2"/>
+      <!-- 24% slice -->
+      <path d="M 0 0 L -117.8 22.4 A 120 120 0 0 1 -29.8 -116.2 Z" class="pie-slice-2" stroke="#FFFFFF" stroke-width="2"/>
+      <!-- 4% slice -->
+      <path d="M 0 0 L -29.8 -116.2 A 120 120 0 0 1 0 -120 Z" class="pie-slice-3" stroke="#FFFFFF" stroke-width="2"/>
+
+      <text x="50" y="20" fill="#FFFFFF" font-size="18" font-family="Arial" font-weight="bold" text-anchor="middle">72%</text>
+      <text x="-60" y="-40" fill="#FFFFFF" font-size="16" font-family="Arial" font-weight="bold" text-anchor="middle">24%</text>
+      <text x="-15" y="-100" fill="#FFFFFF" font-size="12" font-family="Arial" font-weight="bold" text-anchor="middle">4%</text>
+    </g>
+
+    <!-- Legend -->
+    <g transform="translate(100, 365)">
+      <rect x="0" y="0" width="15" height="15" class="pie-slice-1"/>
+      <text x="25" y="12" class="legend-text">Tự động duyệt hoàn toàn (Auto-Approved: 72%)</text>
+      
+      <rect x="0" y="25" width="15" height="15" class="pie-slice-2"/>
+      <text x="25" y="37" class="legend-text">Chuyển duyệt viên rà soát (Manual Review: 24%)</text>
+      
+      <rect x="0" y="50" width="15" height="15" class="pie-slice-3"/>
+      <text x="25" y="62" class="legend-text">Từ chối vi phạm tức thì (Auto-Rejected: 4%)</text>
+    </g>
+
+  </g>
+</svg>

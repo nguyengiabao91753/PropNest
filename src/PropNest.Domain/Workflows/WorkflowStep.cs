@@ -6,11 +6,12 @@ public sealed class WorkflowStep
     {
     }
 
-    public WorkflowStep(Guid correlationId, string stepName)
+    public WorkflowStep(Guid correlationId, string stepName, int attempt = 1)
     {
         CorrelationId = correlationId;
         StepName = stepName;
         Status = "Started";
+        Attempt = attempt <= 0 ? 1 : attempt;
         StartedAt = DateTimeOffset.UtcNow;
     }
 
@@ -34,6 +35,9 @@ public sealed class WorkflowStep
         Status = "Failed";
         Error = error;
         FinishedAt = DateTimeOffset.UtcNow;
-        Attempt++;
+        if (Attempt <= 0)
+        {
+            Attempt = 1;
+        }
     }
 }

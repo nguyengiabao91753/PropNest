@@ -1,0 +1,312 @@
+11 | Heading 1 | LỜI CẢM ƠN
+17 | Heading 1 | TÓM TẮT ĐỒ ÁN
+26 | Heading 1 | DANH MỤC HÌNH ẢNH
+27 | Heading 1 | DANH MỤC BẢNG
+28 | Heading 1 | MỤC LỤC
+30 | Heading 1 | BẢNG PHÂN CHIA CÔNG VIỆC NHÓM
+34 | Heading 1 | PHẦN 1: TỔNG QUAN VỀ CÔNG NGHỆ ASP.NET CORE
+35 | Heading 2 | CHƯƠNG 1: GIỚI THIỆU CHUNG
+36 | Heading 3 | 1.1. Lịch sử hình thành
+44 | Heading 3 | 1.2. Sự thay đổi qua các phiên bản
+46 | Heading 4 | 1.2.1. Các phiên bản đầu từ 2016 đến 2018 (Giai đoạn kiến thiết nền tảng)
+51 | Heading 4 | 1.2.2. Giai đoạn mở rộng và thống nhất từ 2019 đến 2021
+56 | Heading 4 | 1.2.3. Giai đoạn trưởng thành và hiện đại hóa từ 2022 đến nay
+61 | normal | Bảng 1.1. Bảng so sánh các mốc tiến hóa kỹ thuật của .NET Core qua các thời kỳ
+63 | Heading 3 | 1.3. Hệ sinh thái ASP.NET Core
+65 | Heading 4 | 1.3.1. Các thành phần cốt lõi
+71 | Heading 4 | 1.3.2. Các package và framework chính thức
+77 | Heading 4 | 1.3.3. Công cụ hỗ trợ phát triển
+81 | Heading 3 | KẾT LUẬN CHƯƠNG 1
+82 | normal | Chương 1 đã phác họa bức tranh toàn cảnh về sự tiến hóa của nền tảng .NET: từ một framework đóng kín trên Windows trở thành nền tảng mã nguồn mở, đa nền tảng và dẫn đầu về hiệu năng hàng đầu thế giới hiện nay. Sự kết hợp giữa máy chủ Kestrel siêu tốc, cơ chế Dependency Injection nội hợp, đường ống Middleware linh hoạt và hệ sinh thái thư viện chuẩn mực tạo nên bệ phóng vững chắc để xây dựng các giải pháp backend hướng doanh nghiệp như hệ thống PropNest.
+84 | Heading 2 | CHƯƠNG 2: CƠ HỘI NGHỀ NGHIỆP VÀ THỊ TRƯỜNG
+85 | Heading 3 | 2.1. Các vị trí công việc
+91 | Heading 3 | 2.2. Nhu cầu tuyển dụng
+96 | Heading 3 | 2.3. Mức lương tham khảo
+98 | normal | Bảng 2.1. Thang đo mức lương tham khảo của lập trình viên .NET Backend tại thị trường Việt Nam
+104 | Heading 1 | PHẦN 2: NỘI DUNG CỐT LÕI VÀ THỰC HÀNH
+105 | Heading 2 | CHƯƠNG 3: CÀI ĐẶT MÔI TRƯỜNG VÀ “HELLO WORLD”
+106 | normal | Để xây dựng hệ thống Backend API quản lý và đăng tin bất động sản PropNest bằng công nghệ ASP.NET Core, trước tiên cần thiết lập môi trường phát triển toàn diện, chuẩn mực và đồng bộ giữa tất cả các thành viên trong nhóm. Chương này hướng dẫn chi tiết từ việc chuẩn bị các công cụ, phân tích kiến trúc thư mục đa tầng (Clean Architecture), cho đến bài thực hành cấu hình và khởi chạy thành công ứng dụng ban đầu.
+107 | Heading 3 | 3.1. Các công cụ cần thiết để bắt đầu
+109 | Heading 4 | 3.1.1. .NET SDK và dotnet CLI
+111 | Heading 4 | 3.1.2. C# 12 và các tính năng ngôn ngữ hiện đại
+117 | Heading 4 | 3.1.3. Visual Studio 2022 và Visual Studio Code
+121 | Heading 4 | 3.1.4. Microsoft SQL Server
+123 | Heading 4 | 3.1.5. Entity Framework Core và EF Core Tools
+125 | Heading 4 | 3.1.6. Docker và Docker Compose
+127 | Heading 4 | 3.1.7. Message Broker: RabbitMQ và MassTransit
+129 | Heading 4 | 3.1.8. Swagger UI (OpenAPI) và Postman
+131 | Heading 4 | 3.1.9. Git và GitHub
+133 | Heading 4 | 3.1.10. Bảng tóm tắt công cụ cần cài đặt
+134 | normal | Bảng 3.1. Bảng tổng hợp các công cụ, phần mềm và môi trường cần thiết để xây dựng PropNest
+137 | Heading 3 | 3.2. Cài đặt và khởi tạo dự án
+149 | Heading 3 | 3.3. Phân tích cấu trúc thư mục của dự án PropNest
+151 | Heading 4 | 3.3.1. Cây thư mục dự án tổng quan
+153 | Heading 4 | 3.3.2. Tổ chức code Backend theo từng lớp
+155 | Heading 5 | 3.3.2.1. Domain Layer (src/PropNest.Domain)
+160 | Heading 5 | 3.3.2.2. Application Layer (src/PropNest.Application)
+165 | Heading 5 | 3.3.2.3. Infrastructure Layer (src/PropNest.Infrastructure)
+170 | Heading 5 | 3.3.2.4. Api Layer (src/PropNest.Api)
+175 | Heading 5 | 3.3.2.5. Workflow Worker (src/PropNest.Workflow.Worker)
+177 | Heading 4 | 3.3.3. Tại sao chọn kiến trúc Modular Monolith kết hợp Clean Architecture?
+180 | normal | Bảng 3.2. So sánh chuyên sâu giữa kiến trúc N-Tier truyền thống, Microservices và Modular Monolith
+183 | Heading 3 | 3.4. Bài tập ứng dụng (Khởi tạo dự án và chạy Hello World)
+185 | Heading 4 | 3.4.1. File cấu hình ứng dụng (appsettings.json và appsettings.Development.json)
+188 | Heading 4 | 3.4.2. File cấu hình khởi chạy (Properties/launchSettings.json)
+192 | Heading 4 | 3.4.3. File Program.cs – Entry Point ứng dụng
+197 | Heading 4 | 3.4.4. Docker Compose – Điều phối hạ tầng SQL Server và RabbitMQ
+201 | Heading 4 | 3.4.5. Định nghĩa Entity ban đầu và DbContext (PropNestDbContext)
+206 | Heading 4 | 3.4.6. Chạy Migration đầu tiên và cập nhật CSDL
+209 | Heading 4 | 3.4.7. Endpoint kiểm tra sức khỏe và API đầu tiên
+213 | Heading 4 | 3.4.8. Kết quả chạy ứng dụng Hello World qua Swagger UI
+216 | normal | Chương 3 đã hoàn thành toàn diện quy trình thiết lập môi trường phát triển cho hệ thống PropNest Backend. Từ việc chuẩn bị các công cụ (.NET 8 SDK, SQL Server, RabbitMQ, Docker), cấu hình quản lý gói tập trung (CPM), phân tích cấu trúc Clean Architecture cho đến việc chạy thành công Migration ban đầu và khởi chạy API mẫu đầu tiên. Đây là bệ phóng vững chắc để triển khai các nghiệp vụ chuyên sâu trong các chương tiếp theo.
+218 | Heading 2 | CHƯƠNG 4: CÁC KHÁI NIỆM NỀN TẢNG CỦA BACKEND VỚI ASP.NET CORE
+219 | Heading 3 | 4.1. Cú pháp và đặc trưng C# từ cơ bản đến nâng cao
+220 | Heading 4 | 4.1.1. Hệ thống Type System, Nullable Reference Types và Encapsulation
+237 | Heading 4 | 4.1.2. Tính bất biến với Record Types và cú pháp C# 12 (Primary Constructors, Collection Expressions)
+249 | Heading 4 | 4.1.3. Pattern Matching và Switch Expressions
+257 | Heading 4 | 4.1.4. Lập trình bất đồng bộ (Asynchronous Programming) với async/await, Task, ValueTask và CancellationToken
+266 | Heading 4 | 4.1.5. Compile-time Code Generation với Source Generated LoggerMessage
+279 | Heading 3 | 4.2. Kiến trúc Kestrel Web Server và Generic Host
+280 | Heading 4 | 4.2.1. Kestrel Web Server và cơ chế xử lý I/O bất đồng bộ
+285 | Heading 4 | 4.2.2. Generic Host (WebApplicationBuilder / WebApplication) và hệ thống Configuration
+304 | Heading 4 | 4.2.3. Luồng xử lý một HTTP Request hoàn chỉnh (End-to-End Request Lifecycle Flow)
+330 | Heading 3 | 4.3. Dependency Injection (DI) và Quản lý Service Lifetimes
+331 | Heading 4 | 4.3.1. Nguyên lý Inversion of Control (IoC) và Dependency Inversion (SOLID)
+337 | Heading 4 | 4.3.2. Ba vòng đời dịch vụ: Transient, Scoped, Singleton và rủi ro Captive Dependency
+339 | normal | Bảng 4.1: So sánh 3 chế độ vòng đời Service Lifetime trong ASP.NET Core
+341 | normal | Bảng danh mục Service Lifetimes của các dịch vụ trong hệ thống PropNest
+355 | Heading 4 | 4.3.3. Tổ chức đăng ký dịch vụ theo module qua ServiceCollectionExtensions
+358 | Heading 3 | 4.4. Xử lý HTTP Request qua Middleware Pipeline
+359 | Heading 4 | 4.4.1. Bản chất hàm ủy thác RequestDelegate và cơ chế luân chuyển Russian Doll
+367 | Heading 4 | 4.4.2. Thứ tự thực thi chuẩn của Middleware trong ASP.NET Core
+369 | normal | Bảng 4.2: Thứ tự thực thi chuẩn xác của chuỗi Middleware trong PropNest
+376 | Heading 4 | 4.4.3. Xây dựng Custom Middleware trong PropNest
+378 | normal | 1. CorrelationIdMiddleware phục vụ Distributed Tracing (truy vết luồng phân tán):
+381 | normal | 2. ExceptionHandlingMiddleware chuẩn hóa phản hồi lỗi toàn cục theo chuẩn RFC 7807:
+384 | Heading 4 | 4.4.4. Phân biệt chuyên sâu giữa Middleware và Filter trong ASP.NET Core
+391 | Heading 3 | 4.5. Routing, Controller và Chuẩn hóa phản hồi Web API
+393 | Heading 4 | 4.5.1. Attribute Routing, Route Constraints và Model Binding
+400 | Heading 4 | 4.5.2. So sánh Controller-based API và Minimal API
+408 | Heading 4 | 4.5.3. So sánh Task<IActionResult> và Task<ActionResult<T>> trong Controller
+410 | normal | Bảng 4.3: So sánh chi tiết giữa Task<IActionResult> và Task<ActionResult<T>>
+411 | Heading 4 | 4.5.4. Chuẩn hóa lỗi API theo đặc tả RFC 7807 ProblemDetails
+417 | normal | Bảng 4.4: Bảng ánh xạ mã HTTP Status và Exception theo chuẩn RFC 7807
+423 | Heading 3 | 4.6. Quản lý dự án chuyên nghiệp với .NET Tooling
+424 | Heading 4 | 4.6.1. Quản lý dependencies tập trung với Central Package Management (CPM)
+429 | Heading 4 | 4.6.2. Kiểm soát chất lượng code với Roslyn Analyzers và TreatWarningsAsErrors
+437 | Heading 3 | 4.7. So sánh và Phản biện Công nghệ (Comparative Analysis & Counter-Arguments)
+438 | Heading 4 | 4.7.1. So sánh đối sánh ASP.NET Core 8 với các công nghệ Backend tương đương
+439 | normal | Bảng đối sánh đa chiều giữa ASP.NET Core 8 với Spring Boot, NestJS, FastAPI và Go:
+441 | Heading 4 | 4.7.2. Những trường hợp cụ thể KHÔNG NÊN DÙNG ASP.NET Core (Trải nghiệm thực tế của nhóm)
+460 | Heading 3 | KẾT LUẬN CHƯƠNG 4
+461 | normal | Chương 4 đã phân tích toàn diện và sâu sắc các nền tảng kỹ thuật cốt lõi của hệ sinh thái .NET 8 và ngôn ngữ C# 12, đi từ các nguyên lý lập trình cơ bản đến các cơ chế kiến trúc nâng cao:
+462 | normal | 1. Ngôn ngữ C# 12 hiện đại: Làm chủ hệ thống định kiểu tĩnh mạnh (Type System), Nullable Reference Types, tính đóng gói (Encapsulation), tính bất biến với Record Types, Primary Constructors, Pattern Matching và Source Generated Logging hiệu năng cao.
+463 | normal | 2. Kiến trúc thực thi ASP.NET Core: Nắm vững nguyên lý hoạt động của máy chủ Kestrel Web Server, cơ chế xử lý I/O bất đồng bộ và mô hình điều phối Generic Host.
+464 | normal | 3. Dependency Injection và Quản lý vòng đời dịch vụ: Thấu hiểu nguyên lý Inversion of Control, kiểm soát chặt chẽ ranh giới giữa Transient, Scoped, Singleton và loại trừ hoàn toàn rủi ro Captive Dependency.
+465 | normal | 4. Đường ống xử lý yêu cầu Middleware Pipeline: Vận dụng hàm ủy thác RequestDelegate để xây dựng các Custom Middleware thực hiện truy vết luồng phân tán (Correlation ID) và bắt lỗi toàn cục chuẩn RFC 7807 ProblemDetails.
+466 | normal | 5. Thiết kế RESTful Web API và Bộ công cụ .NET Tooling: Triển khai Controller-based API an toàn kiểu dữ liệu, tận dụng Central Package Management (CPM) và Roslyn Analyzers để duy trì chất lượng mã nguồn cấp doanh nghiệp.
+469 | Heading 2 | CHƯƠNG 5: THIẾT KẾ VÀ QUẢN LÝ CƠ SỞ DỮ LIỆU VỚI ENTITY FRAMEWORK CORE
+470 | Heading 3 | 5.1. Vai trò của cơ sở dữ liệu trong hệ thống Backend
+471 | Heading 4 | 5.1.1. Lưu trữ dữ liệu bền vững (Database Persistence)
+474 | Heading 4 | 5.1.2. Tính toàn vẹn dữ liệu (Data Integrity) và nguyên lý ACID
+483 | Heading 3 | 5.2. Mô hình cơ sở dữ liệu quan hệ (Relational Database)
+484 | Heading 4 | 5.2.1. Microsoft SQL Server và ưu thế cho hệ thống doanh nghiệp
+492 | Heading 4 | 5.2.2. So sánh Relational Database và NoSQL Database trong bài toán Bất động sản
+494 | normal | Bảng 5.1. Bảng so sánh chuyên sâu giữa RDBMS (SQL Server) và NoSQL (Document/Key-Value)
+496 | Heading 3 | 5.3. ORM (Object-Relational Mapping)
+497 | Heading 4 | 5.3.1. Khái niệm ORM và lợi ích trong phát triển phần mềm hiện đại
+508 | Heading 4 | 5.3.2. So sánh Entity Framework Core với Dapper và ADO.NET thuần
+511 | normal | Bảng 5.2. Bảng so sánh giữa ADO.NET, Dapper và Entity Framework Core 8
+517 | Heading 3 | 5.4. Cơ chế hoạt động của Entity Framework Core
+518 | Heading 4 | 5.4.1. Mapping Entity sang Table bằng Fluent API
+532 | Heading 4 | 5.4.2. Change Tracker và vòng đời của thực thể (Entity States)
+542 | Heading 4 | 5.4.3. Repository Pattern và Unit of Work trong EF Core
+549 | Heading 3 | 5.5. Ứng dụng EF Core trong dự án PropNest
+550 | Heading 4 | 5.5.1. Tích hợp ASP.NET Core Identity vào DbContext (IdentityDbContext)
+559 | Heading 4 | 5.5.2. Cấu hình kiểu dữ liệu tiền tệ DECIMAL(18,2) và RowVersion
+574 | Heading 3 | 5.6. Thiết kế Entity và Schema chi tiết cho PropNest
+575 | Heading 4 | 5.6.1. Nhóm bảng Identity & Wallet (Users, Roles, Wallets, WalletTransactions)
+581 | Heading 4 | 5.6.2. Nhóm bảng Listing & Moderation (Listings, Images, Histories, Reviews)
+582 | normal | Listings: Bảng trung tâm lưu trữ thông tin bất động sản: tiêu đề, mô tả, loại nhà đất, hình thức (bán/cho thuê), giá tiền, diện tích, địa chỉ đầy đủ và trạng thái tin (Draft, PendingModeration, Published, Hidden, Expired, Rejected).
+587 | Heading 4 | 5.6.3. Nhóm bảng Workflow & Outbox (IdempotencyRequests, SagaStates, OutboxMessages)
+591 | Heading 3 | 5.7. Migration Database và Quản lý phiên bản Schema
+592 | Heading 4 | 5.7.1. Nguyên lý Versioning Database Schema bằng mã nguồn
+596 | normal | Down(MigrationBuilder migrationBuilder): Chứa các lệnh đảo ngược (Drop table, Drop column) để hạ cấp (Rollback) cơ sở dữ liệu về trạng thái liền trước nếu phát sinh sự cố. Khi Migration được áp dụng vào máy chủ SQL Server, EF Core tự động khởi tạo và duy trì bảng hệ thống đặc biệt __EFMigrationsHistory. Bảng này ghi nhận danh sách các mã migration đã được áp dụng (MigrationId) cùng thời điểm thực thi. Mỗi khi ứng dụng khởi động, EF Core đối chiếu các tệp migration trong mã nguồn với danh sách trong bảng lịch sử này để chỉ thực thi các migration còn thiếu mà không gây lỗi trùng lặp
+597 | Heading 4 | 5.7.2. Quy trình Migration Workflow trong nhóm phát triển
+603 | Heading 3 | KẾT LUẬN CHƯƠNG 5
+604 | normal | Chương 5 đã làm rõ các nguyên lý cốt lõi trong việc thiết kế và quản trị cơ sở dữ liệu với Entity Framework Core 8:
+615 | Heading 2 | CHƯƠNG 6: XÂY DỰNG RESTFUL API NÂNG CAO VÀ VALIDATION
+616 | Heading 3 | 6.1. DTO và Validation với FluentValidation
+617 | Heading 4 | 6.1.1. Tại sao cần tách biệt DTO với Entity trong Domain-Driven Design?
+636 | Heading 4 | 6.1.2. Thư viện FluentValidation và ưu thế so với DataAnnotations
+654 | normal | Bảng 6.1. So sánh chuyên sâu giữa DataAnnotations và FluentValidation
+655 | Heading 4 | 6.1.3. Cấu hình FluentValidation tự động kiểm tra trước khi vào Controller
+667 | Heading 4 | 6.1.4. Xây dựng CreateListingRequestValidator và UpdateListingRequestValidator
+672 | Heading 4 | 6.1.5. Custom Validator cho quy tắc định giá và diện tích bất động sản
+677 | Heading 3 | 6.2. Action Filters và Endpoint Filters
+678 | Heading 4 | 6.2.1. Thứ tự thực thi và phạm vi của Action Filter trong ASP.NET Core
+691 | Heading 4 | 6.2.2. Kiểm tra Idempotency-Key thông qua Action Filter
+707 | Heading 3 | 6.3. Xử lý ngoại lệ toàn cục (Global Exception Handling)
+708 | Heading 4 | 6.3.1. Phân loại ngoại lệ nghiệp vụ: DomainException, NotFoundException, ConcurrencyException
+719 | normal | Bảng 6.3: Bảng ánh xạ ngoại lệ nghiệp vụ sang mã trạng thái HTTP chuẩn RFC 7807
+720 | Heading 4 | 6.3.2. Triển khai ExceptionHandlingMiddleware theo chuẩn RFC 7807 ProblemDetails
+732 | Heading 3 | 6.4. Interceptors và Correlation Logging
+733 | Heading 4 | 6.4.1. CorrelationIdMiddleware theo vết luồng dữ liệu xuyên suốt các tầng
+746 | Heading 4 | 6.4.2. Ghi log request/response có cấu trúc bằng Serilog
+756 | Heading 3 | 6.5. Tài liệu hóa API với OpenAPI / Swagger
+757 | Heading 4 | 6.5.1. Cấu hình bảo mật Swagger với Bearer JWT Scheme
+762 | Heading 4 | 6.5.2. Mô tả header Idempotency-Key và các mã phản hồi HTTP chuẩn
+767 | Heading 3 | KẾT LUẬN CHƯƠNG 6
+768 | normal | Chương 6 đã khảo cứu toàn diện và làm chủ các kỹ thuật nâng cao trong xây dựng RESTful Web API cấp doanh nghiệp trên nền tảng ASP.NET Core 8:
+777 | Heading 2 | CHƯƠNG 7: BẢO MẬT, XÁC THỰC VÀ PHÂN QUYỀN HỆ THỐNG TRONG ASP.NET CORE
+778 | Heading 3 | 7.1. Tổng quan bảo mật hệ thống thông tin
+779 | Heading 4 | 7.1.1. Authentication (Xác thực danh tính)
+790 | Heading 4 | 7.1.2. Authorization (Phân quyền truy cập tài nguyên)
+799 | Heading 3 | 7.2. Các phương pháp xác thực hiện đại
+800 | Heading 4 | 7.2.1. So sánh Session-based Authentication và Token-based Authentication
+805 | Heading 4 | 7.2.2. Cấu trúc và nguyên lý hoạt động của JSON Web Token (Header, Payload, Signature)
+811 | normal | 1. Header (Phần đầu)
+815 | normal | 2. Payload (Phần nội dung chứa Claims)
+829 | normal | 3. Signature (Chữ ký điện tử)
+833 | normal | 7.3. ASP.NET Core Identity và Cơ chế băm mật khẩu
+834 | normal | 7.3.1. Thuật toán băm mật khẩu chuẩn doanh nghiệp PBKDF2 với Salt
+836 | Heading 4 | Thuật toán băm PBKDF2 (Password-Based Key Derivation Function 2)
+838 | normal | Vai trò của Salt: Khi một người dùng tạo mật khẩu, hệ thống tự động sinh một chuỗi byte ngẫu nhiên chất lượng cao (Cryptographically Secure Pseudorandom Number Generator - CSPRNG) có độ dài 128-bit (16 bytes). Salt được nối thêm vào chuỗi mật khẩu trước khi băm. Kỹ thuật này giúp loại bỏ hoàn toàn nguy cơ bị tấn công bởi Rainbow Table Attacks (Bảng tra cứu các chuỗi băm tính toán sẵn), đảm bảo rằng hai người dùng đặt mật khẩu hoàn toàn giống nhau ("Abc@123") vẫn sẽ thu được hai chuỗi băm hoàn toàn khác biệt trong cơ sở dữ liệu.
+842 | normal | 7.3.2. Cơ chế khóa tài khoản (Lockout) chống tấn công dò mật khẩu Brute-force
+854 | normal | 7.4. Phân quyền dựa trên vai trò (Role-Based Access Control - RBAC)
+855 | normal | 7.4.1. Hệ thống phân cấp vai trò trong PropNest: Seller, Moderator, Admin
+873 | normal | 7.4.2. Cấu hình và sử dụng [Authorize(Roles = "...")] trên Controller và Endpoint
+877 | normal | 7.5. Policy-based và Resource-based Authorization
+878 | normal | 7.5.1. Định nghĩa Policy CanModerateListings cho ban kiểm duyệt
+880 | Heading 4 | Trong dự án PropNest, Policy CanModerateListings được đăng ký trong Program.cs và chỉ cho phép người dùng có role Moderator hoặc Admin thực hiện các chức năng kiểm duyệt:
+883 | normal | 7.5.2. Resource-based Authorization bảo vệ quyền sở hữu tin đăng (chỉ chủ tin mới được sửa)
+893 | normal | 7.6. Thực hành: Xây dựng Module Authentication và Phân quyền API
+894 | normal | 7.6.1. Hiện thực API Đăng ký tài khoản (POST /api/v1/auth/register)
+895 | normal | 1. Cấu hình Identity, JWT và Policy trong Program.cs
+897 | normal | 2. API đăng ký tài khoản
+903 | normal | 7.6.2. Hiện thực API Đăng nhập và cấp phát JWT Token (POST /api/v1/auth/login)
+904 | normal | 1. API đăng nhập và cấp JWT
+906 | normal | 2. Sinh JWT chứa role
+916 | normal | 7.6.3. Kiểm thử phân quyền truy cập giữa Seller và Moderator qua Swagger
+917 | normal | 1. Bảo vệ API theo role
+918 | normal | 2. Bảo vệ API kiểm duyệt bằng Policy
+919 | normal | 3. Kiểm tra quyền sở hữu listing
+941 | normal | Chương 7 đã trình bày một cách toàn diện và hệ thống các giải pháp an ninh thông tin, xác thực danh tính và kiểm soát truy cập trên nền tảng ASP.NET Core 8, được nghiên cứu và áp dụng trực tiếp vào kiến trúc hệ thống của dự án PropNest. Việc thiết kế và triển khai mô hình bảo mật đa tầng (Defense-in-Depth) đảm bảo cho hệ thống đạt được tính toàn vẹn dữ liệu, tính khả dụng và khả năng bảo mật cấp doanh nghiệp.
+944 | normal | Băm mật khẩu an toàn: Triển khai thuật toán PBKDF2 kết hợp HMAC-SHA256, sinh chuỗi Salt 128-bit ngẫu nhiên độc lập cho từng tài khoản và thực hiện 100.000 vòng băm (iterations). Cơ chế này triệt tiêu hoàn toàn nguy cơ tấn công qua Bảng tra cứu tính sẵn (Rainbow Table Attacks) và làm suy giảm tối đa khả năng tấn công vét cạn (Brute-force).
+954 | Heading 2 | CHƯƠNG 8: XỬ LÝ GIAO DỊCH PHÂN TÁN VÀ ĐIỀU PHỐI WORKFLOW TRONG ASP .NET CORE
+956 | normal | Chương này tập trung đi sâu vào các lý thuyết nền tảng và giải pháp kỹ thuật cốt lõi giải quyết bài toán giao dịch phân tán: từ những giới hạn của giao dịch Two-Phase Commit (2PC), định lý CAP và nguyên lý Eventual Consistency, cho đến việc thiết kế mô hình Saga Orchestration với State Machine trên thư viện MassTransit. Bên cạnh đó, chương phân tích toàn diện các mẫu kiến trúc bảo vệ độ tin cậy thông điệp bao gồm Transactional Outbox Pattern, Inbox Deduplication, cơ chế Idempotency Request và giao dịch hoàn tiền(Compensating Transactions) nhằm đảm bảo tính toàn vẹn dữ liệu tuyệt đối trong môi trường mạng bất định.
+958 | Heading 3 | 8.1. Thách thức giao dịch trong hệ thống Backend phân tán
+959 | Heading 4 | 8.1.1. Giới hạn của giao dịch Two-Phase Commit (2PC) trong môi trường microservices
+971 | Heading 4 | 8.1.2. Định lý CAP và nguyên lý tính nhất quán cuối cùng (Eventual Consistency)
+987 | Heading 3 | 8.2. Mô hình Saga Pattern
+993 | Heading 4 | 8.2.1. Choreography-based Saga: Đặc điểm, ưu thế và hạn chế
+1001 | Heading 4 | 8.2.2. Orchestration-based Saga: Lý do lựa chọn cho bài toán thanh toán mua gói PropNest
+1006 | normal | Bảng so sánh chi tiết giữa hai phương pháp tiếp cận Saga:
+1009 | Heading 3 | 8.3. Triển khai Saga State Machine với MassTransit trong ASP .NET Core
+1011 | Heading 4 | 8.3.1. Các trạng thái trong PurchasePackageSaga
+1024 | Heading 4 | 8.3.2. Lưu trữ bền vững trạng thái Saga trong SQL Server (SagaListingStates)
+1032 | Heading 3 | 8.4. Đảm bảo độ tin cậy thông điệp với Outbox và Inbox
+1033 | Heading 4 | 8.4.1. Transactional Outbox Pattern ngăn ngừa mất sự kiện sau khi commit CSDL
+1035 | normal | 8.4.2. Inbox Deduplication ngăn chặn xử lý trùng lặp tại Consumer
+1037 | normal | 8.5. Cơ chế Idempotency Request và Hoàn tiền tự động (Compensating Actions)
+1038 | normal | 8.5.1. Bảng IdempotencyRequests và cơ chế nhận diện request lặp qua RequestHash
+1040 | normal | 8.5.2. Hành động hoàn tiền vào ví (Refund Ledger) khi xảy ra lỗi nâng cấp tin
+1042 | normal | 8.6. Thực hành: Quy trình mua gói VIP và kịch bản hoàn tiền
+1043 | normal | 8.6.1. Luồng mua gói thành công (Happy Path)
+1045 | normal | 8.6.2. Giả lập sự cố nâng cấp tin và kiểm chứng luồng tự động hoàn tiền (Compensation Flow)
+1051 | normal | 9.1. Các vấn đề hiệu năng và điểm nghẽn trong hệ thống Backend
+1052 | normal | 9.1.1. Bottleneck tại tầng ứng dụng (CPU, Memory Allocation)
+1054 | normal | 9.1.2. Bottleneck tại cơ sở dữ liệu (Index thiếu, câu truy vấn N+1)
+1056 | normal | 9.2. Kiểm soát xung đột ghi đè đồng thời (Optimistic Concurrency Control)
+1057 | normal | 9.2.1. Cấu hình RowVersion trên bảng Listings và Wallets
+1059 | normal | 9.2.2. Xử lý DbUpdateConcurrencyException và chiến lược phản hồi Client an toàn
+1061 | normal | 9.3. Xử lý tác vụ nền và lập lịch định kỳ với Quartz.NET
+1062 | normal | 9.3.1. Giới hạn của BackgroundService cơ bản và ưu thế của Quartz.NET
+1064 | normal | 9.3.2. Cấu hình ListingExpirationJob quét tin hết hạn mỗi 5 phút theo mẻ nhỏ (batch)
+1066 | normal | 9.4. Giám sát hệ thống: Structured Logging và Health Checks
+1067 | normal | 9.4.1. Serilog ghi log JSON có cấu trúc kèm CorrelationId và WorkflowId
+1069 | normal | 9.4.2. Triển khai Health Checks cho SQL Server và RabbitMQ qua endpoint /health
+1075 | normal | 10.1. Tổng quan chiến lược kiểm thử phần mềm
+1076 | normal | 10.1.1. Kim tự tháp kiểm thử (Test Pyramid): Unit Test, Integration Test, E2E Test
+1078 | normal | 10.1.2. Tầm quan trọng của kiểm thử tự động trong dự án Backend phức tạp
+1080 | normal | 10.2. Unit Testing với xUnit và FluentAssertions
+1081 | normal | 10.2.1. Kiểm thử thuật toán Delta Engine và tái tạo Snapshot
+1083 | normal | 10.2.2. Kiểm thử quy tắc chuyển đổi trạng thái tin đăng (Listing State Invariants)
+1085 | normal | 10.2.3. Kiểm thử quy tắc tài chính ví (Trừ Promo trước Main, kiểm tra số dư)
+1087 | normal | 10.3. Integration Testing với WebApplicationFactory
+1088 | normal | 10.3.1. Thiết lập máy chủ kiểm thử In-Memory với WebApplicationFactory
+1090 | normal | 10.3.2. Kiểm thử tích hợp luồng phân quyền và hoàn tiền Saga
+1092 | normal | 10.4. Đóng gói ứng dụng với Docker
+1093 | normal | 10.4.1. Tối ưu Dockerfile đa tầng (Multi-stage build) cho ASP.NET Core
+1095 | normal | 10.4.2. Khởi chạy toàn bộ hệ thống bằng một lệnh với Docker Compose
+1097 | normal | 10.5. CI/CD Pipeline cơ bản với GitHub Actions
+1098 | normal | 10.5.1. Thiết lập quy trình tự động Build và Test khi tạo Pull Request
+1103 | Heading 1 | PHẦN 3: XÂY DỰNG ĐỒ ÁN TỔNG HỢP
+(HỆ THỐNG BẤT ĐỘNG SẢN PROPNEST)
+1104 | Heading 2 | CHƯƠNG 11: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG PROPNEST
+1105 | Heading 3 | 11.1. Mô tả bài toán và yêu cầu nghiệp vụ
+1106 | Heading 4 | 11.1.1. Bối cảnh thị trường bất động sản trực tuyến
+1114 | Heading 4 | 11.1.2. Các yêu cầu chức năng cốt lõi (Functional Requirements)
+1126 | Heading 4 | 11.1.3. Các yêu cầu phi chức năng (Non-Functional Requirements)
+1134 | Heading 3 | 11.2. Thiết kế Cơ sở dữ liệu chi tiết
+1135 | Heading 4 | 11.2.1. Sơ đồ quan hệ thực thể (ERD) hoàn chỉnh
+1139 | Heading 4 | 11.2.2. Đặc tả chi tiết các bảng dữ liệu, chỉ mục (Index) và ràng buộc khóa ngoại
+1140 | normal | - Bảng Users
+1141 | normal | Bảng Users lưu thông tin tài khoản và được quản lý bởi ASP.NET Core Identity. Khóa chính UserId sử dụng kiểu BIGINT IDENTITY. Mật khẩu được lưu tại PasswordHash, không lưu plaintext.Các trường chính gồm:
+1143 | normal | - Bảng Listings
+1150 | normal | - Bảng Wallets
+1154 | normal | - Bảng WalletTransactions
+1158 | normal | - Bảng ListingHistories
+1159 | normal | Bảng lưu lịch sử listing dưới dạng snapshot, delta hoặc event.
+1164 | normal | - Bảng ListingModerationReviews
+1165 | normal | Bảng này lưu bằng chứng kiểm duyệt:
+1168 | normal | - Bảng PackageDefinitions
+1169 | normal | Bảng lưu thông tin các package:
+1172 | normal | - Bảng SagaListingStates
+1173 | normal | Bảng này lưu trạng thái lâu dài của workflow mua package. CorrelationId là khóa chính và được dùng để truy vết toàn bộ workflow.
+1177 | normal | - Bảng WorkflowSteps
+1178 | normal | Lưu từng bước xử lý của Saga, số lần retry, thời gian bắt đầu, kết thúc và lỗi nếu có. Bảng này giúp giao diện hoặc người vận hành theo dõi workflow chi tiết.
+1179 | normal | - Bảng IdempotencyRequests
+1180 | normal | Bảng này ngăn request mua package bị xử lý nhiều lần. Unique index trên (UserId, Key) bảo đảm cùng một user không thể dùng trùng Idempotency-Key.
+1181 | normal | - Bảng OutboxMessages
+1184 | Heading 3 | 11.3. Thiết kế danh mục API RESTful
+1185 | normal | 11.3.1. Nhóm API Xác thực và Hồ sơ (/api/v1/auth)
+1187 | normal | 11.3.2. Nhóm API Tin đăng (/api/v1/listings)
+1189 | normal | 11.3.3. Nhóm API Kiểm duyệt (/api/v1/moderation)
+1191 | normal | 11.3.4. Nhóm API Ví và Mua gói (/api/v1/wallets, /purchase-package)
+1193 | normal | 11.3.5. Nhóm API Tiến độ Workflow (/api/v1/workflows)
+1195 | normal | 11.4. Các cơ chế kỹ thuật đặc sắc của PropNest
+1196 | normal | 11.4.1. Động cơ theo dõi biến động dữ liệu (History Delta Engine)
+1198 | normal | 11.4.2. Kiểm soát đồng thời với RowVersion (Optimistic Concurrency)
+1200 | normal | 11.4.3. Saga Orchestrator và hoàn tiền tự động
+1204 | normal | 12.1. Tích hợp logic nghiệp vụ hoàn chỉnh
+1206 | normal | 12.2. Kết quả đạt được và kiểm thử API
+1207 | normal | 12.2.1. Danh mục API thông qua giao diện Swagger UI
+1209 | normal | 12.2.2. Ảnh chụp kết quả kiểm thử API trên Postman
+1211 | normal | 12.2.3. Bằng chứng kiểm thử kịch bản tự động hoàn tiền giao dịch khi lỗi
+1213 | normal | 12.3. Hướng dẫn cài đặt và vận hành hệ thống
+1214 | normal | 12.3.1. Hướng dẫn cấu hình môi trường cục bộ
+1216 | normal | 12.3.2. Lệnh khởi chạy Docker Compose và cập nhật Database Migration
+1221 | normal | 13.1. So sánh với mục tiêu ban đầu
+1222 | normal | 13.1.1. Tiến độ thực hiện — Bảng tổng hợp các tính năng F01 đến F08
+1224 | normal | 13.1.2. Tổng kết tỷ lệ hoàn thành đồ án
+1226 | normal | 13.1.3. Tự đánh giá điểm mạnh và điểm yếu của giải pháp PropNest
+1228 | normal | 13.2. Phân tích lỗi kỹ thuật quan trọng và giải pháp (Bug Reports)
+1229 | normal | 13.2.1. Bug #1 — Xung đột ghi đè đồng thời khi hai Seller cùng sửa tin
+1231 | normal | 13.2.2. Bug #2 — Trừ tiền ví lặp do mạng chập chờn (xử lý bằng Idempotency)
+1233 | normal | 13.2.3. Bug #3 — Mất thông điệp khi RabbitMQ khởi động lại (xử lý bằng Outbox)
+1235 | normal | 13.3. Bài học kinh nghiệm tổng quát
+1236 | normal | 13.3.1. Về thiết kế kiến trúc và mô hình dữ liệu
+1238 | normal | 13.3.2. Về kiểm thử và gỡ lỗi trong hệ thống phân tán
+1240 | normal | 13.3.3. Về quản lý dự án và làm việc nhóm theo mô hình Agile
+1244 | normal | 14.1. Hướng phát triển cho hệ thống PropNest
+1245 | normal | 14.1.1. Tích hợp động cơ kiểm duyệt tự động AME (FastAPI + Ollama)
+1247 | normal | 14.1.2. Mở rộng kiểm duyệt hình ảnh, phát hiện watermark và nội dung nhạy cảm
+1249 | normal | 14.1.3. Tối ưu tìm kiếm nâng cao với Elasticsearch và Caching Redis
+1251 | normal | 14.2. Định hướng phát triển của bản thân
+1252 | normal | 14.2.1. Tự đánh giá năng lực công nghệ backend sau đồ án
+1254 | normal | 14.2.2. Lộ trình học tập chuyên sâu: Cloud Native, Kubernetes, Microservices
+1256 | normal | 14.2.3. Kế hoạch xây dựng Portfolio và chuẩn bị ứng tuyển vị trí .NET Developer
+1262 | normal | 1. Nhật ký công việc và phân chia đóng góp
+1263 | normal | Bảng theo dõi nhật ký công việc (Commit log, Sprint tasks) của từng thành viên
+1264 | normal | 2. Minh chứng đóng góp và hình ảnh kết quả

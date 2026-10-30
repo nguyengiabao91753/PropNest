@@ -428,9 +428,9 @@ namespace PropNest.Infrastructure.Migrations
                             DurationDays = 30,
                             IsActive = true,
                             Kind = "Standard",
-                            Name = "Gói Tiêu Chuẩn",
+                            Name = "Gói Tiêu Chuẩn (Miễn phí)",
                             PackageCode = "Standard",
-                            Price = 50000m
+                            Price = 0m
                         },
                         new
                         {
