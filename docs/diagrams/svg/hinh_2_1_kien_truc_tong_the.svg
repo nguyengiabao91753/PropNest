@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 780" width="1050" height="780">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9" fill="none" stroke="#5A6B7F" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <rect width="1050" height="780" fill="white"/>
+  <rect x="0" y="0" width="1050" height="44" fill="#232F3E"/>
+  <text x="525" y="29" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="bold" fill="white" text-anchor="middle">KIẾN TRÚC TỔNG THỂ HỆ THỐNG PROPNEST</text>
+
+  <g transform="translate(525,90)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#8C4FFF" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#8C4FFF" stroke-width="1.5" opacity="0.7"/>
+      
+      <circle cx="-7" cy="-7" r="6" fill="none" stroke="#8C4FFF" stroke-width="2"/>
+      <path d="M-15,11 Q-7,3 1,11" fill="none" stroke="#8C4FFF" stroke-width="2"/>
+      <circle cx="7" cy="-5" r="5" fill="none" stroke="#8C4FFF" stroke-width="1.6"/>
+      <path d="M0,11 Q7,5 14,11" fill="none" stroke="#8C4FFF" stroke-width="1.6"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">Users / Clients</text>
+  </g>
+  <rect x="40" y="160" width="970" height="240" rx="12" fill="none" stroke="#2563EB" stroke-width="1.4" stroke-dasharray="8,5" opacity="0.7"/>
+  <rect x="50" y="152" width="313.2" height="17" rx="4" fill="white"/>
+  <text x="58" y="165" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#2563EB" letter-spacing="0.5">Backend — ASP.NET Core 8 Modular Monolith</text>
+  <g transform="translate(170,240)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#2563EB" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#2563EB" stroke-width="1.5" opacity="0.7"/>
+      
+      <rect x="-13" y="-16" width="26" height="9" rx="2" fill="#2563EB" opacity="0.2" stroke="#2563EB" stroke-width="1.4"/>
+      <circle cx="8" cy="-11.5" r="1.8" fill="#2563EB"/>
+      <rect x="-13" y="-4" width="26" height="9" rx="2" fill="#2563EB" opacity="0.2" stroke="#2563EB" stroke-width="1.4"/>
+      <circle cx="8" cy="0.5" r="1.8" fill="#2563EB"/>
+      <rect x="-13" y="8" width="26" height="9" rx="2" fill="#2563EB" opacity="0.2" stroke="#2563EB" stroke-width="1.4"/>
+      <circle cx="8" cy="12.5" r="1.8" fill="#2563EB"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">API Server</text>
+    <text x="0" y="52" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#7B8794" text-anchor="middle">Clean Architecture</text>
+  </g>
+  <g transform="translate(370,210)">
+    <rect x="-42" y="-15" width="84" height="30" rx="7" fill="white" stroke="#2563EB" stroke-width="1.3"/>
+    <rect x="-42" y="-15" width="5" height="30" rx="3" fill="#2563EB"/>
+    <text x="2" y="4" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#232F3E" text-anchor="middle">Identity</text>
+  </g>
+  <g transform="translate(480,210)">
+    <rect x="-42" y="-15" width="84" height="30" rx="7" fill="white" stroke="#3F8624" stroke-width="1.3"/>
+    <rect x="-42" y="-15" width="5" height="30" rx="3" fill="#3F8624"/>
+    <text x="2" y="4" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#232F3E" text-anchor="middle">Listing</text>
+  </g>
+  <g transform="translate(590,210)">
+    <rect x="-42" y="-15" width="84" height="30" rx="7" fill="white" stroke="#0D9488" stroke-width="1.3"/>
+    <rect x="-42" y="-15" width="5" height="30" rx="3" fill="#0D9488"/>
+    <text x="2" y="4" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#232F3E" text-anchor="middle">Wallet</text>
+  </g>
+  <g transform="translate(700,210)">
+    <rect x="-42" y="-15" width="84" height="30" rx="7" fill="white" stroke="#FF9900" stroke-width="1.3"/>
+    <rect x="-42" y="-15" width="5" height="30" rx="3" fill="#FF9900"/>
+    <text x="2" y="4" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#232F3E" text-anchor="middle">Workflow</text>
+  </g>
+  <g transform="translate(810,210)">
+    <rect x="-42" y="-15" width="84" height="30" rx="7" fill="white" stroke="#8C4FFF" stroke-width="1.3"/>
+    <rect x="-42" y="-15" width="5" height="30" rx="3" fill="#8C4FFF"/>
+    <text x="2" y="4" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#232F3E" text-anchor="middle">Moderation</text>
+  </g>
+  <text x="525" y="262" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#8C8C8C" text-anchor="middle" font-style="italic">JWT Auth · ExceptionHandling · CorrelationId · Idempotency</text>
+  <g transform="translate(890,320)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#FF9900" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#FF9900" stroke-width="1.5" opacity="0.7"/>
+      
+      <circle cx="0" cy="-1" r="14" fill="none" stroke="#FF9900" stroke-width="2"/>
+      <path d="M-7,-10 Q0,-3 7,-10" fill="none" stroke="#FF9900" stroke-width="1.6"/>
+      <path d="M-9,2 Q0,9 9,2" fill="none" stroke="#FF9900" stroke-width="1.6"/>
+      <line x1="0" y1="-15" x2="0" y2="13" stroke="#FF9900" stroke-width="1" opacity="0.4"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">AI Moderation</text>
+    <text x="0" y="52" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#7B8794" text-anchor="middle">Engine (AME)</text>
+  </g>
+  <rect x="40" y="440" width="970" height="130" rx="12" fill="none" stroke="#EC7211" stroke-width="1.4" stroke-dasharray="8,5" opacity="0.7"/>
+  <rect x="50" y="432" width="183.6" height="17" rx="4" fill="white"/>
+  <text x="58" y="445" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#EC7211" letter-spacing="0.5">Messaging &amp; Workers</text>
+  <g transform="translate(200,510)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#EC7211" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#EC7211" stroke-width="1.5" opacity="0.7"/>
+      
+      <rect x="-14" y="-9" width="28" height="18" rx="3" fill="#EC7211" opacity="0.15" stroke="#EC7211" stroke-width="1.6"/>
+      <line x1="-14" y1="-9" x2="0" y2="3" stroke="#EC7211" stroke-width="1.4"/>
+      <line x1="14" y1="-9" x2="0" y2="3" stroke="#EC7211" stroke-width="1.4"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">RabbitMQ</text>
+  </g>
+  <g transform="translate(525,510)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#3F8624" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#3F8624" stroke-width="1.5" opacity="0.7"/>
+      
+      <circle cx="0" cy="0" r="8" fill="none" stroke="#3F8624" stroke-width="2"/>
+      <circle cx="0" cy="0" r="3" fill="#3F8624" opacity="0.3"/>
+      <line x1="0" y1="-13" x2="0" y2="-8" stroke="#3F8624" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="0" y1="8" x2="0" y2="13" stroke="#3F8624" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="-13" y1="0" x2="-8" y2="0" stroke="#3F8624" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="8" y1="0" x2="13" y2="0" stroke="#3F8624" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">Workflow Worker</text>
+  </g>
+  <g transform="translate(850,510)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#FF9900" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#FF9900" stroke-width="1.5" opacity="0.7"/>
+      
+      <circle cx="0" cy="0" r="8" fill="none" stroke="#FF9900" stroke-width="2"/>
+      <circle cx="0" cy="0" r="3" fill="#FF9900" opacity="0.3"/>
+      <line x1="0" y1="-13" x2="0" y2="-8" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="0" y1="8" x2="0" y2="13" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="-13" y1="0" x2="-8" y2="0" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="8" y1="0" x2="13" y2="0" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">AME Consumer</text>
+  </g>
+  <rect x="40" y="610" width="970" height="130" rx="12" fill="none" stroke="#0D9488" stroke-width="1.4" stroke-dasharray="8,5" opacity="0.7"/>
+  <rect x="50" y="602" width="97.2" height="17" rx="4" fill="white"/>
+  <text x="58" y="615" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#0D9488" letter-spacing="0.5">Data Stores</text>
+  <g transform="translate(200,680)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#0D9488" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#0D9488" stroke-width="1.5" opacity="0.7"/>
+      
+      <ellipse cx="0" cy="-11" rx="14" ry="6" fill="#0D9488" opacity="0.15" stroke="#0D9488" stroke-width="1.8"/>
+      <line x1="-14" y1="-11" x2="-14" y2="9" stroke="#0D9488" stroke-width="1.8"/>
+      <line x1="14" y1="-11" x2="14" y2="9" stroke="#0D9488" stroke-width="1.8"/>
+      <ellipse cx="0" cy="9" rx="14" ry="6" fill="#0D9488" opacity="0.1" stroke="#0D9488" stroke-width="1.8"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">SQL Server 2022</text>
+  </g>
+  <g transform="translate(525,680)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#DD344C" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#DD344C" stroke-width="1.5" opacity="0.7"/>
+      
+      <polygon points="0,-15 4,-5 15,-5 6,3 9,14 0,7 -9,14 -6,3 -15,-5 -4,-5" fill="#DD344C" opacity="0.15" stroke="#DD344C" stroke-width="1.4"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">Redis 7.0</text>
+  </g>
+  <g transform="translate(850,680)">
+    <g>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="#546E7A" opacity="0.10"/>
+      <rect x="-24" y="-24" width="48" height="48" rx="10" fill="none" stroke="#546E7A" stroke-width="1.5" opacity="0.7"/>
+      
+      <path d="M-11,-14 L-13,10 Q0,18 13,10 L11,-14 Z" fill="#546E7A" opacity="0.12" stroke="#546E7A" stroke-width="1.6"/>
+      <path d="M-11,-14 Q0,-6 11,-14" fill="none" stroke="#546E7A" stroke-width="1.3"/>
+    </g>
+    <text x="0" y="38" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#232F3E" text-anchor="middle">Object Storage</text>
+  </g>  <line x1="525" y1="118" x2="170" y2="210" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+  <text x="353.5" y="160.0" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#5A6B7F" font-weight="bold">HTTPS</text>
+  <line x1="220" y1="320" x2="840" y2="320" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-start="url(#a)" marker-end="url(#a)"/>
+  <text x="530.0" y="314.0" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#5A6B7F" font-weight="bold" text-anchor="middle">REST API</text>
+  <line x1="170" y1="290" x2="200" y2="480" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+  <text x="191.0" y="381.0" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#5A6B7F" font-weight="bold">Publish Events</text>
+  <line x1="250" y1="510" x2="475" y2="510" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+  <text x="368.5" y="506.0" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#5A6B7F" font-weight="bold">Consume</text>
+  <line x1="250" y1="520" x2="800" y2="520" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+  <line x1="525" y1="270" x2="525" y2="650" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+  <text x="531.0" y="456.0" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#5A6B7F" font-weight="bold">Read / Write</text>
+  <line x1="200" y1="540" x2="200" y2="650" stroke="#5A6B7F" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a)"/>
+
+</svg>

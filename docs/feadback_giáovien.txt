@@ -1,0 +1,45 @@
+Lỗi và điểm chưa đạt chung
+1. Chương 4 (bản chất công nghệ) còn mỏng hoặc thiếu
+Khoảng một phần ba số bài chỉ dừng ở mức “đã tìm hiểu khái niệm”, chưa có mã nguồn, kết quả chạy hay giải thích.
+Cấu trúc bắt buộc là: khái niệm → mã nguồn → kết quả → giải thích. Đa số bài thiếu ít nhất hai bước cuối.
+Bảng tiến độ ghi “hoàn thành” nhiều tính năng nhưng báo cáo không có bằng chứng.
+Một số nhóm chưa có ứng dụng cụ thể để minh họa.
+2. Thiếu kết quả chạy
+Gần như bài nào cũng thiếu ít nhất một loại bằng chứng: log, ảnh chụp màn hình, Postman, kết quả test.
+Cần chạy thật các tình huống đặc trưng của công nghệ, kể cả tình huống lỗi, rồi chụp và giải thích.
+3. Phiên bản công nghệ sai, cũ hoặc không thống nhất
+Một số bài mô tả theo phiên bản cũ, trong khi đề bài yêu cầu bản mới.
+Có bài ghi một phiên bản ở chương này, một phiên bản khác ở chương kia.
+Có bài không ghi phiên bản nào.
+Nội dung nhiều chỗ giống dịch từ blog hoặc tài liệu cũ, chưa dựa trên trải nghiệm của nhóm.
+4. So sánh và phản biện chưa đủ
+Chưa đủ hai phương án thay thế. Chưa có hai trường hợp “không nên dùng”, đây là điểm thiếu rất phổ biến.
+Nhiều bài không ghi nguồn và ngày truy cập. Số liệu (lương, việc làm, thị phần) không có nguồn.
+So sánh nghiêng về liệt kê ưu điểm, chưa phản biện.
+5. Cơ sở dữ liệu và tầng dữ liệu chưa được thiết kế đúng
+Nhiều nhóm backend chưa có migration, vẫn dùng tự sinh bảng (ddl-auto=update, create_all).
+Chưa nói về transaction hay ORM/ODM. Với MongoDB, transaction nhiều document cần replica set.
+Chưa rõ driver đồng bộ hay bất đồng bộ.
+Có bài ghi một loại CSDL nhưng nội dung nhắc tới loại khác.
+6. Mâu thuẫn nội bộ và sót nội dung
+Một số bài tự mâu thuẫn: cover nói một công nghệ, nội dung hay mã nguồn là công nghệ khác.
+Có bài còn sót nội dung của đề tài khác.
+Một số bài còn sót placeholder hoặc ghi chú của trợ lý AI.
+7. Hình thức và định danh
+Một số bài thiếu bìa, thiếu số nhóm, danh sách thành viên hoặc kế hoạch. Có bài ghi sai tổng số tuần.
+Số nhóm ghi trong bài không khớp tên file (4 trường hợp), và mã số sinh viên không khớp ở một vài bài.
+Có bài là báo cáo tuần, chưa phải báo cáo đồ án theo cấu trúc chương.
+Đánh số hình trùng hoặc sai.
+8. Quản lý mã nguồn, nhật ký và AI
+Nhiều bài chưa có repo Git, lịch sử commit hay nhật ký tuần.
+AI Disclosure thường chỉ liệt kê “có dùng AI”, chưa có ít nhất hai ca AI trả lời sai cùng cách phát hiện và sửa, như rubric yêu cầu.
+9. Bảo mật và chất lượng mã
+Phần xác thực (JWT, CORS, secret, .env) hay được nêu nhưng chưa kiểm chứng bằng chạy thật.
+Chưa có test (unit hoặc integration), một số bài khai có test nhưng không có kết quả.
+Có một bài nghi ngờ mã chép từ nguồn khác.
+Gợi ý chung cho các nhóm
+Với mỗi mục Bắt buộc, làm trọn chuỗi khái niệm → mã → kết quả → giải thích.
+Rà phiên bản một lượt, ghi thống nhất toàn bài, và đối chiếu tài liệu chính thức của bản mới.
+Bổ sung ít nhất hai trường hợp “không nên dùng” và nguồn kèm ngày cho mọi số liệu.
+Chốt cơ sở dữ liệu, migration và transaction cho nhóm backend.
+Đọc lại toàn bài để xóa placeholder, ghi chú AI, nội dung đề tài khác, và đối chiếu bìa, số nhóm, MSSV.

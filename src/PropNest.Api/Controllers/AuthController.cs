@@ -66,11 +66,24 @@ public sealed class AuthController(
         LoginRequest request,
         CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email.Trim());
-        if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
+        var user = await userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+        if (user is null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
         }
+
+        if (await userManager.IsLockedOutAsync(user))
+        {
+            return StatusCode(StatusCodes.Status423Locked, new { message = "Tài khoản tạm thời bị khóa do nhập sai mật khẩu quá 5 lần. Vui lòng thử lại sau 15 phút." });
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, request.Password))
+        {
+            await userManager.AccessFailedAsync(user);
+            return Unauthorized(new { message = "Invalid email or password." });
+        }
+
+        await userManager.ResetAccessFailedCountAsync(user);
 
         var roles = await userManager.GetRolesAsync(user);
         var accessToken = jwtTokenService.GenerateAccessToken(user, roles);

@@ -34,6 +34,9 @@ builder.Services.AddIdentityCore<PropNest.Domain.Users.ApplicationUser>(options 
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 6;
     options.User.RequireUniqueEmail = true;
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 })
 .AddRoles<Microsoft.AspNetCore.Identity.IdentityRole<long>>()
 .AddEntityFrameworkStores<PropNest.Infrastructure.Persistence.PropNestDbContext>();

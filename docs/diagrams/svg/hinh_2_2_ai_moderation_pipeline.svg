@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700">
+    <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#232F3E"/>
+        </marker>
+        <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#DD344C"/>
+        </marker>
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3F8624"/>
+        </marker>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+        </filter>
+    </defs>
+    <!-- Background -->
+    <rect width="1100" height="700" fill="#ffffff"/>
+    
+    <!-- Title Header -->
+    <rect x="0" y="0" width="1100" height="60" fill="#232F3E"/>
+    <text x="550" y="38" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">QUY TRÌNH DUYỆT TIN TỰ ĐỘNG ĐA TẦNG VỚI AI (AME AUTOMATED MODERATION PIPELINE)</text>
+
+    <!-- Nodes -->
+    
+    <!-- Start -->
+    <rect x="150" y="80" width="200" height="50" rx="25" fill="#3F8624" filter="url(#shadow)"/>
+    <text x="250" y="110" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1. Người bán gửi tin</text>
+    
+    <path d="M 250 130 L 250 155" fill="none" stroke="#232F3E" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Outbox -->
+    <rect x="100" y="160" width="300" height="50" rx="8" fill="#FF9900" filter="url(#shadow)"/>
+    <text x="250" y="185" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2. Outbox &amp; Queue (RabbitMQ)</text>
+    <text x="250" y="200" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">ListingSubmittedEvent</text>
+
+    <path d="M 250 210 L 250 235" fill="none" stroke="#232F3E" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Level 1 -->
+    <rect x="100" y="240" width="300" height="60" rx="8" fill="#1A8C8C" filter="url(#shadow)"/>
+    <text x="250" y="265" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3. Tầng 1: Rule Engine</text>
+    <text x="250" y="285" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">Blacklist/Spam, Regex SĐT/URL [&lt;15ms]</text>
+    
+    <path d="M 250 300 L 250 325" fill="none" stroke="#232F3E" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Decision 1 -->
+    <polygon points="250,330 310,360 250,390 190,360" fill="#F2F3F4" stroke="#D5DBDB" stroke-width="2" filter="url(#shadow)"/>
+    <text x="250" y="365" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#333333" text-anchor="middle">Lỗi nặng?</text>
+
+    <!-- Yes path 1 -->
+    <path d="M 190 360 L 90 360 L 90 620 L 150 620" fill="none" stroke="#DD344C" stroke-width="2" marker-end="url(#arrow-red)"/>
+    <text x="130" y="355" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DD344C" text-anchor="middle">Yes</text>
+    
+    <!-- No path 1 -->
+    <path d="M 250 390 L 250 415" fill="none" stroke="#3F8624" stroke-width="2" marker-end="url(#arrow-green)"/>
+    <text x="265" y="405" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#3F8624">No</text>
+    
+    <!-- Level 2 -->
+    <rect x="100" y="420" width="300" height="70" rx="8" fill="#8C4FFF" filter="url(#shadow)"/>
+    <text x="250" y="440" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4. Tầng 2: AI Đa phương thức (AME)</text>
+    <text x="250" y="460" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">Ollama(NLP): Ngữ nghĩa, lừa đảo, cọc ảo</text>
+    <text x="250" y="475" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">LLaVA(Vision): SĐT/Logo trên ảnh [800ms+]</text>
+    
+    <path d="M 400 455 L 495 455" fill="none" stroke="#232F3E" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Level 3 -->
+    <rect x="500" y="420" width="300" height="70" rx="8" fill="#1A8C8C" filter="url(#shadow)"/>
+    <text x="650" y="440" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5. Tầng 3: Đối soát Giá thị trường</text>
+    <text x="650" y="460" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">So sánh đơn giá VNĐ/m2 với DB 30 ngày</text>
+    <text x="650" y="475" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">Cảnh báo nếu lệch quá 40%</text>
+
+    <path d="M 650 490 L 650 515" fill="none" stroke="#232F3E" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Final Decision -->
+    <polygon points="650,520 750,560 650,600 550,560" fill="#F2F3F4" stroke="#D5DBDB" stroke-width="2" filter="url(#shadow)"/>
+    <text x="650" y="555" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#333333" text-anchor="middle">Tổng điểm AI</text>
+    <text x="650" y="570" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#333333" text-anchor="middle">Score &gt;= 0.85?</text>
+
+    <!-- Yes Path Final -->
+    <path d="M 750 560 L 895 560" fill="none" stroke="#3F8624" stroke-width="2" marker-end="url(#arrow-green)"/>
+    <text x="820" y="550" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#3F8624" text-anchor="middle">Yes</text>
+    
+    <rect x="900" y="535" width="180" height="50" rx="25" fill="#3F8624" filter="url(#shadow)"/>
+    <text x="990" y="560" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">TỰ ĐỘNG PHÊ DUYỆT</text>
+    <text x="990" y="575" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">(AUTO APPROVED)</text>
+
+    <!-- No Path Final -->
+    <path d="M 550 560 L 500 560 L 500 620 L 405 620" fill="none" stroke="#DD344C" stroke-width="2" marker-end="url(#arrow-red)"/>
+    <text x="520" y="550" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DD344C" text-anchor="middle">No</text>
+    
+    <!-- Reject & Manual Review Nodes -->
+    <rect x="155" y="595" width="250" height="50" rx="8" fill="#DD344C" filter="url(#shadow)"/>
+    <text x="280" y="620" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">TỪ CHỐI &amp; MANUAL REVIEW</text>
+    <text x="280" y="635" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">Chuyển Kiểm duyệt viên (Moderation Q)</text>
+
+</svg>

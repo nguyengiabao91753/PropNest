@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 600" width="1100" height="600">
+    <defs>
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3F8624"/>
+        </marker>
+        <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#DD344C"/>
+        </marker>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+        </filter>
+    </defs>
+    <!-- Background -->
+    <rect width="1100" height="600" fill="#ffffff"/>
+    
+    <!-- Title Header -->
+    <rect x="0" y="0" width="1100" height="60" fill="#232F3E"/>
+    <text x="550" y="38" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">SƠ ĐỒ MÁY TRẠNG THÁI SAGA ORCHESTRATION VÀ LUỒNG BỒI HOÀN TỰ ĐỘNG</text>
+
+    <!-- State Machine Nodes -->
+    
+    <!-- Started -->
+    <circle cx="100" cy="200" r="40" fill="#F2F3F4" stroke="#232F3E" stroke-width="3" filter="url(#shadow)"/>
+    <text x="100" y="205" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#333333" text-anchor="middle">Started</text>
+    <text x="100" y="220" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">(Khởi tạo)</text>
+
+    <!-- DeductingWallet -->
+    <rect x="250" y="170" width="200" height="60" rx="10" fill="#E8F8F5" stroke="#1A8C8C" stroke-width="2" filter="url(#shadow)"/>
+    <text x="350" y="200" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#1A8C8C" text-anchor="middle">DeductingWallet</text>
+    <text x="350" y="215" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#555555" text-anchor="middle">(Đang trừ tiền ví)</text>
+
+    <!-- UpgradingListing -->
+    <rect x="580" y="170" width="200" height="60" rx="10" fill="#E8F8F5" stroke="#1A8C8C" stroke-width="2" filter="url(#shadow)"/>
+    <text x="680" y="200" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#1A8C8C" text-anchor="middle">UpgradingListing</text>
+    <text x="680" y="215" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#555555" text-anchor="middle">(Đang nâng cấp tin)</text>
+    
+    <!-- Completed -->
+    <circle cx="950" cy="200" r="40" fill="#E9F7EF" stroke="#3F8624" stroke-width="4" filter="url(#shadow)"/>
+    <text x="950" y="205" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#3F8624" text-anchor="middle">Completed</text>
+    <text x="950" y="220" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">(Hoàn tất)</text>
+
+    <!-- Failed -->
+    <circle cx="350" cy="380" r="40" fill="#FDEDEC" stroke="#DD344C" stroke-width="3" filter="url(#shadow)"/>
+    <text x="350" y="385" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#DD344C" text-anchor="middle">Failed</text>
+    <text x="350" y="400" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">(Thất bại)</text>
+
+    <!-- Compensating -->
+    <rect x="580" y="350" width="200" height="60" rx="10" fill="#F4ECF7" stroke="#8C4FFF" stroke-width="2" filter="url(#shadow)"/>
+    <text x="680" y="380" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#8C4FFF" text-anchor="middle">Compensating</text>
+    <text x="680" y="395" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#555555" text-anchor="middle">(Kích hoạt bồi hoàn)</text>
+
+    <!-- Compensated -->
+    <circle cx="950" cy="380" r="40" fill="#FDEDEC" stroke="#DD344C" stroke-width="4" filter="url(#shadow)"/>
+    <text x="950" y="385" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#DD344C" text-anchor="middle">Compensated</text>
+    <text x="950" y="400" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">(Hoàn tiền)</text>
+
+
+    <!-- Happy Path Arrows -->
+    <path d="M 140 200 L 240 200" fill="none" stroke="#3F8624" stroke-width="3" marker-end="url(#arrow-green)"/>
+    <text x="195" y="190" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#3F8624" text-anchor="middle">[DeductWalletCmd]</text>
+
+    <path d="M 450 200 L 570 200" fill="none" stroke="#3F8624" stroke-width="3" marker-end="url(#arrow-green)"/>
+    <text x="510" y="190" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#3F8624" text-anchor="middle">[UpgradeListingCmd]</text>
+    <text x="510" y="215" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">(WalletDeductedEvent)</text>
+
+    <path d="M 780 200 L 900 200" fill="none" stroke="#3F8624" stroke-width="3" marker-end="url(#arrow-green)"/>
+    <text x="840" y="190" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#3F8624" text-anchor="middle">[ListingUpgraded]</text>
+
+
+    <!-- Error Paths (Red Dashed) -->
+    <!-- Deducting to Failed -->
+    <path d="M 350 230 L 350 330" fill="none" stroke="#DD344C" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#arrow-red)"/>
+    <text x="360" y="280" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DD344C">[WalletDeductionFailed]</text>
+    <text x="360" y="295" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555">Số dư ví không đủ</text>
+
+    <!-- Upgrading to Compensating -->
+    <path d="M 680 230 L 680 340" fill="none" stroke="#DD344C" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#arrow-red)"/>
+    <text x="690" y="280" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DD344C">[ListingUpgradeFailed]</text>
+    <text x="690" y="295" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555">Nâng cấp tin lỗi DB/Lock</text>
+
+    <!-- Compensating to Compensated -->
+    <path d="M 780 380 L 900 380" fill="none" stroke="#DD344C" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#arrow-red)"/>
+    <text x="840" y="370" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DD344C" text-anchor="middle">[RefundWalletCmd]</text>
+    <text x="840" y="405" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#555555" text-anchor="middle">Hoàn 100% ví chính</text>
+
+
+    <!-- Legend -->
+    <rect x="50" y="500" width="300" height="70" rx="4" fill="#ffffff" stroke="#232F3E" stroke-width="1"/>
+    <text x="60" y="520" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#333333">Legend:</text>
+    
+    <path d="M 60 540 L 110 540" fill="none" stroke="#3F8624" stroke-width="3" marker-end="url(#arrow-green)"/>
+    <text x="120" y="545" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#333333">Happy Path (Thành công)</text>
+
+    <path d="M 60 560 L 110 560" fill="none" stroke="#DD344C" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#arrow-red)"/>
+    <text x="120" y="565" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#333333">Compensating Path (Lỗi/Bồi hoàn)</text>
+
+</svg>
