@@ -11,6 +11,14 @@ public sealed record PurchasePackageCommand(
     string RequestPath,
     string RequestHash);
 
+public sealed record WorkflowStepDto(
+    string StepName,
+    string Status,
+    int Attempt,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? FinishedAt,
+    string? Error);
+
 public sealed record WorkflowDto(
     Guid CorrelationId,
     long ListingId,
@@ -20,7 +28,9 @@ public sealed record WorkflowDto(
     WorkflowStatus Status,
     int RetryCount,
     string? ErrorMessage,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    IReadOnlyList<WorkflowStepDto> Steps);
 
 public interface IWorkflowRepository
 {
@@ -33,6 +43,10 @@ public interface IWorkflowRepository
     Task AddIdempotencyRequestAsync(IdempotencyRequest request, CancellationToken cancellationToken = default);
 
     Task AddOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WorkflowStep>> GetStepsByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default);
+
+    Task AddStepAsync(WorkflowStep workflowStep, CancellationToken cancellationToken = default);
 }
 
 public interface IWorkflowService
