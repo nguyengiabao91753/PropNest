@@ -23,9 +23,9 @@ public sealed class SellerAuthorizeAttribute : Attribute, IAsyncActionFilter
         }
 
         var profile = JwtUserHelper.GetProfileFromToken(token);
-        if (profile == null || !profile.IsSeller)
+        if (profile == null)
         {
-            // Nếu không phải là Seller (ví dụ Customer hoặc Admin cố vào Seller portal)
+            // Yêu cầu đăng nhập tài khoản hợp lệ
             var returnUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.Path}{httpContext.Request.QueryString}";
             context.Result = new RedirectResult($"{ClientLoginUrl}?returnUrl={Uri.EscapeDataString(returnUrl)}");
             return;

@@ -19,7 +19,7 @@
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="rounded-md bg-primary/10 text-primary text-[11px] font-bold px-2 py-0.5 tracking-wide uppercase">
-                            Audit Trail • DeltaEngine
+                            Nhật ký hoạt động
                         </span>
                         <span class="font-mono text-xs font-bold text-neutral-800">PN-@property?.Id</span>
                         @if (property != null)
@@ -75,7 +75,7 @@
     <div class="flex flex-wrap items-center justify-between gap-4 px-1">
         <div class="flex items-center gap-2 text-xs text-muted-foreground">
             <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Trình tự thời gian: <strong class="text-neutral-800">Chronological (Cũ &rarr; Mới)</strong></span>
+            <span>Trình tự thời gian: <strong class="text-neutral-800">Cũ &rarr; Mới</strong></span>
             <span class="rounded-full bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-neutral-700 border border-border">
                 @(Model?.Count ?? 0) sự kiện
             </span>
@@ -104,7 +104,7 @@
                 <div class="space-y-1">
                     <p class="font-bold text-base text-neutral-800">Chưa có bản ghi lịch sử nào</p>
                     <p class="text-xs text-muted-foreground max-w-sm mx-auto">
-                        Mọi thao tác khởi tạo tin, cập nhật thông tin, gửi duyệt hoặc kiểm duyệt sẽ được tự động ghi vết và so sánh độ lệch (Delta) tại đây.
+                        Mọi thao tác khởi tạo tin, cập nhật thông tin hoặc phê duyệt bài đăng sẽ được tự động ghi nhận tại đây.
                     </p>
                 </div>
             </div>

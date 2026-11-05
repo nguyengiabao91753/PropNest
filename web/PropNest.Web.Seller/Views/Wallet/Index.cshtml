@@ -1,7 +1,7 @@
 @model PropNest.Web.Seller.Models.ViewModels.WalletViewModel
 
 @{
-    ViewData["Title"] = "Ví & Giao dịch (F05)";
+    ViewData["Title"] = "Ví & Giao dịch";
     var currentType = string.IsNullOrWhiteSpace(Model.CurrentType) ? "all" : Model.CurrentType;
 
     var typeTabs = new[]
@@ -9,7 +9,7 @@
         ("all", "Tất cả", Model.Counts.All),
         ("TopUp", "Nạp tiền", Model.Counts.TopUp),
         ("Charge", "Thanh toán", Model.Counts.Charge),
-        ("Refund", "Bồi hoàn Saga", Model.Counts.Refund),
+        ("Refund", "Hoàn tiền", Model.Counts.Refund),
         ("PromoReward", "Thưởng", Model.Counts.PromoReward)
     };
 }
@@ -19,9 +19,9 @@
     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5 md:px-8">
             <div>
-                <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Ví Tài Khoản & Giao Dịch (F05)</h1>
+                <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Ví Tài Khoản & Giao Dịch</h1>
                 <p class="text-xs text-muted-foreground mt-1">
-                    Quản lý số dư, theo dõi lịch sử thanh toán mua gói VIP và kiểm toán bồi hoàn (Saga Refund).
+                    Quản lý số dư tài khoản và theo dõi lịch sử giao dịch nạp tiền, thanh toán.
                 </p>
             </div>
             <div>
@@ -125,7 +125,7 @@
                 </form>
 
                 <div class="text-xs text-muted-foreground">
-                    Sổ cái giao dịch <span class="font-mono text-neutral-900 font-bold">#Immutable</span>
+                    Tổng số giao dịch: <span class="font-mono text-neutral-900 font-bold">@Model.TotalCount</span>
                 </div>
             </div>
 
@@ -148,29 +148,56 @@
                         <tbody class="divide-y divide-border">
                             @foreach (var t in Model.Transactions)
                             {
-                                var isPositive = t.Amount > 0;
+                                var isCharge = string.Equals(t.Type, "Charge", StringComparison.OrdinalIgnoreCase);
+                                var isTopUp = string.Equals(t.Type, "TopUp", StringComparison.OrdinalIgnoreCase);
+                                var isRefund = string.Equals(t.Type, "Refund", StringComparison.OrdinalIgnoreCase);
+                                var isPromo = string.Equals(t.Type, "PromoReward", StringComparison.OrdinalIgnoreCase);
+
+                                string amountSign;
+                                string amountColorClass;
+
+                                if (isCharge)
+                                {
+                                    amountSign = "-";
+                                    amountColorClass = "text-rose-600";
+                                }
+                                else if (isRefund)
+                                {
+                                    amountSign = "+";
+                                    amountColorClass = "text-blue-600";
+                                }
+                                else if (isPromo)
+                                {
+                                    amountSign = "+";
+                                    amountColorClass = "text-amber-600";
+                                }
+                                else
+                                {
+                                    amountSign = "+";
+                                    amountColorClass = "text-emerald-600";
+                                }
                                 <tr class="hover:bg-surface/50 transition-colors">
                                     <td class="px-5 py-3.5 font-mono text-xs text-muted-foreground font-semibold">#@t.Id</td>
                                     <td class="px-4 py-3.5 whitespace-nowrap">
-                                        @if (string.Equals(t.Type, "TopUp", StringComparison.OrdinalIgnoreCase))
+                                        @if (isTopUp)
                                         {
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
                                                 <i data-lucide="arrow-down-left" class="size-3 mr-1"></i> Nạp tiền
                                             </span>
                                         }
-                                        else if (string.Equals(t.Type, "Charge", StringComparison.OrdinalIgnoreCase))
+                                        else if (isCharge)
                                         {
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300">
                                                 <i data-lucide="arrow-up-right" class="size-3 mr-1"></i> Thanh toán
                                             </span>
                                         }
-                                        else if (string.Equals(t.Type, "Refund", StringComparison.OrdinalIgnoreCase))
+                                        else if (isRefund)
                                         {
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300">
-                                                <i data-lucide="rotate-ccw" class="size-3 mr-1"></i> Bồi hoàn Saga
+                                                <i data-lucide="rotate-ccw" class="size-3 mr-1"></i> Hoàn tiền
                                             </span>
                                         }
-                                        else if (string.Equals(t.Type, "PromoReward", StringComparison.OrdinalIgnoreCase))
+                                        else if (isPromo)
                                         {
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
                                                 <i data-lucide="gift" class="size-3 mr-1"></i> Thưởng
@@ -183,8 +210,8 @@
                                             </span>
                                         }
                                     </td>
-                                    <td class="px-4 py-3.5 font-semibold font-display whitespace-nowrap @(isPositive ? "text-emerald-600" : "text-destructive")">
-                                        @(isPositive ? "+" : "")@FormatHelper.FormatVnd(t.Amount)
+                                    <td class="px-4 py-3.5 font-semibold font-display whitespace-nowrap @amountColorClass">
+                                        @amountSign@FormatHelper.FormatVnd(Math.Abs(t.Amount))
                                     </td>
                                     <td class="px-4 py-3.5 text-xs text-neutral-800 font-mono whitespace-nowrap">
                                         @FormatHelper.FormatVnd(t.BalanceAfter)
