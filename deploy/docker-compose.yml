@@ -1,12 +1,175 @@
 services:
+  # =============================================================================
+  # 1. Cơ sở dữ liệu Microsoft SQL Server 2022
+  # =============================================================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: propnest-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_Strong_Password123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Your_Strong_Password123!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Your_Strong_Password123!' -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - propnest-network
 
+  # =============================================================================
+  # 2. Message Broker RabbitMQ (kèm Management Dashboard)
+  # =============================================================================
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: propnest-rabbitmq
+    restart: unless-stopped
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 12
+      retries: 10
+      start_period: 10s
+    networks:
+      - propnest-network
+
+  # =============================================================================
+  # 3. PropNest Backend Web API
+  # =============================================================================
+  api:
+    build:
+      context: ..
+      dockerfile: src/PropNest.Api/Dockerfile
+    container_name: propnest-api
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__PropNest: "Server=sqlserver,1433;Database=PropNestDb;User Id=sa;Password=Your_Strong_Password123!;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: "/"
+      RabbitMq__Username: "guest"
+      RabbitMq__Password: "guest"
+    ports:
+      - "65148:8080"
+      - "5000:8080"
+    networks:
+      - propnest-network
+
+  # =============================================================================
+  # 4. PropNest Workflow Background Worker (Outbox / Saga / Quartz)
+  # =============================================================================
+  worker:
+    build:
+      context: ..
+      dockerfile: src/PropNest.Workflow.Worker/Dockerfile
+    container_name: propnest-worker
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: "Development"
+      ConnectionStrings__PropNest: "Server=sqlserver,1433;Database=PropNestDb;User Id=sa;Password=Your_Strong_Password123!;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: "/"
+      RabbitMq__Username: "guest"
+      RabbitMq__Password: "guest"
+    networks:
+      - propnest-network
+
+  # =============================================================================
+  # 5. PropNest Web Client (Xem tin, tìm kiếm, đăng nhập khách hàng)
+  # =============================================================================
+  web-client:
+    build:
+      context: ..
+      dockerfile: web/PropNest.Web.Client/Dockerfile
+    container_name: propnest-web-client
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ServiceUrls__BackendApi: "http://api:8080"
+    ports:
+      - "5241:8080"
+    networks:
+      - propnest-network
+
+  # =============================================================================
+  # 6. PropNest Web Seller (Đăng tin, nạp ví, mua gói dịch vụ)
+  # =============================================================================
+  web-seller:
+    build:
+      context: ..
+      dockerfile: web/PropNest.Web.Seller/Dockerfile
+    container_name: propnest-web-seller
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ServiceUrls__BackendApi: "http://api:8080"
+    ports:
+      - "5198:8080"
+    networks:
+      - propnest-network
+
+  # =============================================================================
+  # 7. PropNest Web Admin (Kiểm duyệt tin đăng, xem thống kê dashboard)
+  # =============================================================================
+  web-admin:
+    build:
+      context: ..
+      dockerfile: web/PropNest.Web.Admin/Dockerfile
+    container_name: propnest-web-admin
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ServiceUrls__BackendApi: "http://api:8080"
+    ports:
+      - "5015:8080"
+    networks:
+      - propnest-network
+
+# =============================================================================
+# Networks & Persistent Volumes
+# =============================================================================
+networks:
+  propnest-network:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+  rabbitmq_data:
