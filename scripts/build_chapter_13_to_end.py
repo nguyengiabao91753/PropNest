@@ -177,7 +177,7 @@ def populate_chapter_13_to_end(doc):
     add_heading_2(doc, "CHƯƠNG 13: ĐÁNH GIÁ VÀ NHÌN LẠI")
 
     add_body(doc,
-        "Sau hành trình nghiên cứu lý thuyết nền tảng ASP.NET Core 8 và trực tiếp thiết kế, hiện thực hóa hệ thống đăng tin bất động sản PropNest qua 6 Sprint phát triển, chương này thực hiện việc đối chiếu toàn diện giữa kết quả đạt được so với mục tiêu đề ra ban đầu, phân tích chuyên sâu các sự cố kỹ thuật điển hình đã giải quyết (Bug Reports), và đúc kết những bài học kinh nghiệm thực tiễn trong kỹ nghệ phần mềm hiện đại.")
+        "Sau hành trình nghiên cứu lý thuyết nền tảng ASP.NET Core 8 và trực tiếp thiết kế, hiện thực hóa hệ thống đăng tin bất động sản PropNest qua 9 tuần (9 Sprint) phát triển, chương này thực hiện việc đối chiếu toàn diện giữa kết quả đạt được so với mục tiêu đề ra ban đầu, phân tích chuyên sâu các sự cố kỹ thuật điển hình đã giải quyết (Bug Reports), và đúc kết những bài học kinh nghiệm thực tiễn trong kỹ nghệ phần mềm hiện đại.")
 
     # -------------------------------------------------------------------------
     # 13.1. So sánh với mục tiêu ban đầu
@@ -208,7 +208,7 @@ def populate_chapter_13_to_end(doc):
     add_heading_4(doc, "13.1.2. Tổng kết tỷ lệ hoàn thành đồ án")
 
     add_body(doc,
-        "Xét trên phương diện định lượng, nhóm đã hoàn thành trọn vẹn 46/46 hạng mục công việc (Tasks) được phân bổ trong kế hoạch 6 Sprint (đạt tỷ lệ 100% khối lượng cam kết). Cụ thể:")
+        "Xét trên phương diện định lượng, nhóm đã hoàn thành trọn vẹn 100% khối lượng công việc được phân bổ trong kế hoạch 9 tuần (9 Sprint phát triển). Cụ thể:")
 
     add_body(doc,
         "• Về mặt kiến trúc và mã nguồn: Xây dựng thành công Solution gồm 8 Project tuân thủ nghiêm ngặt kiến trúc Clean Architecture kết hợp Modular Monolith, biên dịch sạch hoàn toàn (0 Warning, 0 Error).")
@@ -251,12 +251,12 @@ def populate_chapter_13_to_end(doc):
     add_heading_3(doc, "13.2. Phân tích lỗi kỹ thuật quan trọng và giải pháp (Bug Reports)")
 
     add_body(doc,
-        "Trong quá trình phát triển và tích hợp liên tục qua 6 Sprint, nhóm đã đối mặt và xử lý nhiều bài toán kỹ thuật thực tế. Dưới đây là hồ sơ phân tích 3 lỗi kỹ thuật quan trọng nhất (Critical Bugs) cùng giải pháp khắc phục triệt để:")
+        "Trong quá trình phát triển và tích hợp liên tục qua 9 tuần (9 Sprint), nhóm đã đối mặt và xử lý nhiều bài toán kỹ thuật thực tế. Dưới đây là hồ sơ phân tích 3 lỗi kỹ thuật quan trọng nhất (Critical Bugs) cùng giải pháp khắc phục triệt để:")
 
     add_heading_4(doc, "13.2.1. Bug #1 — Xung đột ghi đè đồng thời khi hai tác nhân cùng sửa tin đăng (Lost Update)")
 
     add_body(doc,
-        "• Bối cảnh phát hiện: Tại Sprint 2, khi kiểm thử tình huống Người bán mở trang chỉnh sửa giá bán tin đăng cùng lúc với một tiến trình khác cập nhật thông tin trên cùng bản ghi Listing, hệ thống chấp nhận cả hai lệnh lưu. Hậu quả là lệnh lưu thực hiện sau đã ghi đè và làm mất hoàn toàn thay đổi của lệnh lưu trước đó mà không hề có bất kỳ cảnh báo nào.")
+        "• Bối cảnh phát hiện: Tại Tuần 4 (Sprint 4 - giai đoạn hoàn thiện API CRUD Listing), khi kiểm thử tình huống Người bán mở trang chỉnh sửa giá bán tin đăng cùng lúc với một tiến trình khác cập nhật thông tin trên cùng bản ghi Listing, hệ thống chấp nhận cả hai lệnh lưu. Hậu quả là lệnh lưu thực hiện sau đã ghi đè và làm mất hoàn toàn thay đổi của lệnh lưu trước đó mà không hề có bất kỳ cảnh báo nào.")
 
     add_body(doc,
         "• Nguyên nhân gốc rễ (Root Cause): Câu lệnh SQL UPDATE do EF Core sinh ra mặc định chỉ lọc theo khóa chính (WHERE [ListingId] = @p0), hoàn toàn không kiểm tra xem bản ghi trong cơ sở dữ liệu có bị biến đổi kể từ thời điểm người dùng tải lên màn hình hay không.")
@@ -267,7 +267,7 @@ def populate_chapter_13_to_end(doc):
     add_heading_4(doc, "13.2.2. Bug #2 — Trừ tiền ví lặp do mạng chập chờn hoặc người dùng nhấp đúp (Double Charging)")
 
     add_body(doc,
-        "• Bối cảnh phát hiện: Tại Sprint 3, khi mô phỏng đường truyền mạng có độ trễ cao (Network Latency > 2000ms) trên giao diện mua gói VIP, người dùng có xu hướng bấm nút \"Thanh toán\" liên tiếp 2–3 lần. Hệ thống đã tiếp nhận cả hai HTTP POST request gần như đồng thời và phát sinh hai giao dịch trừ tiền ví cho cùng một lần nâng cấp tin.")
+        "• Bối cảnh phát hiện: Tại Tuần 6 (Sprint 6 - giai đoạn hoàn thiện quy trình Saga mua gói dịch vụ), khi mô phỏng đường truyền mạng có độ trễ cao (Network Latency > 2000ms) trên giao diện mua gói VIP, người dùng có xu hướng bấm nút \"Thanh toán\" liên tiếp 2–3 lần. Hệ thống đã tiếp nhận cả hai HTTP POST request gần như đồng thời và phát sinh hai giao dịch trừ tiền ví cho cùng một lần nâng cấp tin.")
 
     add_body(doc,
         "• Nguyên nhân gốc rễ (Root Cause): Giao thức HTTP POST vốn không có tính chất lũy đẳng (Non-idempotent). Khi thiếu cơ chế định danh duy nhất cho mỗi ý định giao dịch từ phía Client, máy chủ coi mỗi lần gửi gói tin là một giao dịch độc lập mới.")
@@ -278,7 +278,7 @@ def populate_chapter_13_to_end(doc):
     add_heading_4(doc, "13.2.3. Bug #3 — Mất thông điệp khi RabbitMQ khởi động lại (Dual-Write Inconsistency)")
 
     add_body(doc,
-        "• Bối cảnh phát hiện: Tại Sprint 4, trong bài kiểm thử chịu lỗi (Chaos Testing), nhóm tiến hành tắt đột ngột container RabbitMQ ngay tại thời điểm API vừa lưu trạng thái khởi tạo giao dịch mua gói vào SQL Server. Kết quả là bản ghi trong CSDL đã được tạo nhưng thông điệp PackagePurchaseInitiatedEvent không bao giờ đến được hàng đợi RabbitMQ, khiến giao dịch của người dùng bị treo vĩnh viễn.")
+        "• Bối cảnh phát hiện: Tại Tuần 6 (Sprint 6 - bài kiểm thử tích hợp các Consumer Saga và RabbitMQ), trong bài kiểm thử chịu lỗi (Chaos Testing), nhóm tiến hành tắt đột ngột container RabbitMQ ngay tại thời điểm API vừa lưu trạng thái khởi tạo giao dịch mua gói vào SQL Server. Kết quả là bản ghi trong CSDL đã được tạo nhưng thông điệp PackagePurchaseInitiatedEvent không bao giờ đến được hàng đợi RabbitMQ, khiến giao dịch của người dùng bị treo vĩnh viễn.")
 
     add_body(doc,
         "• Nguyên nhân gốc rễ (Root Cause): Lỗi kinh điển Dual-Write trong hệ thống phân tán — việc ghi dữ liệu vào SQL Server và việc gửi mạng sang RabbitMQ là hai tiến trình độc lập không nằm chung một giao dịch nguyên tử (Atomic Transaction).")
@@ -304,7 +304,7 @@ def populate_chapter_13_to_end(doc):
     add_heading_4(doc, "13.3.3. Về quản lý dự án và làm việc nhóm theo mô hình Agile")
 
     add_body(doc,
-        "Việc áp dụng chiến lược phân công theo quyền sở hữu miền nghiệp vụ (Domain Ownership) trong 6 Sprint đã phát huy hiệu quả tối đa. Thay vì chia việc rời rạc theo tầng (người chỉ làm DB, người chỉ làm API), việc giao trọn vẹn từng cụm tính năng (TV1 làm Auth & Moderation, TV2 làm Listing & History, TV3 làm Wallet & Saga) giúp mỗi thành viên hiểu sâu sắc luồng dữ liệu của mình, giảm thiểu tới 80% xung đột mã nguồn (Merge Conflicts) khi hợp nhất nhánh trên GitHub.")
+        "Việc áp dụng chiến lược phân công theo quyền sở hữu miền nghiệp vụ (Domain Ownership) trong 9 tuần làm việc đã phát huy hiệu quả tối đa. Thay vì chia việc rời rạc theo tầng (người chỉ làm DB, người chỉ làm API), việc giao trọn vẹn từng cụm tính năng kết hợp theo tuần giúp mỗi thành viên hiểu sâu sắc luồng dữ liệu của mình, giảm thiểu tới 80% xung đột mã nguồn (Merge Conflicts) khi hợp nhất nhánh trên GitHub.")
 
     # =========================================================================
     # CHƯƠNG 14: HƯỚNG PHÁT TRIỂN TRONG TƯƠNG LAI
@@ -333,7 +333,7 @@ def populate_chapter_13_to_end(doc):
         "Như minh họa trong Hình 14.1, quy trình thẩm định tự động của AME vận hành qua 4 chốt chặn liên tiếp:")
 
     add_body(doc,
-        "1. Tầng lọc luật cứng (Rule-based Engine): Quét nhanh biểu thức chính quy (Regex) và danh sách từ khóa cấm để chặn tức thì các tin đăng chứa nội dung vi phạm pháp luật, cờ bạc hoặc спам số điện thoại.")
+        "1. Tầng lọc luật cứng (Rule-based Engine): Quét nhanh biểu thức chính quy (Regex) và danh sách từ khóa cấm để chặn tức thì các tin đăng chứa nội dung vi phạm pháp luật, cờ bạc hoặc spam số điện thoại.")
 
     add_body(doc,
         "2. Tầng phân tích ngữ nghĩa tự nhiên (NLP Local LLM via Ollama): Đánh giá văn phong mô tả bất động sản, phát hiện các dấu hiệu lừa đảo tinh vi (ví dụ: yêu cầu chuyển khoản đặt cọc trước khi xem nhà, cam kết lợi nhuận phi thực tế).")
@@ -425,30 +425,87 @@ def populate_chapter_13_to_end(doc):
     add_heading_3(doc, "1. Nhật ký công việc và phân chia đóng góp")
 
     add_body(doc,
-        "Dự án được triển khai trong 6 tuần (tương ứng 6 Sprint) bởi 3 thành viên theo mô hình Domain Ownership — mỗi thành viên chịu trách nhiệm xuyên suốt từ tầng Backend API cho đến kiểm thử và tích hợp trên nhóm phân hệ được giao:")
+        "Dự án được triển khai trong 9 tuần (tương ứng 9 Sprint) bởi 3 thành viên theo mô hình Domain Ownership kết hợp phương pháp luận Agile/Scrum — mỗi thành viên chịu trách nhiệm xuyên suốt từ tầng Backend API, Frontend Web UI cho đến kiểm thử, tích hợp và hoàn thiện báo cáo đồ án:")
 
-    headers_mem = ["STT", "Họ và tên sinh viên", "MSSV", "Phân hệ phụ trách (Domain Ownership)", "Khối lượng hoàn thành", "Tỷ lệ đóng góp"]
+    headers_mem = ["STT", "Họ và tên sinh viên", "MSSV", "Phân hệ phụ trách (Domain Ownership)", "Hạng mục phụ trách chính qua 9 tuần", "Tỷ lệ đóng góp"]
     data_mem = [
-        ["1", "Nguyễn Hoàng Phúc", "3122560060", "Module Listing (CRUD, Filter, Images) + History Delta Engine + Giao diện Client Portal & Seller Portal", "14/14 Tasks (F02, F04, UI)", "33.3% (100% cam kết)"],
-        ["2", "Nguyễn Gia Bảo", "3122560004", "Module Wallet & Transactions + PurchasePackageSaga + Transactional Outbox/Inbox + Idempotency + Workflows", "16/16 Tasks (F05, F06, F08)", "33.4% (100% cam kết)"],
-        ["3", "Đoàn Tuấn Tài", "3122410365", "Module Auth (Identity, JWT, Lockout) + Moderation API & Dashboard Stats + Operations (Serilog, Quartz, Health) + Admin Portal", "16/16 Tasks (F01, F03, F07, F09)", "33.3% (100% cam kết)"]
+        ["1", "Nguyễn Hoàng Phúc", "3122560060", "Module Listing (CRUD, Filter, Images) + History Delta Engine + Giao diện Client Portal & Seller Portal", "Phụ trách API Listing; UI Client (load listing) & UI Seller (đăng tin, chi tiết); Thuật toán DeltaEngine; Viết doc Ch.1, 2, 3, 6, 8; Báo cáo cá nhân", "33.3% (100% cam kết)"],
+        ["2", "Nguyễn Gia Bảo", "3122560004", "Module Wallet & Transactions + PurchasePackageSaga + Transactional Outbox/Inbox + Idempotency + Workflows", "Phụ trách kiến trúc Clean Architecture, Database EF Core; API nạp ví, transaction; Saga mua gói, 3 Consumer; UI nạp ví & mua gói; Viết doc Ch.4, 5, 8, 11, 12, 13; Báo cáo cá nhân", "33.4% (100% cam kết)"],
+        ["3", "Đoàn Tuấn Tài", "3122410365", "Module Auth (Identity, JWT, Lockout) + Moderation API & Dashboard Stats + Operations (Serilog, Quartz, Health) + Admin Portal", "Phụ trách API Auth (JWT, register/login); API Moderation; Cấu hình Serilog & Quartz.NET; UI Admin (duyệt tin, dashboard); Viết doc Ch.7, 9, 10; Fix review của GV; Báo cáo cá nhân", "33.3% (100% cam kết)"]
     ]
     add_body(doc, "Bảng PL.1: Bảng phân công trách nhiệm và đánh giá mức độ đóng góp của các thành viên trong nhóm", bold=True, italic=True)
-    add_styled_table(doc, headers_mem, data_mem, col_widths=[0.5, 1.4, 0.9, 2.1, 1.1, 1.0])
+    add_styled_table(doc, headers_mem, data_mem, col_widths=[0.4, 1.3, 0.8, 1.7, 1.6, 0.7])
 
-    add_body(doc, "Nhật ký thực hiện công việc chi tiết qua 6 Sprint phát triển của dự án:")
+    add_body(doc, "Nhật ký thực hiện công việc chi tiết và kết quả đạt được qua 9 tuần (9 Sprint) phát triển của dự án:")
 
-    headers_sp = ["Giai đoạn", "Mục tiêu trọng tâm của Sprint", "Các hạng mục công việc tiêu biểu (Tasks)", "Thành viên thực hiện", "Trạng thái"]
+    headers_sp = ["Giai đoạn", "Mục tiêu trọng tâm của tuần (Sprint)", "Chi tiết các công việc thực tế đã hoàn thành", "Thành viên thực hiện", "Trạng thái"]
     data_sp = [
-        ["Sprint 1\n(Tuần 1)", "Khởi tạo kiến trúc Solution, CSDL & Foundation APIs", "Thiết lập Clean Architecture, PropNestDbContext, Migration đầu tiên; 구현 POST /auth/register, POST /auth/login, JwtTokenService; GET /listings có phân trang và bộ lọc; khởi tạo thực thể Wallet", "Bảo, Phúc, Tài", "Hoàn thành (Done)"],
-        ["Sprint 2\n(Tuần 2)", "Hoàn thiện CRUD Listing, RowVersion OCC & Nạp tiền Ví", "Implement POST/PUT/DELETE /listings, Submit/Hide/Unhide tin đăng; tích hợp kiểm soát đồng thời RowVersion (409 Conflict); API GET /wallets/me và POST /wallets/top-up; viết Unit Test cho Listing State Transitions (Task 182)", "Phúc, Bảo, Tài", "Hoàn thành (Done)"],
-        ["Sprint 3\n(Tuần 3)", "Phân hệ Kiểm duyệt Moderation, History Delta & Idempotency", "Implement GET /moderation/pending, Approve/Reject listing, Policy CanModerateListings; xây dựng thuật toán DeltaEngine, API GET /listings/{id}/history (Task 187, 188); xây dựng bảng IdempotencyRequests & RequestHash", "Tài, Phúc, Bảo", "Hoàn thành (Done)"],
-        ["Sprint 4\n(Tuần 4)", "Tích hợp RabbitMQ, MassTransit & PurchasePackageSaga", "Cài đặt MassTransit + RabbitMQ (Task 194); thiết kế PurchasePackageSaga 9 trạng thái (Task 195); viết DeductWalletConsumer (Task 196), UpgradeListingConsumer (Task 197) và RefundWalletConsumer bồi hoàn tự động (Task 198)", "Bảo, Phúc", "Hoàn thành (Done)"],
-        ["Sprint 5\n(Tuần 5)", "Transactional Outbox, Inbox Deduplication & Web Portals", "Xây dựng OutboxDispatchService (Task 199), InboxMessage deduplication filter (Task 200); hoàn thiện Client Portal, Seller Portal (My Listings, Form Tạo/Sửa, Trang Ví, Flow mua gói - Task 210..213)", "Bảo, Phúc, Tài", "Hoàn thành (Done)"],
-        ["Sprint 6\n(Tuần 6)", "Hoàn thiện Admin Portal, Kiểm thử toàn diện & Báo cáo", "Xây dựng Admin Moderation Queue & Dashboard Stats (Task 214); hoàn thiện API GET /workflows/{correlationId} (Task 205); viết Unit Test cho Idempotency logic (Task 206); rà soát đồng bộ báo cáo đồ án", "Tài, Phúc, Bảo", "Hoàn thành (Done)"]
+        [
+            "Tuần 1\n(Sprint 1)",
+            "Lập nhóm & Xác định đề tài, công nghệ",
+            "• Lập nhóm thực hiện đồ án (3 thành viên: Phúc, Bảo, Tài).\n• Xác định công nghệ chủ đạo (ASP.NET Core 8, SQL Server, RabbitMQ) và thống nhất lựa chọn đề tài: Hệ thống đăng tin bất động sản PropNest.",
+            "Cả nhóm\n(Bảo, Phúc, Tài)",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 2\n(Sprint 2)",
+            "Nghiên cứu kiến thức, phân tích yêu cầu & lập kế hoạch",
+            "• Xác định mục tiêu đồ án, củng cố kiến thức nền tảng về công nghệ ASP.NET Core.\n• Phân tích yêu cầu hệ thống (Functional & Non-Functional Requirements) và xác định danh mục chức năng của đề tài (F01–F10).\n• Lập kế hoạch phân chia công việc chi tiết theo từng Sprint (tuần).",
+            "Cả nhóm\n(Bảo, Phúc, Tài)",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 3\n(Sprint 3)",
+            "Khởi tạo Solution Clean Architecture, CSDL & Viết Doc Ch.1-3",
+            "• Khởi tạo dự án PropNest theo mô hình Clean Architecture kết hợp Modular Monolith.\n• Thiết kế và xây dựng Database ban đầu (PropNestDbContext, Entity Framework Core).\n• Thực hiện viết tài liệu báo cáo Chương 1 (Giới thiệu chung), Chương 2 (Cơ hội nghề nghiệp & thị trường), Chương 3 (Cài đặt môi trường & Hello World).",
+            "Bảo, Phúc, Tài",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 4\n(Sprint 4)",
+            "Hoàn thiện API Listing, Nạp ví, Auth JWT & Viết Doc Ch.4, 5, 7",
+            "• Hoàn thiện các API CRUD Listing (tạo, cập nhật, lấy chi tiết, phân trang danh sách tin đăng).\n• Hoàn thiện API nạp tiền vào ví cá nhân (Top-up).\n• Cấu hình xác thực JWT, hoàn thiện API login và register với ASP.NET Core Identity.\n• Thực hiện viết tài liệu báo cáo Chương 4 (Khái niệm nền tảng Backend), Chương 5 (Thiết kế & quản lý CSDL với EF Core), Chương 7 (Bảo mật, xác thực & phân quyền).",
+            "Phúc, Bảo, Tài",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 5\n(Sprint 5)",
+            "API Moderation, Listing History, RabbitMQ/Saga & Viết Doc Ch.6, 8",
+            "• Hoàn thiện các API Moderation (hàng đợi chờ duyệt, duyệt và từ chối tin đăng).\n• Hoàn thiện API Listing History và thuật toán Delta vi sai (History Delta Engine).\n• Hoàn thiện API Wallet Transaction, cấu hình hạ tầng Message Broker RabbitMQ và thiết kế các trạng thái cỗ máy Saga.\n• Thực hiện viết tài liệu báo cáo Chương 6 (Xây dựng RESTful API nâng cao) và Chương 8 (Xử lý giao dịch phân tán & điều phối workflow).",
+            "Tài, Phúc, Bảo",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 6\n(Sprint 6)",
+            "UI Client/Seller, Saga mua gói, 3 Consumer, Quartz & Doc Ch.8, 11",
+            "• Hoàn thiện UI phía Client + load hiển thị thành công danh sách tin đăng bất động sản.\n• Thực hiện UI Seller: trang đăng tin, trang chi tiết tin, và trang đăng nhập / đăng ký.\n• Hoàn thiện quy trình Saga mua gói dịch vụ.\n• Thực hiện đầy đủ 3 Consumer: DeductWalletConsumer, UpgradeListingConsumer, RefundWalletConsumer (tự động bồi hoàn hoàn tiền).\n• Cấu hình Serilog ghi log có cấu trúc và Quartz.NET quét tin quá hạn (ListingExpirationJob).\n• Thực hiện viết tài liệu báo cáo: Chương 8 (phần còn lại), Chương 11 (mục 11.1 và 11.2).",
+            "Phúc, Bảo, Tài",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 7\n(Sprint 7)",
+            "UI Ví/Mua gói, UI Admin & Chỉnh sửa phản biện của Giảng viên",
+            "• Hoàn thiện trang nạp ví và giao diện mua gói dịch vụ trên Seller Portal.\n• Hoàn thiện UI Admin: trang duyệt tin (Moderation Queue), trang Dashboard thống kê vận hành.\n• Thực hiện rà soát, chỉnh sửa toàn diện các nhận xét chi tiết của Giảng viên hướng dẫn về tài liệu báo cáo từ Tuần 5 (mâu thuẫn Program.cs, phiên bản gói, lockout, policy, Saga states).",
+            "Bảo, Tài, Phúc",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 8\n(Sprint 8)",
+            "Hoàn thiện Project, Kiểm thử toàn diện & Viết Doc Ch.9-13",
+            "• Hoàn thiện toàn bộ project: tiến hành chạy kiểm thử toàn diện các chức năng (Unit Tests xUnit 20/20 Passed, kiểm thử tích hợp, kiểm chứng kịch bản bồi hoàn Saga).\n• Thực hiện viết tài liệu báo cáo các Chương: Chương 9 (Tối ưu hiệu năng & vận hành), Chương 10 (Kiểm thử & đóng gói triển khai), Chương 11 (hoàn thiện mục 11.3 & 11.4), Chương 12 (Thực nghiệm & đánh giá kết quả hệ thống), Chương 13 (Đánh giá và nhìn lại).",
+            "Cả nhóm\n(Bảo, Phúc, Tài)",
+            "Hoàn thành\n(Done)"
+        ],
+        [
+            "Tuần 9\n(Sprint 9)",
+            "Format chuẩn hóa toàn bộ Báo cáo & Báo cáo cá nhân",
+            "• Thực hiện format lại, chuẩn hóa quy chuẩn trình bày, rà soát chính tả, định dạng bảng biểu, hình vẽ của toàn bộ file Báo cáo chung đồ án.\n• Mỗi thành viên hoàn thành báo cáo cá nhân và chuẩn bị tài liệu báo cáo nghiệm thu đồ án.",
+            "Cả nhóm\n(Bảo, Phúc, Tài)",
+            "Hoàn thành\n(Done)"
+        ]
     ]
-    add_body(doc, "Bảng PL.2: Nhật ký theo dõi tiến độ thực hiện đồ án qua 6 Sprint", bold=True, italic=True)
-    add_styled_table(doc, headers_sp, data_sp, col_widths=[0.9, 1.5, 2.7, 1.0, 0.9])
+    add_body(doc, "Bảng PL.2: Nhật ký theo dõi tiến độ thực hiện đồ án qua 9 tuần (9 Sprint)", bold=True, italic=True)
+    add_styled_table(doc, headers_sp, data_sp, col_widths=[0.8, 1.4, 2.7, 0.9, 0.7])
 
     # -------------------------------------------------------------------------
     # Phụ lục 2: Minh chứng đóng góp và lịch sử Git Commits
@@ -542,8 +599,13 @@ def generate_standalone_part_4():
     populate_chapter_13_to_end(doc)
 
     out_path = "docs/Chuong13_14_KetLuan_PhuLuc.docx"
-    doc.save(out_path)
-    print(f"Successfully generated standalone Part 4 document: {out_path}")
+    try:
+        doc.save(out_path)
+        print(f"Successfully generated standalone Part 4 document: {out_path}")
+    except PermissionError:
+        alt_path = "docs/Chuong13_14_KetLuan_PhuLuc_Updated.docx"
+        doc.save(alt_path)
+        print(f"File {out_path} is currently open in Word. Saved updated version to: {alt_path}")
 
 def update_main_report():
     main_doc_path = "docs/Báo cáo chung Các công nghệ LTHĐ.docx"
@@ -559,7 +621,6 @@ def update_main_report():
         print("Could not locate CHƯƠNG 13: ĐÁNH GIÁ VÀ NHÌN LẠI in main doc")
         return
 
-    # Collect all elements from start_p to the end of body (excluding w:sectPr)
     elements_to_remove = []
     curr = start_p._p
     sect_pr = None
@@ -577,7 +638,6 @@ def update_main_report():
     temp_doc = docx.Document()
     populate_chapter_13_to_end(temp_doc)
 
-    # Insert new elements right before sect_pr (or append to body if no sect_pr)
     for child in list(temp_doc.element.body):
         tag = child.tag.split('}')[-1]
         if tag in ('p', 'tbl'):
