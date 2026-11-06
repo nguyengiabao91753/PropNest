@@ -22,7 +22,7 @@
             <div>
                 <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Quản lý Bất động sản</h1>
                 <p class="text-xs text-muted-foreground mt-1">
-                    Theo dõi vòng đời tin đăng, cập nhật giá và kiểm toán lịch sử thay đổi (Delta Engine F04).
+                    Quản lý danh sách tin đăng, cập nhật thông tin và theo dõi trạng thái bài đăng.
                 </p>
             </div>
             <div>
@@ -33,7 +33,7 @@
         </div>
 
         <div class="p-6 md:p-8 space-y-6">
-            <!-- 1. Horizontal Status Tabs Filter (Task 210) -->
+            <!-- Tabs trang thai -->
             <div class="border-b border-border/80 pb-1">
                 <nav class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" aria-label="Tabs trạng thái">
                     @foreach (var (val, lbl, count) in statusTabs)
@@ -163,7 +163,7 @@
                                         <button type="button"
                                                 onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
                                                 class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
-                                                title="Nâng cấp gói dịch vụ (Task 213)">
+                                                title="Nâng cấp gói dịch vụ">
                                             <i data-lucide="sparkles" class="size-4"></i>
                                         </button>
                                     }
@@ -177,7 +177,7 @@
                                             </button>
                                         </form>
                                     }
-                                    <a asp-action="History" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900 p-1.5" title="Xem lịch sử Delta">
+                                    <a asp-action="History" asp-route-id="@p.Id" class="text-muted-foreground hover:text-neutral-900 p-1.5" title="Xem lịch sử thay đổi">
                                         <i data-lucide="history" class="size-4"></i>
                                     </a>
                                 </div>
@@ -242,7 +242,7 @@
                                             <partial name="_StatusBadge" model="p.Status" />
                                         </td>
 
-                                        <!-- Column 3: Package (Task 213: Nút nâng cấp nhanh) -->
+                                        <!-- Column 3: Package -->
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="flex items-center gap-1.5">
                                                 <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
@@ -312,10 +312,10 @@
                                                         <!-- Chi tiết -->
                                                         <a asp-action="Details" asp-route-id="@p.Id"
                                                            class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
-                                                            <i data-lucide="eye" class="size-3.5 text-primary"></i> Xem chi tiết (Preview)
+                                                            <i data-lucide="eye" class="size-3.5 text-primary"></i> Xem chi tiết
                                                         </a>
 
-                                                        <!-- Mua / Nâng cấp gói (Task 213) -->
+                                                        <!-- Mua / Nâng cấp gói -->
                                                         @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
                                                         {
                                                             <button type="button"
@@ -340,10 +340,10 @@
                                                             </a>
                                                         }
 
-                                                        <!-- Lịch sử Delta F04 -->
+                                                        <!-- Lịch sử thay đổi -->
                                                         <a asp-action="History" asp-route-id="@p.Id"
                                                            class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-neutral-800 hover:bg-surface transition-colors">
-                                                            <i data-lucide="history" class="size-3.5 text-neutral-600"></i> Lịch sử kiểm toán
+                                                            <i data-lucide="history" class="size-3.5 text-neutral-600"></i> Lịch sử thay đổi
                                                         </a>
 
                                                         <!-- Gửi kiểm duyệt (Submit) - Disable nếu không phải Draft hoặc Rejected -->
@@ -464,7 +464,7 @@
     </div>
 </div>
 
-<!-- Modal Chọn Gói Dịch Vụ & Step Indicator Saga (Task 213) -->
+<!-- Modal Chọn Gói Dịch Vụ -->
 <partial name="_PurchasePackageModal" />
 
 @section Scripts {

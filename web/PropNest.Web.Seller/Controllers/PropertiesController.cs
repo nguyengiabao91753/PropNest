@@ -13,10 +13,12 @@ namespace PropNest.Web.Seller.Controllers;
 public class PropertiesController : Controller
 {
     private readonly ISellerPropertyService _sellerService;
+    private readonly ISellerWalletService _walletService;
 
-    public PropertiesController(ISellerPropertyService sellerService)
+    public PropertiesController(ISellerPropertyService sellerService, ISellerWalletService walletService)
     {
         _sellerService = sellerService;
+        _walletService = walletService;
     }
 
     [HttpGet("")]
@@ -32,6 +34,7 @@ public class PropertiesController : Controller
         var model = await _sellerService.GetMyPropertiesAsync(status, q, layout, page, 8, cancellationToken);
         return View(model);
     }
+
     [HttpPost("Submit/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(
@@ -50,6 +53,7 @@ public class PropertiesController : Controller
         }
         return RedirectToAction(nameof(Index), new { status });
     }
+
     [HttpPost("ToggleHide/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleHide(
@@ -68,6 +72,7 @@ public class PropertiesController : Controller
         }
         return RedirectToAction(nameof(Index), new { status });
     }
+
     [HttpPost("Delete/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(
@@ -108,6 +113,7 @@ public class PropertiesController : Controller
         var model = new CreatePropertyInputModel();
         return View(model);
     }
+
     [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreatePropertyInputModel model, [FromForm] string? submitAction, CancellationToken cancellationToken)
@@ -276,6 +282,7 @@ public class PropertiesController : Controller
         };
         return View(model);
     }
+
     [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(long id, CreatePropertyInputModel model, CancellationToken cancellationToken)
@@ -329,16 +336,43 @@ public class PropertiesController : Controller
         var history = await _sellerService.GetHistoryDeltaAsync(id, cancellationToken);
         return View(history);
     }
+
     // ==========================================
     // Task 213: Mua gói dịch vụ & Polling Saga
     // ==========================================
+
+    [HttpGet("GetWalletBalance")]
+    public async Task<IActionResult> GetWalletBalance(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var wallet = await _walletService.GetWalletAsync(1, null, null, cancellationToken);
+            return Ok(new
+            {
+                success = true,
+                totalBalance = wallet.TotalBalance,
+                mainBalance = wallet.MainBalance,
+                promoBalance = wallet.PromoBalance
+            });
+        }
+        catch (Exception)
+        {
+            return Ok(new
+            {
+                success = false,
+                totalBalance = 0m,
+                mainBalance = 0m,
+                promoBalance = 0m
+            });
+        }
+    }
 
     [HttpPost("PurchasePackage")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> PurchasePackage([FromBody] PurchasePackageInputModel input, CancellationToken cancellationToken = default)
     {
-        // 1. Validate dữ liệu đầu vào cơ bản
-        if (input == null || input.ListingId <= 0 || string.IsNullOrWhiteSpace(input.PackageCode) || input.Amount <= 0)
+        // 1. Validate dữ liệu đầu vào cơ bản (input.Amount < 0 để cho phép gói 0đ nếu có)
+        if (input == null || input.ListingId <= 0 || string.IsNullOrWhiteSpace(input.PackageCode) || input.Amount < 0)
         {
             return BadRequest(new
             {
@@ -347,7 +381,28 @@ public class PropertiesController : Controller
             });
         }
 
-        // 2. Gọi Service gửi POST sang Backend API kèm Idempotency-Key
+        // 2. Kiểm tra số dư ví trước khi gọi flow Saga (Issue #3)
+        if (input.Amount > 0)
+        {
+            try
+            {
+                var wallet = await _walletService.GetWalletAsync(1, null, null, cancellationToken);
+                if (wallet.TotalBalance < input.Amount)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Số dư ví của bạn ({wallet.TotalBalance:N0} ₫) không đủ để thanh toán gói {input.Amount:N0} ₫. Vui lòng nạp thêm tiền vào ví."
+                    });
+                }
+            }
+            catch (Exception)
+            {
+                // Nếu lỗi kết nối kiểm tra số dư tạm thời, tiếp tục để Backend API xử lý
+            }
+        }
+
+        // 3. Gọi Service gửi POST sang Backend API kèm Idempotency-Key
         var correlationId = await _sellerService.PurchasePackageAsync(
             input.ListingId,
             input.PackageCode,
@@ -364,7 +419,7 @@ public class PropertiesController : Controller
             });
         }
 
-        // 3. Trả về correlationId cho Client Javascript bắt đầu Polling
+        // 4. Trả về correlationId cho Client Javascript thực thi Polling ngầm
         return Ok(new
         {
             success = true,

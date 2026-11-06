@@ -1,4 +1,4 @@
-@* Partial View: Modal Chọn Gói Dịch Vụ & Step Indicator Tiến Trình Saga (Task 213) *@
+@* Partial View: Modal Chọn Gói Dịch Vụ & Luồng Nâng Cấp Tin Chạy Ngầm *@
 
 <div id="purchasePackageModal"
      class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-200"
@@ -7,7 +7,7 @@
     <div class="relative w-full max-w-xl rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col transition-transform transform duration-200 scale-95 opacity-0"
          id="modalContent">
 
-        <!-- ================= 1. VIEW CHỌN GÓI ================= -->
+        <!-- ================= 1. VIEW CHỌN GÓI & XÁC NHẬN THANH TOÁN ================= -->
         <div id="packageSelectView" class="flex flex-col">
             <!-- Modal Header -->
             <div class="px-6 py-5 border-b border-border bg-surface/50 flex items-start justify-between gap-4">
@@ -19,22 +19,22 @@
                         <h3 id="modalTitle" class="text-base font-bold text-neutral-900">Nâng cấp gói dịch vụ</h3>
                         <p class="text-xs text-muted-foreground mt-0.5">
                             Áp dụng cho tin: <span id="modalListingTitle" class="font-semibold text-neutral-800"></span>
-                            <span class="font-mono text-muted-foreground font-normal">(PN-<span id="modalListingId"></span>)</span>
+                            <span class="font-mono text-muted-foreground font-normal">(#<span id="modalListingId"></span>)</span>
                         </p>
                     </div>
                 </div>
                 <button type="button"
                         onclick="closePurchasePackageModal()"
-                        class="p-1.5 rounded-xl border border-border text-muted-foreground hover:text-neutral-900 hover:bg-surface transition-colors"
+                        class="p-1.5 rounded-xl border border-border text-muted-foreground hover:text-neutral-900 hover:bg-surface transition-colors cursor-pointer"
                         title="Đóng">
                     <i data-lucide="x" class="size-4"></i>
                 </button>
             </div>
 
             <!-- Modal Body: Lựa chọn 3 gói -->
-            <div class="p-6 space-y-4 max-h-[68vh] overflow-y-auto">
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div class="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Chọn gói phù hợp với nhu cầu tiếp cận của bạn:</span>
+                    <span>Chọn gói phù hợp với nhu cầu của bạn:</span>
                     <span>Gói hiện tại: <strong id="modalCurrentPackage" class="text-neutral-900">Standard</strong></span>
                 </div>
 
@@ -43,7 +43,7 @@
                     <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/40 cursor-pointer transition-all shadow-2xs">
                         <div class="flex items-start gap-3">
                             <input type="radio" name="selectedPackageCode" value="Standard"
-                                   data-name="Gói Tiêu Chuẩn (Mặc định)" data-price="0" data-days="30"
+                                   data-name="Gói Tiêu Chuẩn (Standard)" data-price="0" data-days="30"
                                    class="mt-1 size-4 text-primary border-border focus:ring-primary"
                                    onchange="onPackageSelected(this)">
                             <div>
@@ -63,7 +63,7 @@
                     <!-- Gói 2: VIP (Khuyên dùng) -->
                     <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-amber-500/80 bg-amber-50/20 hover:border-amber-500 cursor-pointer transition-all shadow-xs ring-1 ring-amber-500/20">
                         <div class="absolute -top-2.5 right-4 rounded-full bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-xs uppercase tracking-wide">
-                            Khuyên dùng • Tăng 300% tương tác
+                            Khuyên dùng • Tăng tương tác
                         </div>
                         <div class="flex items-start gap-3">
                             <input type="radio" name="selectedPackageCode" value="VIP" checked
@@ -78,7 +78,7 @@
                                     </h4>
                                     <span class="rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-200">30 ngày</span>
                                 </div>
-                                <p class="text-xs text-amber-900/80 mt-1">Gắn huy hiệu VIP vàng, hiển thị ưu tiên đầu trang chủ & danh mục tìm kiếm.</p>
+                                <p class="text-xs text-amber-900/80 mt-1">Gắn huy hiệu VIP, hiển thị ưu tiên đầu trang chủ & danh mục tìm kiếm.</p>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
@@ -102,7 +102,7 @@
                                     </h4>
                                     <span class="rounded-md bg-surface text-muted-foreground text-[10px] font-semibold px-2 py-0.5 border border-border">7 ngày</span>
                                 </div>
-                                <p class="text-xs text-muted-foreground mt-1">Đưa tin đăng lên vị trí top đầu mục tìm kiếm ngay lập tức trong 7 ngày.</p>
+                                <p class="text-xs text-muted-foreground mt-1">Đưa tin đăng lên vị trí top đầu danh mục tìm kiếm trong 7 ngày.</p>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
@@ -112,8 +112,8 @@
                     </label>
                 </div>
 
-                <!-- Tóm tắt thanh toán -->
-                <div class="rounded-2xl border border-border bg-surface/60 p-4 space-y-2">
+                <!-- Tóm tắt thanh toán & Số dư ví -->
+                <div class="rounded-2xl border border-border bg-surface/60 p-4 space-y-2.5">
                     <div class="flex items-center justify-between text-xs">
                         <span class="text-muted-foreground">Gói dịch vụ đã chọn:</span>
                         <span id="summaryPackageName" class="font-bold text-neutral-900">Gói VIP Đẳng Cấp</span>
@@ -126,6 +126,42 @@
                         <span class="font-semibold text-neutral-900">Tổng thanh toán:</span>
                         <span id="summaryPrice" class="text-base font-black text-primary">150.000 ₫</span>
                     </div>
+
+                    <!-- Hiển thị Tổng số dư của seller & Số dư sau khi thanh toán -->
+                    <div class="border-t border-border/60 pt-2 space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-muted-foreground flex items-center gap-1.5">
+                                <i data-lucide="wallet" class="size-3.5 text-primary"></i>
+                                Số dư ví hiện tại:
+                            </span>
+                            <span id="summaryCurrentBalance" class="font-bold text-neutral-900">Đang tải...</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-muted-foreground flex items-center gap-1.5">
+                                <i data-lucide="calculator" class="size-3.5 text-muted-foreground"></i>
+                                Số dư sau thanh toán:
+                            </span>
+                            <span id="summaryRemainingBalance" class="font-bold text-emerald-600">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Cảnh báo số dư không đủ -->
+                    <div id="insufficientBalanceAlert" class="hidden rounded-xl border border-rose-200 bg-rose-50/90 p-3 text-xs text-rose-800 space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5 font-semibold text-rose-700">
+                                <i data-lucide="alert-circle" class="size-4 shrink-0 text-rose-600"></i>
+                                <span>Số dư ví không đủ để thanh toán</span>
+                            </div>
+                            <a asp-controller="Wallet" asp-action="Index"
+                               class="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[11px] hover:bg-rose-700 transition-colors shrink-0 flex items-center gap-1">
+                                <i data-lucide="plus-circle" class="size-3"></i> Nạp tiền ngay
+                            </a>
+                        </div>
+                        <p class="text-[11px] text-rose-600 leading-relaxed">
+                            Vui lòng nạp thêm tiền vào ví để hoàn tất giao dịch nâng cấp gói này.
+                        </p>
+                    </div>
+
                     <p class="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
                         <i data-lucide="info" class="size-3.5 text-muted-foreground/80 shrink-0"></i>
                         <span>Số tiền sẽ được trừ trực tiếp từ số dư ví PropNest của bạn.</span>
@@ -137,159 +173,85 @@
             <div class="px-6 py-4 border-t border-border bg-surface/40 flex items-center justify-end gap-3">
                 <button type="button"
                         onclick="closePurchasePackageModal()"
-                        class="h-10 px-4 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors">
+                        class="h-10 px-4 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors cursor-pointer">
                     Hủy bỏ
                 </button>
                 <button type="button"
                         id="btnConfirmPurchase"
                         onclick="startPurchasePackageWorkflow()"
-                        class="h-10 px-5 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+                        class="h-10 px-5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <i data-lucide="credit-card" class="size-4"></i>
                     <span>Xác nhận mua gói</span>
                 </button>
             </div>
         </div>
 
-        <!-- ================= 2. VIEW STEP INDICATOR SAGA ================= -->
-        <div id="packageWorkflowView" class="hidden flex-col p-6 sm:p-8 space-y-6">
-            <div class="text-center space-y-1">
-                <div class="size-12 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center border border-primary/20 shadow-xs mb-3">
-                    <i data-lucide="loader-2" class="size-6 animate-spin"></i>
-                </div>
-                <h3 class="text-base font-bold text-neutral-900">Đang xử lý giao dịch mua gói</h3>
-                <p class="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Quy trình Saga Orchestrator đang thực thi các bước theo thời gian thực...
-                </p>
-            </div>
-
-            <!-- Thanh tiến trình (Progress Bar) -->
-            <div class="space-y-1.5">
-                <div class="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Tiến độ xử lý</span>
-                    <span id="workflowProgressPercent" class="font-bold text-primary">25%</span>
-                </div>
-                <div class="h-2 w-full bg-surface rounded-full overflow-hidden border border-border/40">
-                    <div id="workflowProgressBar" class="h-full bg-primary transition-all duration-500 rounded-full" style="width: 25%"></div>
-                </div>
-            </div>
-
-            <!-- Step Indicator (4 Bước) -->
-            <div class="space-y-3" id="sagaStepsList">
-                <!-- Step 1: Khởi tạo -->
-                <div id="sagaStep1" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-surface/30 transition-colors">
-                    <div class="step-icon size-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        <i data-lucide="loader-2" class="size-4 animate-spin"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 1: Khởi tạo yêu cầu</h5>
-                        <p class="text-[11px] text-muted-foreground step-desc">Xác thực quyền sở hữu tin đăng và đăng ký giao dịch Idempotent.</p>
-                    </div>
-                </div>
-
-                <!-- Step 2: Trừ tiền ví -->
-                <div id="sagaStep2" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
-                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        2
-                    </div>
-                    <div class="flex-1">
-                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 2: Khấu trừ số dư ví</h5>
-                        <p class="text-[11px] text-muted-foreground step-desc">Khấu trừ PromoBalance / MainBalance và ghi sổ cái giao dịch.</p>
-                    </div>
-                </div>
-
-                <!-- Step 3: Nâng cấp tin -->
-                <div id="sagaStep3" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
-                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        3
-                    </div>
-                    <div class="flex-1">
-                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 3: Nâng cấp gói & gia hạn tin</h5>
-                        <p class="text-[11px] text-muted-foreground step-desc">Cập nhật PackageCode và tự động tính lại StartDate - EndDate.</p>
-                    </div>
-                </div>
-
-                <!-- Step 4: Hoàn tất -->
-                <div id="sagaStep4" class="saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-60 transition-colors">
-                    <div class="step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        4
-                    </div>
-                    <div class="flex-1">
-                        <h5 class="text-xs font-bold text-neutral-900 step-title">Bước 4: Hoàn tất giao dịch</h5>
-                        <p class="text-[11px] text-muted-foreground step-desc">Lưu vết lịch sử kiểm toán ListingHistory và hoàn tất Saga.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Status Text -->
-            <div class="text-center pt-2">
-                <span id="workflowStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                    <span class="size-2 rounded-full bg-primary animate-ping"></span>
-                    <span id="workflowStatusText">Đang khởi tạo yêu cầu...</span>
-                </span>
-            </div>
-        </div>
-
-        <!-- ================= 3. VIEW KẾT QUẢ THÀNH CÔNG ================= -->
+        <!-- ================= 2. VIEW KẾT QUẢ THÀNH CÔNG (HIỂN THỊ NỔI BẬT) ================= -->
         <div id="packageResultSuccessView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
             <div class="size-16 rounded-3xl bg-emerald-500/10 text-emerald-600 mx-auto flex items-center justify-center border border-emerald-500/20 shadow-xs">
                 <i data-lucide="check-circle-2" class="size-10"></i>
             </div>
 
-            <div class="space-y-2">
-                <h3 class="text-lg font-black text-neutral-900">Nâng cấp gói thành công!</h3>
-                <p class="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Tin đăng của bạn đã được nâng cấp lên <span id="resSuccessPackageName" class="font-bold text-emerald-700">Gói VIP</span> thành công.
+            <div class="space-y-1.5">
+                <h3 class="text-xl font-bold text-neutral-900 font-display">Nâng cấp gói thành công!</h3>
+                <p class="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                    Tin đăng <span id="resSuccessListingTitle" class="font-bold text-neutral-800"></span> đã được nâng cấp lên <span id="resSuccessPackageName" class="font-bold text-emerald-700"></span> thành công.
                 </p>
             </div>
 
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 text-xs text-emerald-800 text-left space-y-1.5">
-                <div class="flex items-center gap-2 font-semibold">
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-xs text-emerald-900 text-left space-y-2">
+                <div class="flex items-center gap-2 font-bold text-emerald-800">
                     <i data-lucide="sparkles" class="size-4 text-emerald-600"></i>
                     <span>Quyền lợi đã được kích hoạt:</span>
                 </div>
-                <p class="text-muted-foreground">Tin đăng đã được gia hạn thời hạn hiển thị và gắn nhãn theo quyền lợi của gói.</p>
+                <ul class="text-muted-foreground text-xs space-y-1 list-disc list-inside leading-relaxed">
+                    <li>Gắn huy hiệu gói trên danh sách tin đăng và trang chi tiết.</li>
+                    <li>Tự động gia hạn thời gian hiển thị tin theo quyền lợi của gói.</li>
+                    <li>Ưu tiên hiển thị tiếp cận khách hàng tiềm năng.</li>
+                </ul>
             </div>
 
             <div class="pt-2">
                 <button type="button"
                         onclick="window.location.reload()"
-                        class="w-full h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                        class="w-full h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
                     <i data-lucide="check" class="size-4"></i>
-                    <span>Hoàn tất & Làm mới danh sách</span>
+                    <span>Hoàn tất & Cập nhật danh sách</span>
                 </button>
             </div>
         </div>
 
-        <!-- ================= 4. VIEW KẾT QUẢ THẤT BẠI / BỒI HOÀN ================= -->
+        <!-- ================= 3. VIEW KẾT QUẢ THẤT BẠI (HIỂN THỊ NỔI BẬT) ================= -->
         <div id="packageResultFailedView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
-            <div class="size-16 rounded-3xl bg-destructive/10 text-destructive mx-auto flex items-center justify-center border border-destructive/20 shadow-xs">
+            <div class="size-16 rounded-3xl bg-rose-500/10 text-rose-600 mx-auto flex items-center justify-center border border-rose-500/20 shadow-xs">
                 <i data-lucide="alert-triangle" class="size-10"></i>
             </div>
 
             <div class="space-y-2">
-                <h3 class="text-lg font-black text-neutral-900">Giao dịch không thành công</h3>
-                <div id="resErrorMessage" class="p-3.5 rounded-2xl border border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium max-w-md mx-auto text-left">
-                    Không thể thực hiện giao dịch.
+                <h3 class="text-xl font-bold text-neutral-900 font-display">Giao dịch không thành công</h3>
+                <div id="resErrorMessage" class="p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium max-w-md mx-auto text-left leading-relaxed">
+                    Không thể thực hiện giao dịch nâng cấp gói.
                 </div>
             </div>
 
-            <!-- Cam kết hoàn tiền an tâm (Yêu cầu Blueprint) -->
             <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 text-left flex items-start gap-3">
                 <i data-lucide="shield-check" class="size-5 text-amber-600 shrink-0 mt-0.5"></i>
                 <div class="space-y-0.5">
                     <strong class="font-bold text-neutral-900">Bảo vệ số dư ví:</strong>
-                    <p class="text-muted-foreground">Theo cơ chế bồi hoàn Saga, số tiền của bạn không bị khấu trừ hoặc đã được bồi hoàn 100% vào ví.</p>
+                    <p class="text-muted-foreground text-xs leading-relaxed">
+                        Số dư trong ví của bạn không bị trừ hoặc đã được hoàn trả lại ví 100%.
+                    </p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3 pt-2">
                 <button type="button"
                         onclick="closePurchasePackageModal()"
-                        class="flex-1 h-11 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors">
+                        class="flex-1 h-11 rounded-xl border border-border bg-card text-neutral-700 hover:bg-surface text-xs font-semibold transition-colors cursor-pointer">
                     Đóng
                 </button>
                 <a asp-controller="Wallet" asp-action="Index"
-                   class="flex-1 h-11 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                   class="flex-1 h-11 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2">
                     <i data-lucide="wallet" class="size-4"></i>
                     <span>Nạp tiền vào ví</span>
                 </a>
@@ -299,23 +261,48 @@
     </div>
 </div>
 
-<!-- ================= JAVASCRIPT LOGIC POLLING & MODAL (Task 213) ================= -->
+<!-- ================= JAVASCRIPT LOGIC CHẠY NGẦM & SHOW KẾT QUẢ NỔI BẬT ================= -->
 <script>
     let currentListingId = 0;
+    let currentListingTitle = '';
     let selectedPackageCode = 'VIP';
     let selectedPackagePrice = 150000;
     let selectedPackageName = 'Gói VIP Đẳng Cấp';
-    let pollIntervalTimer = null;
+    let selectedPackageDays = 30;
+    let currentWalletBalance = 0;
+    let isFetchingWallet = false;
+    let activeBackgroundTimer = null;
+
+    function formatVndCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    }
+
+    async function fetchWalletBalance() {
+        if (isFetchingWallet) return;
+        isFetchingWallet = true;
+        try {
+            const res = await fetch('/Properties/GetWalletBalance');
+            if (res.ok) {
+                const data = await res.json();
+                currentWalletBalance = typeof data.totalBalance === 'number' ? data.totalBalance : 0;
+            }
+        } catch (e) {
+            console.error('Không thể lấy số dư ví:', e);
+        } finally {
+            isFetchingWallet = false;
+            updateSummaryUI();
+        }
+    }
 
     function openPurchasePackageModal(listingId, listingTitle, currentPackage) {
         currentListingId = listingId;
+        currentListingTitle = listingTitle || ('Tin đăng #' + listingId);
         document.getElementById('modalListingId').innerText = listingId;
-        document.getElementById('modalListingTitle').innerText = listingTitle || ('Tin đăng #' + listingId);
+        document.getElementById('modalListingTitle').innerText = currentListingTitle;
         document.getElementById('modalCurrentPackage').innerText = currentPackage || 'Standard';
 
-        // Reset về view chọn gói
+        // Đảm bảo reset view về view chọn gói
         document.getElementById('packageSelectView').classList.remove('hidden');
-        document.getElementById('packageWorkflowView').classList.add('hidden');
         document.getElementById('packageResultSuccessView').classList.add('hidden');
         document.getElementById('packageResultFailedView').classList.add('hidden');
 
@@ -323,10 +310,20 @@
         const vipRadio = document.querySelector('input[name="selectedPackageCode"][value="VIP"]');
         if (vipRadio) {
             vipRadio.checked = true;
-            onPackageSelected(vipRadio);
+            selectedPackageCode = 'VIP';
+            selectedPackagePrice = 150000;
+            selectedPackageName = 'Gói VIP Đẳng Cấp';
+            selectedPackageDays = 30;
         }
 
+        // Lấy số dư ví mới nhất từ server
+        fetchWalletBalance();
+
         // Hiển thị modal kèm animation
+        openModalDialog();
+    }
+
+    function openModalDialog() {
         const modal = document.getElementById('purchasePackageModal');
         const content = document.getElementById('modalContent');
         modal.classList.remove('hidden');
@@ -342,11 +339,6 @@
     }
 
     function closePurchasePackageModal() {
-        if (pollIntervalTimer) {
-            clearInterval(pollIntervalTimer);
-            pollIntervalTimer = null;
-        }
-
         const modal = document.getElementById('purchasePackageModal');
         const content = document.getElementById('modalContent');
         content.classList.remove('scale-100', 'opacity-100');
@@ -359,39 +351,107 @@
 
     function onPackageSelected(radio) {
         selectedPackageCode = radio.value;
-        selectedPackagePrice = parseFloat(radio.dataset.price);
+        selectedPackagePrice = parseFloat(radio.dataset.price) || 0;
         selectedPackageName = radio.dataset.name;
-        const days = radio.dataset.days;
+        selectedPackageDays = parseInt(radio.dataset.days, 10) || 30;
 
-        document.getElementById('summaryPackageName').innerText = selectedPackageName;
-        document.getElementById('summaryDuration').innerText = `${days} ngày`;
-        document.getElementById('summaryPrice').innerText = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedPackagePrice);
+        updateSummaryUI();
     }
 
-    async function startPurchasePackageWorkflow() {
-        if (!currentListingId || !selectedPackageCode) return;
+    function updateSummaryUI() {
+        const summaryPackageEl = document.getElementById('summaryPackageName');
+        const summaryDurationEl = document.getElementById('summaryDuration');
+        const summaryPriceEl = document.getElementById('summaryPrice');
+        const currentBalanceEl = document.getElementById('summaryCurrentBalance');
+        const remainingBalanceEl = document.getElementById('summaryRemainingBalance');
+        const alertEl = document.getElementById('insufficientBalanceAlert');
+        const confirmBtn = document.getElementById('btnConfirmPurchase');
 
-        // Sinh Idempotency-Key chuẩn UUIDv4 chống duplicate charge
-        const idempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('idemp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9));
+        if (summaryPackageEl) summaryPackageEl.innerText = selectedPackageName;
+        if (summaryDurationEl) summaryDurationEl.innerText = `${selectedPackageDays} ngày`;
+        if (summaryPriceEl) summaryPriceEl.innerText = formatVndCurrency(selectedPackagePrice);
 
-        // Chuyển sang View Step Indicator
-        document.getElementById('packageSelectView').classList.add('hidden');
-        document.getElementById('packageWorkflowView').classList.remove('hidden');
-        resetStepIndicator();
+        // Hiển thị số dư ví hiện tại
+        if (currentBalanceEl) {
+            currentBalanceEl.innerText = formatVndCurrency(currentWalletBalance);
+        }
+
+        // Tính số dư sau thanh toán
+        const remaining = currentWalletBalance - selectedPackagePrice;
+
+        if (remainingBalanceEl) {
+            if (remaining >= 0) {
+                remainingBalanceEl.innerText = formatVndCurrency(remaining);
+                remainingBalanceEl.className = 'font-bold text-emerald-600';
+            } else {
+                remainingBalanceEl.innerText = `-${formatVndCurrency(Math.abs(remaining))} (Thiếu tiền)`;
+                remainingBalanceEl.className = 'font-bold text-rose-600';
+            }
+        }
+
+        // Kiểm tra số dư
+        if (selectedPackagePrice > 0 && remaining < 0) {
+            if (alertEl) alertEl.classList.remove('hidden');
+            if (confirmBtn) {
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                confirmBtn.title = 'Số dư ví không đủ để thanh toán gói này';
+            }
+        } else {
+            if (alertEl) alertEl.classList.add('hidden');
+            if (confirmBtn) {
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                confirmBtn.title = 'Bấm để thanh toán và nâng cấp gói';
+            }
+        }
 
         if (window.lucide) {
             window.lucide.createIcons();
         }
+    }
+
+    // ==========================================
+    // KHỞI CHẠY GIAO DỊCH NGẦM & SHOW KẾT QUẢ RÕ RÀNG
+    // ==========================================
+
+    async function startPurchasePackageWorkflow() {
+        if (!currentListingId || !selectedPackageCode) return;
+
+        // 1. Kiểm tra số dư ví trước khi gửi
+        if (selectedPackagePrice > 0 && currentWalletBalance < selectedPackagePrice) {
+            if (typeof showSellerToast === 'function') {
+                showSellerToast(`Số dư ví (${formatVndCurrency(currentWalletBalance)}) không đủ để thanh toán ${formatVndCurrency(selectedPackagePrice)}. Vui lòng nạp thêm tiền!`, 'error', 5000);
+            }
+            return;
+        }
+
+        const confirmBtn = document.getElementById('btnConfirmPurchase');
+        if (confirmBtn) confirmBtn.disabled = true;
+
+        const targetListingId = currentListingId;
+        const targetListingTitle = currentListingTitle;
+        const targetPackageName = selectedPackageName;
+
+        // Sinh Idempotency-Key chuẩn UUID
+        const idempotencyKey = (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : ('idemp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9));
+
+        // Đóng modal chọn gói để không bắt user ngồi chờ
+        closePurchasePackageModal();
+
+        // Hiển thị toast thông báo tiến trình chạy ngầm
+        if (typeof showSellerToast === 'function') {
+            showSellerToast(`Đang xử lý nâng cấp ${targetPackageName} cho tin #${targetListingId} chạy ngầm...`, 'loading', 0);
+        }
 
         try {
-            // Gửi POST mua gói sang BFF Controller
             const response = await fetch('/Properties/PurchasePackage', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    listingId: currentListingId,
+                    listingId: targetListingId,
                     packageCode: selectedPackageCode,
                     amount: selectedPackagePrice,
                     idempotencyKey: idempotencyKey
@@ -401,27 +461,47 @@
             const data = await response.json();
 
             if (!response.ok || !data.success || !data.correlationId) {
-                showFailedResult(data.message || 'Không thể bắt đầu tiến trình mua gói. Vui lòng thử lại.');
+                // Ẩn toast loading
+                const toast = document.getElementById('sellerToast');
+                if (toast) toast.classList.add('hidden');
+
+                // Bật Modal thông báo thất bại nổi bật lên màn hình
+                showFailedResultModal(data.message || 'Không thể bắt đầu tiến trình mua gói. Vui lòng thử lại sau.');
                 return;
             }
 
-            // Bắt đầu chu kỳ Polling theo CorrelationId (mỗi 1.2s)
-            startWorkflowPolling(data.correlationId);
+            // Bắt đầu Polling ngầm theo CorrelationId
+            startBackgroundWorkflowPolling(data.correlationId, targetListingId, targetListingTitle, targetPackageName);
 
         } catch (err) {
-            showFailedResult('Đã xảy ra lỗi kết nối khi gửi yêu cầu. Vui lòng kiểm tra lại mạng.');
+            console.error('Lỗi khi gửi yêu cầu mua gói:', err);
+            const toast = document.getElementById('sellerToast');
+            if (toast) toast.classList.add('hidden');
+
+            showFailedResultModal('Đã xảy ra lỗi kết nối khi gửi yêu cầu. Vui lòng kiểm tra lại mạng.');
+        } finally {
+            if (confirmBtn) confirmBtn.disabled = false;
         }
     }
 
-    function startWorkflowPolling(correlationId) {
-        let attempts = 0;
-        const maxAttempts = 60; // Timeout sau ~70 giây
+    function startBackgroundWorkflowPolling(correlationId, listingId, listingTitle, packageName) {
+        if (activeBackgroundTimer) {
+            clearInterval(activeBackgroundTimer);
+        }
 
-        pollIntervalTimer = setInterval(async () => {
+        let attempts = 0;
+        const maxAttempts = 60; // Timeout sau ~90 giây
+
+        activeBackgroundTimer = setInterval(async () => {
             attempts++;
             if (attempts > maxAttempts) {
-                clearInterval(pollIntervalTimer);
-                showFailedResult('Quá thời gian chờ phản hồi từ hệ thống. Vui lòng kiểm tra lại lịch sử giao dịch trong ví.');
+                clearInterval(activeBackgroundTimer);
+                activeBackgroundTimer = null;
+
+                const toast = document.getElementById('sellerToast');
+                if (toast) toast.classList.add('hidden');
+
+                showFailedResultModal(`Giao dịch cho tin #${listingId} mất nhiều thời gian hơn dự kiến. Vui lòng kiểm tra lại ví hoặc làm mới trang sau.`);
                 return;
             }
 
@@ -429,107 +509,69 @@
                 const res = await fetch(`/Properties/WorkflowStatus/${correlationId}`);
                 if (!res.ok) {
                     if (res.status === 404) return; // Đang chờ worker ghi db
-                    clearInterval(pollIntervalTimer);
-                    showFailedResult('Không thể kiểm tra trạng thái tiến trình xử lý.');
+                    clearInterval(activeBackgroundTimer);
+                    activeBackgroundTimer = null;
+
+                    const toast = document.getElementById('sellerToast');
+                    if (toast) toast.classList.add('hidden');
+
+                    showFailedResultModal('Không thể kiểm tra trạng thái tiến trình xử lý.');
                     return;
                 }
 
                 const workflow = await res.json();
-                updateStepUI(workflow);
 
-                // Nếu Completed
+                // VẤN ĐỀ 2: KHI XONG THÌ MỞ MODAL THÔNG BÁO THÀNH CÔNG RÕ RÀNG
                 if (workflow.isCompleted || workflow.status === 5) {
-                    clearInterval(pollIntervalTimer);
-                    setTimeout(() => {
-                        showSuccessResult();
-                    }, 800);
+                    clearInterval(activeBackgroundTimer);
+                    activeBackgroundTimer = null;
+
+                    const toast = document.getElementById('sellerToast');
+                    if (toast) toast.classList.add('hidden');
+
+                    showSuccessResultModal(packageName, listingTitle);
                 }
-                // Nếu Failed hoặc Compensated
+                // NẾU THẤT BẠI THÌ MỞ MODAL THÔNG BÁO THẤT BẠI RÕ RÀNG
                 else if (workflow.isFailed || workflow.status === 7 || workflow.status === 8) {
-                    clearInterval(pollIntervalTimer);
-                    setTimeout(() => {
-                        const errMsg = workflow.errorMessage || (workflow.status === 7 
-                            ? 'Giao dịch bồi hoàn: Số dư ví không đủ để thanh toán. Tiền đã được hoàn lại ví.'
-                            : 'Giao dịch thất bại. Tiền không bị trừ.');
-                        showFailedResult(errMsg);
-                    }, 800);
+                    clearInterval(activeBackgroundTimer);
+                    activeBackgroundTimer = null;
+
+                    const toast = document.getElementById('sellerToast');
+                    if (toast) toast.classList.add('hidden');
+
+                    const errMsg = workflow.errorMessage || (workflow.status === 7
+                        ? 'Giao dịch bồi hoàn: Số dư ví không đủ để thanh toán gói. Tiền đã được hoàn lại ví.'
+                        : 'Giao dịch thất bại. Tiền không bị trừ.');
+
+                    showFailedResultModal(errMsg);
                 }
 
             } catch (error) {
-                console.error('Lỗi khi polling workflow:', error);
+                console.error('Lỗi khi polling workflow ngầm:', error);
             }
-        }, 1200);
+        }, 1500);
     }
 
-    function resetStepIndicator() {
-        updateStepUI({
-            status: 0,
-            currentStepIndex: 1,
-            statusText: 'Đang khởi tạo yêu cầu...'
-        });
-    }
-
-    function updateStepUI(workflow) {
-        const stepIndex = workflow.currentStepIndex || 1;
-        const statusText = workflow.statusText || 'Đang xử lý...';
-
-        document.getElementById('workflowStatusText').innerText = statusText;
-
-        // Tính % thanh tiến trình: Step 1 (25%), Step 2 (50%), Step 3 (75%), Step 4 (100%)
-        let percent = 25;
-        if (stepIndex === 2) percent = 50;
-        else if (stepIndex === 3) percent = 75;
-        else if (stepIndex >= 4) percent = 100;
-
-        document.getElementById('workflowProgressPercent').innerText = `${percent}%`;
-        document.getElementById('workflowProgressBar').style.width = `${percent}%`;
-
-        // Cập nhật từng step icon và highlight
-        for (let i = 1; i <= 4; i++) {
-            const stepEl = document.getElementById(`sagaStep${i}`);
-            const iconEl = stepEl.querySelector('.step-icon');
-
-            if (i < stepIndex || (stepIndex === 4 && workflow.isCompleted)) {
-                // Đã xong
-                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/30 transition-colors';
-                iconEl.className = 'step-icon size-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
-                iconEl.innerHTML = '<i data-lucide="check" class="size-4"></i>';
-            } else if (i === stepIndex) {
-                // Đang chạy
-                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-primary/40 bg-surface/80 transition-colors shadow-2xs';
-                iconEl.className = 'step-icon size-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
-                iconEl.innerHTML = '<i data-lucide="loader-2" class="size-4 animate-spin"></i>';
-            } else {
-                // Chưa tới
-                stepEl.className = 'saga-step flex items-start gap-3 p-3 rounded-xl border border-border bg-card opacity-50 transition-colors';
-                iconEl.className = 'step-icon size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5';
-                iconEl.innerText = i;
-            }
-        }
-
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
-    }
-
-    function showSuccessResult() {
-        document.getElementById('packageWorkflowView').classList.add('hidden');
-        document.getElementById('packageResultSuccessView').classList.remove('hidden');
-        document.getElementById('resSuccessPackageName').innerText = selectedPackageName;
-
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
-    }
-
-    function showFailedResult(errorMessage) {
-        document.getElementById('packageWorkflowView').classList.add('hidden');
+    // Hiển thị Modal Kết quả Thành công nổi bật
+    function showSuccessResultModal(packageName, listingTitle) {
         document.getElementById('packageSelectView').classList.add('hidden');
+        document.getElementById('packageResultFailedView').classList.add('hidden');
+        document.getElementById('packageResultSuccessView').classList.remove('hidden');
+
+        document.getElementById('resSuccessPackageName').innerText = packageName;
+        document.getElementById('resSuccessListingTitle').innerText = listingTitle || ('#' + currentListingId);
+
+        openModalDialog();
+    }
+
+    // Hiển thị Modal Kết quả Thất bại nổi bật
+    function showFailedResultModal(errorMessage) {
+        document.getElementById('packageSelectView').classList.add('hidden');
+        document.getElementById('packageResultSuccessView').classList.add('hidden');
         document.getElementById('packageResultFailedView').classList.remove('hidden');
+
         document.getElementById('resErrorMessage').innerText = errorMessage || 'Giao dịch không thành công. Vui lòng thử lại sau.';
 
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
+        openModalDialog();
     }
 </script>

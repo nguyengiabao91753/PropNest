@@ -1,4 +1,4 @@
-@using PropNest.Web.Seller.Services.IServices
+﻿@using PropNest.Web.Seller.Services.IServices
 @using PropNest.Web.Seller.Helpers
 @using PropNest.Web.Seller.Services
 @inject ISellerPropertyService SellerService
@@ -248,15 +248,37 @@
             }
         });
 
-        function showSellerToast(msg, type) {
+        function showSellerToast(msg, type, duration = 4500) {
             const toast = document.getElementById("sellerToast");
             if (!toast) return;
-            const bg = type === "success" ? "bg-emerald-600 text-white" : "bg-amber-600 text-white";
+            let bg = "bg-neutral-900 text-white";
+            let icon = "info";
+            if (type === "success") {
+                bg = "bg-emerald-600 text-white";
+                icon = "check-circle";
+            } else if (type === "error" || type === "danger") {
+                bg = "bg-rose-600 text-white";
+                icon = "alert-circle";
+            } else if (type === "warning") {
+                bg = "bg-amber-600 text-white";
+                icon = "alert-triangle";
+            } else if (type === "info" || type === "loading") {
+                bg = "bg-primary text-white";
+                icon = "loader-2";
+            }
             toast.className = `fixed bottom-6 right-6 z-50 rounded-xl p-4 text-xs font-semibold shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 ${bg}`;
-            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="size-4 shrink-0"></i><span>${msg}</span>`;
+            const spin = icon === "loader-2" ? "animate-spin" : "";
+            toast.innerHTML = `<i data-lucide="${icon}" class="size-4 shrink-0 ${spin}"></i><span>${msg}</span>`;
             toast.classList.remove("hidden");
             if (window.lucide) lucide.createIcons();
-            setTimeout(() => toast.classList.add("hidden"), 4500);
+
+            if (window.sellerToastTimer) {
+                clearTimeout(window.sellerToastTimer);
+                window.sellerToastTimer = null;
+            }
+            if (duration > 0) {
+                window.sellerToastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
+            }
         }
     </script>
     @await RenderSectionAsync("Scripts", required: false)
