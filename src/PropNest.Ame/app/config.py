@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     CHAR_REPEAT_LIMIT: int = 4        # Lặp ký tự ≥4 lần → Warning
     PRICE_DEVIATION_PERCENT: float = 50.0  # Lệch >50% khung giá → ManualReview
 
+    # 🆕 Ollama settings
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "qwen2.5:3b"
+    OLLAMA_TIMEOUT: float = 30.0       # Timeout (giây) cho mỗi request
+    OLLAMA_ENABLED: bool = True        # Tắt/bật LLM analysis
+
     class Config:
         env_file = ".env"
 

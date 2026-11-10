@@ -1,32 +1,54 @@
 import re
 from app.models.responses import RuleViolation
 
+
 class PhoneFilter:
-    # Các pattern phát hiện SĐT Việt Nam trong mô tả
-    PHONE_PATTERNS = [
-        # Số VN chuẩn: 0xxx.xxx.xxxx hoặc biến thể
-        r'0[1-9]\d[\s.\-]?\d{3}[\s.\-]?\d{4}',
-        # Có mã quốc gia: +84, 84
-        r'(?:\+?84)[\s.\-]?\d[\s.\-]?\d{3}[\s.\-]?\d{4}',
-        # Dạng ẩn: không ba hai, không chín tám (viết bằng chữ)
+    # Pattern trên chuỗi đã loại bỏ dấu phân tách (chỉ còn digits)
+    DIGIT_PATTERNS = [
+        # SĐT VN 10 số: 0xx xxxxxxx
+        r'0[1-9]\d{8}',
+        # Có mã quốc gia: +84 hoặc 84
+        r'(?:\+?84)[1-9]\d{8}',
+    ]
+
+    # Pattern trên text gốc (phát hiện dạng viết bằng chữ)
+    TEXT_PATTERNS = [
         r'(?:không|kh[oô]ng)\s*(?:một|hai|ba|bốn|năm|sáu|bảy|tám|chín)(?:\s*(?:một|hai|ba|bốn|năm|sáu|bảy|tám|chín)){7,}',
-        # Dạng thay thế ký tự: O9O8.123.456
-        r'[O0][1-9][O0-9][\s.\-]?[O0-9]{3}[\s.\-]?[O0-9]{4}',
     ]
 
     def __init__(self):
-        self._compiled = [
-            re.compile(p, re.IGNORECASE | re.UNICODE) for p in self.PHONE_PATTERNS
+        self._digit_compiled = [
+            re.compile(p, re.IGNORECASE) for p in self.DIGIT_PATTERNS
+        ]
+        self._text_compiled = [
+            re.compile(p, re.IGNORECASE | re.UNICODE) for p in self.TEXT_PATTERNS
         ]
 
     def check(self, text: str) -> list[RuleViolation]:
         violations = []
-        for pattern in self._compiled:
-            if pattern.search(text):
+
+        # Normalize: loại bỏ dấu phân tách phổ biến, thay O→0
+        stripped = re.sub(r'[\s.\-\(\)]', '', text)
+        stripped = stripped.replace('O', '0').replace('o', '0')
+
+        # Check digit patterns trên chuỗi đã normalize
+        for pattern in self._digit_compiled:
+            if pattern.search(stripped):
                 violations.append(RuleViolation(
                     rule="PHONE_EXPOSURE",
                     severity="critical",
                     message="Phát hiện số điện thoại trong nội dung tin đăng"
                 ))
-                break  # 1 lần phát hiện là đủ
+                return violations
+
+        # Check text patterns trên text gốc
+        for pattern in self._text_compiled:
+            if pattern.search(text):
+                violations.append(RuleViolation(
+                    rule="PHONE_EXPOSURE",
+                    severity="critical",
+                    message="Phát hiện số điện thoại (dạng chữ) trong nội dung tin đăng"
+                ))
+                return violations
+
         return violations
