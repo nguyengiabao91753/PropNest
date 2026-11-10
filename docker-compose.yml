@@ -163,6 +163,23 @@ services:
     networks:
       - propnest-network
 
+  # =============================================================================
+  # 8. PropNest Ame (Tự động kiểm duyệt tin đăng bằng AI, dự đoán giá bất động sản)
+  # =============================================================================
+    ame:
+    build:
+      context: ./services/ame
+      dockerfile: Dockerfile
+    container_name: propnest-ame
+    ports:
+      - "8001:8001"
+    environment:
+      - CAPS_THRESHOLD=0.5
+      - MIN_DESCRIPTION_LENGTH=30
+      - PRICE_DEVIATION_PERCENT=50
+    networks:
+      - propnest-network
+
 # =============================================================================
 # Networks & Persistent Volumes
 # =============================================================================
