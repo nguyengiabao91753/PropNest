@@ -37,7 +37,14 @@ public static class ServiceCollectionExtensions
 
         //tai
 
-
+        // Cấu hình AME Options & Typed HttpClient gọi sang Python FastAPI
+        services.Configure<AmeOptions>(configuration.GetSection(AmeOptions.SectionName));
+        services.AddHttpClient<IAmeModerationClient, AmeModerationClient>((serviceProvider, client) =>
+        {
+            var ameOptions = configuration.GetSection(AmeOptions.SectionName).Get<AmeOptions>() ?? new AmeOptions();
+            client.BaseAddress = new Uri(ameOptions.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(ameOptions.TimeoutSeconds > 0 ? ameOptions.TimeoutSeconds : 15);
+        });
 
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
         services.AddMassTransit(busConfig =>
