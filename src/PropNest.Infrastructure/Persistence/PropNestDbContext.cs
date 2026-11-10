@@ -46,6 +46,11 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
                     {
                         property.SetColumnType("TEXT");
                     }
+
+                    if (property.IsConcurrencyToken && property.ClrType == typeof(byte[]))
+                    {
+                        property.SetDefaultValueSql("randomblob(8)");
+                    }
                 }
             }
         }
