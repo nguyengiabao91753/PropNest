@@ -27,11 +27,6 @@ public sealed class AdminAuthorizeAttribute : Attribute, IAsyncActionFilter
         {
             token = adminToken;
         }
-        else if (httpContext.Request.Cookies.TryGetValue(AuthHeaderHandler.AccessTokenCookieName, out var accessToken) &&
-                 !string.IsNullOrWhiteSpace(accessToken))
-        {
-            token = accessToken;
-        }
 
         var resolvedProfile = JwtAdminHelper.GetProfileFromToken(token);
         if (resolvedProfile == null || !resolvedProfile.IsAdmin)
