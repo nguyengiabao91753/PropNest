@@ -136,6 +136,17 @@ public sealed class Listing : AuditableEntity
         Touch();
     }
 
+    public void MarkForManualReview()
+    {
+        if (Status != ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Only a listing pending moderation can be marked for manual review.");
+        }
+
+        ModerationDecision = ModerationDecision.ManualReview;
+        Touch();
+    }
+
     public void Hide()
     {
         if (Status != ListingStatus.Published)
