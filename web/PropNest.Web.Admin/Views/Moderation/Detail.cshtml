@@ -1,0 +1,737 @@
+@model PropNest.Web.Admin.Models.ViewModels.PropertyItemViewModel
+
+@{
+    ViewData["Title"] = $"Duyệt tin {Model.Id} - {Model.Title}";
+    var hasPreviousReject = Model.IsResubmission || !string.IsNullOrWhiteSpace(Model.PreviousRejectReason);
+    var rejectReasonText = Model.PreviousRejectReason;
+    var primaryImg = Model.PrimaryImage;
+}
+
+<div class="mx-auto max-w-[1400px] space-y-6 pb-16">
+    <!-- Top Breadcrumb & Navigation -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">
+            <a asp-controller="Moderation" asp-action="Index" class="hover:text-primary transition-colors flex items-center gap-1 font-medium">
+                <i data-lucide="arrow-left" class="size-3.5"></i> Quay lại Hàng đợi kiểm duyệt
+            </a>
+            <span>/</span>
+            <span class="font-mono font-semibold text-neutral-800">#@Model.Id</span>
+            @if (hasPreviousReject)
+            {
+                <span class="rounded-full bg-rose-500/15 text-rose-800 font-bold px-2 py-0.5 text-[10px] border border-rose-300">
+                    Gửi duyệt lại (Re-submission)
+                </span>
+            }
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-muted-foreground">Thời gian gửi:</span>
+            <span class="text-xs font-semibold text-neutral-900 font-mono">@Model.CreatedAt.ToString("HH:mm - dd/MM/yyyy")</span>
+        </div>
+    </div>
+
+    <!-- PROMINENT STICKY ACTION BAR (Top Control Header) -->
+    <div class="sticky top-16 z-20 rounded-2xl border-2 border-border bg-card/95 backdrop-blur-md p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="font-mono font-bold text-sm bg-neutral-100 px-2.5 py-1 rounded-lg border border-border text-neutral-800">
+                    @Model.Id
+                </span>
+                <span class="rounded-full bg-amber-500/20 text-amber-900 font-bold px-3 py-1 text-xs border border-amber-300/60 flex items-center gap-1">
+                    <span class="size-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    Chờ duyệt thẩm định
+                </span>
+                @if (Model.PackageCode == "VIP")
+                {
+                    <span class="rounded-md bg-gradient-to-r from-amber-500 to-amber-600 text-white font-extrabold px-2.5 py-0.5 text-[11px] shadow-2xs">
+                        GÓI VIP
+                    </span>
+                }
+                else if (Model.PackageCode == "Boost")
+                {
+                    <span class="rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold px-2.5 py-0.5 text-[11px] shadow-2xs">
+                        GÓI BOOST
+                    </span>
+                }
+                else
+                {
+                    <span class="rounded-md bg-neutral-200 text-neutral-700 font-semibold px-2 py-0.5 text-[10px]">
+                        @Model.PackageCode
+                    </span>
+                }
+            </div>
+            <h1 class="text-lg sm:text-xl font-bold font-display text-neutral-900 truncate mt-1.5" title="@Model.Title">
+                @Model.Title
+            </h1>
+        </div>
+
+        <!-- TWO PROMINENT ACTION BUTTONS -->
+        <div class="flex items-center gap-3 shrink-0">
+            <!-- Button Approve with API handler & Toast -->
+            <button type="button" id="btnDetailApprove" onclick="handleDetailApprove('@Model.Id')"
+                    class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-3 px-5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all">
+                <i data-lucide="check-circle-2" class="size-5"></i>
+                <span>Phê duyệt tin đăng</span>
+            </button>
+
+            <!-- Button Open Reject Modal -->
+            <button type="button" id="btnDetailReject" onclick="openRejectModal('@Model.Id', '@Model.Title')"
+                    class="flex items-center justify-center gap-2 bg-destructive hover:bg-red-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-3 px-5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all">
+                <i data-lucide="x-circle" class="size-5"></i>
+                <span>Từ chối duyệt</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- PREVIOUS REJECTION ALERT (Nếu listing từng bị reject rồi submit lại) -->
+    @if (hasPreviousReject)
+    {
+        <div class="rounded-2xl border-2 border-rose-300 bg-rose-50/90 p-5 sm:p-6 shadow-xs space-y-3">
+            <div class="flex items-start gap-3.5">
+                <div class="size-11 rounded-xl bg-destructive text-white grid place-items-center shrink-0 shadow-xs">
+                    <i data-lucide="shield-alert" class="size-6"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="rounded bg-destructive text-white font-bold px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                            Cảnh báo kiểm duyệt
+                        </span>
+                        <h3 class="font-bold text-base text-rose-950">
+                            Tin đăng này đã từng bị TỪ CHỐI DUYỆT trước đó và vừa được Người bán gửi lại (Re-submission)
+                        </h3>
+                    </div>
+                    <p class="text-xs text-rose-900/80 mt-1">
+                        Dưới đây là lý do từ chối cụ thể trong lần thẩm định trước. Vui lòng đối chiếu với nội dung mới và bảng <strong class="underline">So sánh Diff</strong> để xác nhận người bán đã khắc phục đầy đủ lỗi vi phạm.
+                    </p>
+
+                    <!-- Quote Lý do từ chối lần trước -->
+                    <div class="mt-3 rounded-xl border border-rose-200 bg-white/90 p-4 shadow-2xs">
+                        <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+                            <i data-lucide="message-square-warning" class="size-3.5 text-destructive"></i> Lý do từ chối trước đó từ Moderator:
+                        </span>
+                        <p class="text-xs sm:text-sm font-semibold text-neutral-900 italic leading-relaxed">
+                            "@(!string.IsNullOrWhiteSpace(rejectReasonText) ? rejectReasonText : "Nội dung hình ảnh hoặc thông tin mô tả chưa đạt tiêu chuẩn quy định.")"
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- RE-SUBMISSION DIFF COMPARISON TABLE (So sánh diff nếu là re-submission) -->
+    @if (Model.ResubmissionDeltas is { Count: > 0 })
+    {
+        <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="size-8 rounded-lg bg-primary/10 text-primary grid place-items-center font-bold">
+                        <i data-lucide="git-compare" class="size-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm sm:text-base text-neutral-900">
+                            Bảng So Sánh Thay Đổi (Re-submission Diff View)
+                        </h3>
+                        <p class="text-xs text-muted-foreground">
+                            Đối chiếu chi tiết giữa bản tin bị từ chối lần trước và bản đã chỉnh sửa vừa gửi lại
+                        </p>
+                    </div>
+                </div>
+                <span class="rounded-full bg-emerald-500/15 text-emerald-800 text-xs font-semibold px-3 py-1 border border-emerald-300">
+                    @Model.ResubmissionDeltas.Count trường dữ liệu đã được cập nhật
+                </span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-border">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-surface/80 text-neutral-700 font-semibold border-b border-border text-[11px] uppercase tracking-wider">
+                        <tr>
+                            <th class="p-3.5 w-1/5">Trường thông tin</th>
+                            <th class="p-3.5 w-2/5 text-rose-800 bg-rose-50/50">Dữ liệu cũ (Bản bị từ chối)</th>
+                            <th class="p-3.5 w-2/5 text-emerald-800 bg-emerald-50/50">Dữ liệu mới (Bản gửi duyệt lại)</th>
+                            <th class="p-3.5 w-20 text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        @foreach (var delta in Model.ResubmissionDeltas)
+                        {
+                            <tr class="hover:bg-surface/40 transition-colors">
+                                <td class="p-3.5 font-semibold text-neutral-900 align-top">
+                                    <span>@delta.FieldDisplayName</span>
+                                    <span class="block font-mono text-[10px] text-muted-foreground">@delta.FieldName</span>
+                                </td>
+                                <td class="p-3.5 bg-rose-50/30 text-rose-900 align-top line-through decoration-rose-400">
+                                    <div class="flex items-start gap-1.5">
+                                        <i data-lucide="minus-circle" class="size-3.5 text-rose-500 shrink-0 mt-0.5"></i>
+                                        <span class="whitespace-pre-line">@delta.OldValue</span>
+                                    </div>
+                                </td>
+                                <td class="p-3.5 bg-emerald-50/40 text-emerald-950 font-medium align-top">
+                                    <div class="flex items-start gap-1.5">
+                                        <i data-lucide="plus-circle" class="size-3.5 text-emerald-600 shrink-0 mt-0.5"></i>
+                                        <span class="whitespace-pre-line font-semibold">@delta.NewValue</span>
+                                    </div>
+                                </td>
+                                <td class="p-3.5 text-center align-top">
+                                    <span class="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px] inline-flex items-center gap-1">
+                                        <i data-lucide="check" class="size-3"></i> Đã sửa
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- MAIN 2-COLUMN LAYOUT: Content, Gallery, Specs, Histories -->
+    <div class="grid gap-6 lg:grid-cols-[1.5fr_1fr] items-start">
+        <!-- LEFT COLUMN: Content Tin Đăng & Gallery Ảnh -->
+        <div class="space-y-6">
+            <!-- GALLERY ẢNH TƯƠNG TÁC -->
+            <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-border pb-3">
+                    <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
+                        <i data-lucide="images" class="size-4 text-primary"></i>
+                        <span>Thư viện hình ảnh thực tế (Gallery)</span>
+                    </h3>
+                    <span id="galleryCounter" class="text-xs font-mono font-semibold bg-surface border border-border px-2.5 py-1 rounded-lg text-neutral-700">
+                        1 / @(Model.Images.Count > 0 ? Model.Images.Count : 1) ảnh
+                    </span>
+                </div>
+
+                <!-- Main Large Photo Viewer -->
+                <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-border bg-neutral-100 shadow-inner group">
+                    <img id="detailMainViewImage" src="@primaryImg" alt="@Model.Title"
+                         class="size-full object-cover transition-all duration-300" />
+                    
+                    <div class="absolute left-3 top-3 flex items-center gap-2">
+                        <span class="bg-black/75 backdrop-blur-xs text-white text-xs px-3 py-1 rounded-full font-medium">
+                            @(Model.ListingType == "sale" ? "Bán" : "Cho thuê") · @Model.PropertyType
+                        </span>
+                        @if (Model.AmeRecommendation.ImageQualityPassed)
+                        {
+                            <span class="bg-emerald-600/90 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
+                                <i data-lucide="sparkles" class="size-3"></i> AI: Ảnh đạt chuẩn
+                            </span>
+                        }
+                    </div>
+
+                    <div class="absolute right-3 bottom-3 bg-black/60 backdrop-blur-xs text-white text-[11px] px-2.5 py-1 rounded-md">
+                        Click thumbnail bên dưới để chuyển ảnh
+                    </div>
+                </div>
+
+                <!-- Thumbnails Strip -->
+                <div class="flex items-center gap-3 overflow-x-auto pb-1 pt-1" id="thumbnailsGallery">
+                    @for (int idx = 0; idx < Model.Images.Count; idx++)
+                    {
+                        var imgUrl = Model.Images[idx];
+                        var isFirst = idx == 0;
+                        <button type="button" onclick="selectDetailImage('@imgUrl', @(idx + 1), @Model.Images.Count)"
+                                class="thumb-btn relative size-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all hover:scale-105 active:scale-95 @(isFirst ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/60")"
+                                data-img-src="@imgUrl">
+                            <img src="@imgUrl" class="size-full object-cover" />
+                            <span class="absolute bottom-1 right-1 bg-black/70 text-white font-mono text-[9px] px-1 rounded">
+                                #@(idx + 1)
+                            </span>
+                        </button>
+                    }
+                </div>
+            </section>
+
+            <!-- FULL LISTING CONTENT & SPECS -->
+            <section class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6">
+                <!-- Title, Address & Price Header -->
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-border pb-5">
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono text-xs text-muted-foreground font-semibold">Mã: @Model.Id</span>
+                            <span class="rounded bg-primary/10 text-primary text-[11px] font-bold px-2 py-0.5">
+                                @(Model.ListingType == "sale" ? "Bất động sản Bán" : "Bất động sản Cho thuê")
+                            </span>
+                            <span class="rounded bg-neutral-100 text-neutral-800 text-[11px] font-medium px-2 py-0.5">
+                                Loại: @Model.PropertyType
+                            </span>
+                        </div>
+                        <h2 class="font-display text-xl sm:text-2xl font-bold text-neutral-900 leading-snug">
+                            @Model.Title
+                        </h2>
+                        <p class="text-xs sm:text-sm text-neutral-700 flex items-center gap-1.5">
+                            <i data-lucide="map-pin" class="size-4 text-primary shrink-0"></i>
+                            <span class="font-medium">@Model.FullAddress</span>
+                        </p>
+                    </div>
+
+                    <div class="text-left sm:text-right shrink-0 bg-surface sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-border">
+                        <span class="text-2xl sm:text-3xl font-extrabold text-primary font-display block">
+                            @PropNest.Web.Admin.Helpers.FormatHelper.FormatPrice(Model.Price, Model.ListingType)
+                        </span>
+                        <span class="text-xs text-muted-foreground block mt-0.5">
+                            Đơn giá: ~@((Model.Area > 0 ? (Model.Price / Model.Area / 1_000_000m).ToString("0.#") : "0")) triệu/m²
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 4 Key Specs Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
+                        <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
+                            <i data-lucide="maximize" class="size-3.5 text-neutral-600"></i> Diện tích
+                        </span>
+                        <strong class="text-base font-bold text-neutral-900 mt-1 block">
+                            @PropNest.Web.Admin.Helpers.FormatHelper.FormatArea(Model.Area)
+                        </strong>
+                    </div>
+
+                    <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
+                        <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
+                            <i data-lucide="bed" class="size-3.5 text-neutral-600"></i> Phòng ngủ
+                        </span>
+                        <strong class="text-base font-bold text-neutral-900 mt-1 block">
+                            @(Model.Beds > 0 ? $"{Model.Beds} phòng" : "Chưa xác định")
+                        </strong>
+                    </div>
+
+                    <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
+                        <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
+                            <i data-lucide="bath" class="size-3.5 text-neutral-600"></i> Phòng tắm
+                        </span>
+                        <strong class="text-base font-bold text-neutral-900 mt-1 block">
+                            @(Model.Baths > 0 ? $"{Model.Baths} phòng" : "Chưa xác định")
+                        </strong>
+                    </div>
+
+                    <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
+                        <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
+                            <i data-lucide="package-check" class="size-3.5 text-neutral-600"></i> Gói tin
+                        </span>
+                        <strong class="text-base font-bold text-amber-700 mt-1 block">
+                            @Model.PackageCode
+                        </strong>
+                    </div>
+                </div>
+
+                <!-- Full Description Content -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="size-4 text-primary"></i>
+                        <span>Nội dung mô tả chi tiết của Người bán</span>
+                    </h4>
+                    <div class="rounded-xl border border-border bg-surface/40 p-4 sm:p-5 text-neutral-800 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-sans">
+                        @Model.Description
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- RIGHT COLUMN: Owner, AI Recommendation, Audit History -->
+        <div class="space-y-6">
+            <!-- SELLER / OWNER INFORMATION CARD -->
+            <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-border pb-3">
+                    <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
+                        <i data-lucide="user-check" class="size-4 text-primary"></i>
+                        <span>Thông tin Người đăng (Seller)</span>
+                    </h3>
+                    <span class="rounded-full bg-emerald-500/10 text-emerald-700 text-[10px] font-bold px-2 py-0.5 border border-emerald-300">
+                        Đã xác thực
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-3.5">
+                    <img src="@(Model.SellerAvatar ?? "/images/avatar-1.png")" alt="@Model.SellerName"
+                         class="size-14 rounded-full object-cover border-2 border-border shadow-xs" />
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-bold text-sm text-neutral-900 truncate">@Model.SellerName</h4>
+                        <p class="text-xs text-muted-foreground font-mono">ID: @Model.SellerId</p>
+                        <p class="text-[11px] text-emerald-600 font-medium mt-0.5">Môi giới chuyên nghiệp tại @Model.City</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2 rounded-xl bg-surface/80 p-3.5 border border-border text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-muted-foreground">Số điện thoại:</span>
+                        <a href="tel:@Model.SellerPhone" class="font-semibold text-neutral-900 hover:text-primary transition-colors">
+                            @Model.SellerPhone
+                        </a>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-muted-foreground">Email:</span>
+                        <span class="font-semibold text-neutral-900 truncate max-w-[180px]">@Model.SellerEmail</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AME AI AUTO-MODERATION RECOMMENDATION -->
+            <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-border pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="size-6 rounded-md bg-primary text-white grid place-items-center text-xs font-bold">
+                            AI
+                        </div>
+                        <h3 class="font-bold text-sm text-neutral-900">Ame Auto-Moderation (AI Thẩm định)</h3>
+                    </div>
+                    <span class="rounded bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5">
+                        @Model.AmeRecommendation.RecommendationText
+                    </span>
+                </div>
+
+                <!-- Confidence Score Bar -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground">Độ tin cậy thuật toán:</span>
+                        <span class="font-bold text-emerald-600 font-mono text-sm">@Model.AmeRecommendation.ConfidenceScore%</span>
+                    </div>
+                    <div class="w-full bg-neutral-200 h-2.5 rounded-full overflow-hidden">
+                        <div class="bg-emerald-600 h-full rounded-full" style="width: @Model.AmeRecommendation.ConfidenceScore%"></div>
+                    </div>
+                </div>
+
+                <!-- Checklist -->
+                <div class="space-y-2 text-xs">
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-surface">
+                        <span class="text-neutral-700 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="size-3.5 text-emerald-600"></i> Từ khóa nhạy cảm / Lừa đảo
+                        </span>
+                        <span class="font-bold text-emerald-700">Đạt chuẩn</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-surface">
+                        <span class="text-neutral-700 flex items-center gap-1.5">
+                            <i data-lucide="badge-dollar-sign" class="size-3.5 text-emerald-600"></i> So sánh giá khu vực
+                        </span>
+                        <span class="font-bold text-neutral-800">@Model.AmeRecommendation.PriceBenchmarkText</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-surface">
+                        <span class="text-neutral-700 flex items-center gap-1.5">
+                            <i data-lucide="image-check" class="size-3.5 text-emerald-600"></i> Chất lượng ảnh thực tế
+                        </span>
+                        <span class="font-bold text-emerald-700">Đạt chuẩn</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AUDIT & HISTORY TIMELINE (Lịch sử tin đăng đầy đủ) -->
+            <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-border pb-3">
+                    <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
+                        <i data-lucide="history" class="size-4 text-primary"></i>
+                        <span>Lịch sử tin đăng (Audit & History)</span>
+                    </h3>
+                    <span class="text-xs text-muted-foreground font-mono">
+                        @(Model.Histories?.Count ?? 0) sự kiện
+                    </span>
+                </div>
+
+                <div class="space-y-3.5 relative pl-4 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
+                    @if (Model.Histories is { Count: > 0 })
+                    {
+                        @foreach (var h in Model.Histories)
+                        {
+                            var isReject = h.ActionType == "Reject";
+                            var isApprove = h.ActionType == "Approve";
+                            var isSubmit = h.ActionType == "Submit";
+                            var isUpdate = h.ActionType == "UpdateContent";
+
+                            <div class="relative pl-3 text-xs space-y-1">
+                                <!-- Dot -->
+                                <span class="absolute -left-[19px] top-1 size-3 rounded-full border-2 border-white @(isReject ? "bg-destructive ring-2 ring-rose-200" : isApprove ? "bg-emerald-600" : isSubmit ? "bg-primary" : "bg-neutral-500")"></span>
+                                
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="font-bold @(isReject ? "text-destructive" : isApprove ? "text-emerald-700" : "text-neutral-900")">
+                                        @if (isReject) { <span>Từ chối duyệt (Reject)</span> }
+                                        else if (isApprove) { <span>Phê duyệt xuất bản (Approve)</span> }
+                                        else if (isSubmit) { <span>Gửi duyệt tin đăng (Submit)</span> }
+                                        else if (isUpdate) { <span>Cập nhật nội dung (Update)</span> }
+                                        else { <span>@h.ActionType</span> }
+                                    </span>
+                                    <span class="text-[10px] text-muted-foreground font-mono">
+                                        @h.ActionDate.ToString("HH:mm dd/MM/yyyy")
+                                    </span>
+                                </div>
+
+                                <p class="text-[11px] text-muted-foreground">
+                                    Bởi: <strong class="text-neutral-800">@h.Actor</strong>
+                                </p>
+
+                                @if (!string.IsNullOrWhiteSpace(h.Note))
+                                {
+                                    <p class="text-[11px] p-2 rounded-lg @(isReject ? "bg-rose-50 text-rose-900 border border-rose-200 font-medium" : "bg-surface text-neutral-700 italic")">
+                                        "@h.Note"
+                                    </p>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-xs text-muted-foreground italic">Chưa có bản ghi lịch sử nào.</p>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- REJECT REASON MODAL (Modal nhập lý do từ chối chuẩn F03) -->
+<div id="rejectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between text-destructive border-b border-border pb-3">
+            <div class="flex items-center gap-2">
+                <div class="size-9 rounded-xl bg-destructive/10 grid place-items-center text-destructive">
+                    <i data-lucide="shield-alert" class="size-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-neutral-900">Từ chối phê duyệt tin đăng</h3>
+                    <p class="text-xs text-muted-foreground">Mã tin: <span id="modalRejectListingId" class="font-mono font-bold text-neutral-900">@Model.Id</span></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="text-muted-foreground hover:text-neutral-900 p-1.5 rounded-lg hover:bg-surface">
+                <i data-lucide="x" class="size-4"></i>
+            </button>
+        </div>
+
+        <div>
+            <h4 id="modalRejectTitle" class="text-xs font-semibold text-neutral-800 line-clamp-2 bg-surface p-2.5 rounded-lg border border-border/60">
+                @Model.Title
+            </h4>
+        </div>
+
+        <!-- Quick Reason Templates -->
+        <div>
+            <label class="text-[11px] font-bold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                Lý do mẫu thường gặp (Click để điền nhanh):
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <button type="button" onclick="setQuickReason('Hình ảnh mờ, chứa logo số điện thoại ngoài hoặc không đúng thực tế')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border p-2 text-left text-[11px] text-neutral-800 transition">
+                    📸 Ảnh mờ / Chứa logo ngoài
+                </button>
+                <button type="button" onclick="setQuickReason('Giá niêm yết hoặc diện tích ghi sai lệch nghiêm trọng so với thực tế')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border p-2 text-left text-[11px] text-neutral-800 transition">
+                    💰 Sai lệch giá / diện tích
+                </button>
+                <button type="button" onclick="setQuickReason('Địa chỉ không chính xác hoặc trùng lặp với tin đăng đang hoạt động')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border p-2 text-left text-[11px] text-neutral-800 transition">
+                    📍 Địa chỉ sai / Tin trùng lặp
+                </button>
+                <button type="button" onclick="setQuickReason('Nội dung mô tả chứa từ ngữ vi phạm tiêu chuẩn hoặc thiếu thông tin pháp lý')"
+                        class="rounded-lg bg-surface hover:bg-brand-soft border border-border p-2 text-left text-[11px] text-neutral-800 transition">
+                    📜 Thiếu pháp lý / Vi phạm chuẩn
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Reject Submit -->
+        <form asp-controller="Moderation" asp-action="Reject" method="post" id="rejectForm" class="space-y-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ListingId" value="@Model.Id" />
+
+            <div>
+                <label for="rejectReasonInput" class="text-xs font-bold text-neutral-900 mb-1.5 block">
+                    Lý do từ chối cụ thể (Bắt buộc theo F03) *
+                </label>
+                <textarea id="rejectReasonInput" name="Reason" rows="3" required
+                          placeholder="Nhập lý do từ chối cụ thể để gửi thông báo cho Người bán..."
+                          class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-destructive focus:ring-1 focus:ring-destructive transition-colors"></textarea>
+                <span id="rejectErrorMsg" class="text-[11px] text-destructive hidden mt-1 block">Vui lòng nhập lý do từ chối ít nhất 5 ký tự.</span>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2 border-t border-border">
+                <button type="button" onclick="closeRejectModal()"
+                        class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-surface transition-colors">
+                    Hủy bỏ
+                </button>
+                <button type="submit" id="confirmRejectBtn"
+                        class="rounded-xl bg-destructive hover:bg-red-700 text-white px-5 py-2.5 text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5">
+                    <i data-lucide="x-circle" class="size-4"></i>
+                    <span>Xác nhận từ chối & Quay lại hàng đợi</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Global Toast Notification Container for Detail Page -->
+<div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2.5 border transition-all"></div>
+
+@section Scripts {
+    <script>
+        function selectDetailImage(url, index, total) {
+            const mainImg = document.getElementById('detailMainViewImage');
+            if (mainImg) {
+                mainImg.src = url;
+            }
+            const counter = document.getElementById('galleryCounter');
+            if (counter) {
+                counter.innerText = `${index} / ${total} ảnh`;
+            }
+
+            // Update active ring on thumbnail
+            document.querySelectorAll('#thumbnailsGallery .thumb-btn').forEach((btn, idx) => {
+                if (idx + 1 === index) {
+                    btn.classList.add('border-primary', 'ring-2', 'ring-primary/30');
+                    btn.classList.remove('border-border');
+                } else {
+                    btn.classList.remove('border-primary', 'ring-2', 'ring-primary/30');
+                    btn.classList.add('border-border');
+                }
+            });
+        }
+
+        async function handleDetailApprove(id) {
+            const btn = document.getElementById('btnDetailApprove');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.innerHTML = `<svg class="animate-spin size-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Đang phê duyệt...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/v1/moderation/listings/' + id + '/approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (res.ok) {
+                    showToast('Tin đăng đã được duyệt thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/Moderation';
+                    }, 1200);
+                } else {
+                    const data = await res.json().catch(() => null);
+                    showToast((data && data.message) ? data.message : 'Lỗi khi phê duyệt tin ' + id, 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        btn.innerHTML = `<i data-lucide="check-circle-2" class="size-5"></i><span>Phê duyệt tin đăng</span>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch (err) {
+                console.error('Approve error:', err);
+                showToast('Có lỗi xảy ra khi gọi API duyệt tin.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = `<i data-lucide="check-circle-2" class="size-5"></i><span>Phê duyệt tin đăng</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        }
+
+        function openRejectModal(id, title) {
+            const modal = document.getElementById('rejectModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeRejectModal() {
+            const modal = document.getElementById('rejectModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function setQuickReason(text) {
+            const input = document.getElementById('rejectReasonInput');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        }
+
+        document.getElementById('rejectForm')?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const input = document.getElementById('rejectReasonInput');
+            const errorMsg = document.getElementById('rejectErrorMsg');
+            const reason = input?.value?.trim();
+            if (!reason || reason.length < 5) {
+                if (errorMsg) errorMsg.classList.remove('hidden');
+                return false;
+            }
+            if (errorMsg) errorMsg.classList.add('hidden');
+
+            const btn = document.getElementById('confirmRejectBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>Đang từ chối...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/v1/moderation/listings/@Model.Id/reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        reason: reason,
+                        reasons: [reason]
+                    })
+                });
+
+                if (res.ok) {
+                    closeRejectModal();
+                    showToast('Đã từ chối duyệt tin @Model.Id thành công!', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/Moderation';
+                    }, 1200);
+                } else {
+                    showToast('Lỗi khi từ chối tin đăng.', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="x-circle" class="size-4"></i><span>Xác nhận từ chối & Quay lại hàng đợi</span>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch (err) {
+                console.error('Reject error:', err);
+                showToast('Có lỗi xảy ra khi gọi API từ chối.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i data-lucide="x-circle" class="size-4"></i><span>Xác nhận từ chối & Quay lại hàng đợi</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        });
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+
+            let bg = "bg-neutral-900 text-white border-neutral-700";
+            let iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+            if (type === "success") {
+                bg = "bg-emerald-600 text-white border-emerald-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+            } else if (type === "warning") {
+                bg = "bg-amber-600 text-white border-amber-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            } else if (type === "error") {
+                bg = "bg-destructive text-white border-red-500";
+                iconHtml = `<svg class="size-4 shrink-0 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+            }
+
+            toast.className = `fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2.5 border animate-in fade-in slide-in-from-bottom-2 ${bg}`;
+            toast.innerHTML = `${iconHtml}<span>${message}</span>`;
+            toast.classList.remove("hidden");
+
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 4000);
+        }
+
+        // Initialize Lucide icons on load
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    </script>
+}

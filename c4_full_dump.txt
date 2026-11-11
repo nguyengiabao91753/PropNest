@@ -1,0 +1,164 @@
+[216] (Heading 2) CHƯƠNG 4: CÁC KHÁI NIỆM NỀN TẢNG CỦA BACKEND VỚI ASP.NET CORE
+[217] (normal) 4.1. Cú pháp và đặc trưng C# từ cơ bản đến nâng cao
+[218] (normal) 4.1.1. Hệ thống Type System, Nullable Reference Types và Encapsulation 
+[219] (normal) C# là một ngôn ngữ định kiểu tĩnh mạnh (Strongly-typed, Object-Oriented Programming). Trong Common Language Runtime (CLR), hệ thống kiểu dữ liệu được phân chia thành hai nhóm cơ bản với mô hình quản lý bộ nhớ hoàn toàn khác biệt:
+[220] (normal) • Value Types (Kiểu giá trị): Bao gồm các kiểu nguyên thủy (int, long, decimal, bool, enum) và struct. Dữ liệu của Value Type được lưu trữ trực tiếp trên ngăn xếp (Stack) hoặc nhúng trực tiếp trong đối tượng chứa nó. Việc gán giá trị thực hiện sao chép toàn bộ nội dung (Copy by value).
+[221] (normal) • Reference Types (Kiểu tham chiếu): Bao gồm class, interface, delegate và string. Đối tượng thực sự được cấp phát trên bộ nhớ Heap và được quản lý tự động bởi Garbage Collector (GC). Biến của Reference Type chỉ lưu giữ địa chỉ tham chiếu (Memory Pointer) trỏ tới vùng nhớ trên Heap.
+[222] (normal) Một bước tiến mang tính cách mạng từ C# 8.0 và được hoàn thiện trong C# 12 là tính năng Nullable Reference Types (NRT), được bật mặc định trong PropNest qua thẻ '<Nullable>enable</Nullable>'. Trước đây, mọi biến Reference Type đều có thể nhận giá trị null, dẫn đến lỗi 'NullReferenceException' kinh điển trong lập trình. Với NRT, trình biên dịch Roslyn phân biệt tường minh:
+[223] (normal) • Non-nullable Reference Type (ví dụ: string Title): Trình biên dịch bắt buộc phải có giá trị, nếu gán null hoặc không khởi tạo sẽ lập tức cảnh báo lúc biên dịch.
+[224] (normal) • Nullable Reference Type (ví dụ: string? Description): Cho phép nhận null nhưng bắt buộc lập trình viên phải kiểm tra null trước khi truy cập.
+[225] (normal) Về tính đóng gói (Encapsulation) trong Lập trình Hướng đối tượng (OOP): Một thiết kế chuẩn mực phải ngăn chặn việc tùy tiện thay đổi trạng thái nội bộ của đối tượng từ bên ngoài (Anemic Domain Model). Thay vào đó, toàn bộ thuộc tính phải dùng 'private set', và mọi sự biến động trạng thái chỉ được thực hiện thông qua các Domain Method có thẩm định nghiệp vụ.
+[226] (normal) 
+[227] (normal) Minh họa Type System, Nullable Reference Types và Encapsulation trong Entity Wallet
+[228] (normal) 
+[229] (normal) 
+[230] (normal) 4.1.2. Tính bất biến với Record Types và cú pháp C# 12 (Primary Constructors, Collection Expressions) 
+[231] (normal) Trong phát triển phần mềm hiện đại, tính bất biến (Immutability) là nguyên tắc cốt lõi giúp mã nguồn an toàn trong môi trường đa luồng (Thread-safe) và loại bỏ hoàn toàn các lỗi 'tác dụng phụ' (Side-effects) ngoài ý muốn.
+[232] (normal) C# 9.0 giới thiệu từ khóa 'record', và C# 10/12 tiếp tục hoàn thiện thành 'record class' và 'record struct'. Khác biệt cơ bản giữa 'class' truyền thống và 'record' nằm ở cơ chế so sánh bằng:
+[233] (normal) • Class truyền thống dùng Reference Equality: Hai đối tượng class dù có toàn bộ thuộc tính giống hệt nhau nhưng nằm ở hai ô nhớ khác nhau thì toán tử '==' vẫn trả về false.
+[234] (normal) • Record dùng Value Equality: Trình biên dịch tự động sinh hàm Equals(), GetHashCode() và toán tử '==' dựa trên giá trị của tất cả các thuộc tính bên trong. Nếu hai record có dữ liệu giống nhau, chúng được coi là bằng nhau.
+[235] (normal) Hai cải tiến cú pháp đột phá của C# 12 được dự án PropNest khai thác tối đa gồm:
+[236] (normal) • Primary Constructors: Cho phép khai báo tham số khởi tạo trực tiếp trên tên class hoặc record. Trình biên dịch tự động tạo các trường dữ liệu tương ứng, giúp loại bỏ hoàn toàn mã thừa gán tham số trong constructor truyền thống.
+[237] (normal) • Collection Expressions: Cú pháp tạo mảng và danh sách đồng nhất thông qua cặp ngoặc vuông '[..]', thay thế cú pháp rườm rà 'new List<T>()' hay 'new T[] { ... }', đồng thời cho phép gộp các tập hợp bằng toán tử spread '..'.
+[238] (normal) 
+[239] (normal) Minh họa Record Types, Primary Constructors và Collection Expressions trong PropNest
+[240] (normal) 
+[241] (normal) 4.1.3. Pattern Matching và Switch Expressions 
+[242] (normal) Pattern Matching (Khớp mẫu) là một trong những tính năng mạnh mẽ nhất của C# hiện đại, cho phép kiểm tra hình dạng (Shape) và kiểu dữ liệu của đối tượng một cách ngắn gọn, an toàn và trực quan.
+[243] (normal) Thay vì sử dụng câu lệnh 'switch-case' cồng kềnh với các từ khóa 'break' và biến tạm như trong C/C++ truyền thống, C# 8+ cung cấp Switch Expression biến câu lệnh rẽ nhánh thành một biểu thức tính toán trả về giá trị (Expression-bodied):
+[244] (normal) • Type Pattern: Kiểm tra xem đối tượng có thuộc một kiểu cụ thể hay không (ví dụ: 'KeyNotFoundException => 404').
+[245] (normal) • Property Pattern: Kiểm tra giá trị các thuộc tính bên trong đối tượng mà không cần ép kiểu thủ công.
+[246] (normal) • Discard Pattern (_): Đại diện cho trường hợp mặc định (Default/Fallback case) khi không có mẫu nào khớp.
+[247] (normal) Áp dụng Pattern Matching trong hàm CreateProblemDetails
+[248] (normal) 
+[249] (normal) 4.1.4. Lập trình bất đồng bộ (Asynchronous Programming) với async/await, Task, ValueTask và CancellationToken
+[250] (normal) Trong các ứng dụng Web Backend có lưu lượng truy cập cao, các tác vụ I/O (truy vấn Database, đọc ghi ổ đĩa, gọi HTTP API bên ngoài) chiếm phần lớn thời gian xử lý. Nếu sử dụng lập trình đồng bộ (Synchronous), luồng thực thi (Thread) của máy chủ sẽ bị phong tỏa (Blocked) trong trạng thái chờ đợi, dẫn đến cạn kiệt Thread Pool (Thread Pool Starvation) và làm sập hệ thống.
+[251] (normal) ASP.NET Core giải quyết triệt để bài toán này bằng mô hình Task-based Asynchronous Pattern (TAP) thông qua cặp từ khóa 'async' và 'await':
+[252] (normal) Cơ chế State Machine ngầm định: Khi gặp từ khóa 'await', trình biên dịch C# tự động tách phương thức thành một Máy trạng thái (State Machine). Luồng hiện tại được giải phóng ngay lập tức để quay về Thread Pool phục vụ các HTTP Request khác. Khi thao tác I/O hoàn tất (I/O Completion Port thông báo), Thread Pool sẽ cấp một luồng bất kỳ để tiếp tục thực thi phần mã phía sau.
+[253] (normal) Phân biệt Task và ValueTask: 'Task<T>' là một đối tượng Reference Type được cấp phát trên Heap. Nếu một phương thức bất đồng bộ thường xuyên trả về kết quả có sẵn (cached/synchronous completion), việc tạo Task liên tục sẽ gây áp lực lớn lên Garbage Collector. '.NET' giới thiệu 'ValueTask<T>' là một struct nằm trên Stack. Trong Entity Framework Core 8, phương thức AddAsync trả về ValueTask, do đó cần gọi '.AsTask()' nếu interface yêu cầu Task.
+[254] (normal) Cơ chế ngắt lan truyền với CancellationToken: CancellationToken là cơ chế cộng tác ngắt tác vụ (Cooperative Cancellation). Khi người dùng hủy request hoặc đóng trình duyệt, HTTP connection bị ngắt, CancellationToken kích hoạt trạng thái hủy. Việc truyền CancellationToken xuyên suốt qua các tầng (Controller -> Service -> Repository -> DbContext) giúp hệ thống ngừng ngay lập tức các câu lệnh SQL tốn kém, tiết kiệm tối đa tài nguyên máy chủ (quy tắc CA2016).
+[255] (normal) Minh họa lập trình bất đồng bộ với ValueTask và CancellationToken trong WalletRepository
+[256] (normal) 
+[257] (normal) 4.1.5. Compile-time Code Generation với Source Generated LoggerMessage
+[258] (normal) Trong các ứng dụng .NET truyền thống, việc ghi log thường dùng phương thức mở rộng:
+[259] (normal) Cách ghi log truyền thống gặp nhược điểm hiệu năng
+[260] (normal) 
+[261] (normal) Cách ghi log truyền thống này tồn tại hai nhược điểm chí mạng về hiệu năng:
+[262] (normal) • Hiện tượng Boxing: Tham số 'userId' (kiểu long - Value Type) bị ép kiểu ngầm định sang 'object' (Reference Type), dẫn đến việc cấp phát bộ nhớ trên Heap và sinh rác cho Garbage Collector.
+[263] (normal) • Phân tích chuỗi lúc Runtime: Trình phân tích log phải dùng Reflection để duyệt chuỗi template '{UserId}' ở mỗi lần gọi hàm, tiêu tốn chu kỳ CPU.
+[264] (normal) Từ .NET 6 và hoàn thiện trong .NET 8, Microsoft giới thiệu tính năng Compile-time Source Generated Logging thông qua thuộc tính '[LoggerMessage]'. Lập trình viên định nghĩa một phương thức static partial, trình biên dịch Roslyn sẽ tự động sinh mã C# tối ưu trực tiếp lúc biên dịch:
+[265] (normal) • Zero Heap Allocation: Loại bỏ hoàn toàn boxing tham số.
+[266] (normal) • Không tốn chi phí Reflection lúc chạy ứng dụng.
+[267] (normal) • Tuân thủ tuyệt đối quy tắc phân tích mã nguồn CA1848, cho phép dự án bật chế độ 'TreatWarningsAsErrors=true' mà không bị cảnh báo lỗi.
+[268] (normal) Áp dụng Source Generated LoggerMessage trong ExceptionHandlingMiddleware
+[269] (normal) 
+[270] (normal) 4.2. Kiến trúc Kestrel Web Server và Generic Host 
+[271] (normal) 4.2.1. Kestrel Web Server và cơ chế xử lý I/O bất đồng bộ 
+[272] (normal)  Kestrel là máy chủ web (Web Server) tích hợp sẵn trong nhân của ASP.NET Core, được thiết kế từ đầu với tiêu chí hiệu năng cao, đa nền tảng (chạy trên Windows, Linux, macOS) và tối ưu hóa tài nguyên phần cứng. Về mặt kiến trúc mạng, Kestrel hoạt động theo mô hình:
+[273] (normal) • Lớp Socket Transport: Sử dụng trực tiếp Socket API của hệ điều hành kết hợp với kỹ thuật I/O đa luồng bất đồng bộ (I/O Completion Ports trên Windows hoặc epoll trên Linux) để tiếp nhận hàng chục nghìn kết nối mạng đồng thời mà không tạo luồng xử lý riêng cho từng socket.
+[274] (normal) • Hỗ trợ đa giao thức: Kestrel hỗ trợ hoàn chỉnh HTTP/1.1 (truyền tải dạng văn bản), HTTP/2 (ghép kênh đa luồng Multiplexing trên cùng một kết nối TCP), và HTTP/3 (chạy trên giao thức UDP/QUIC giúp giảm độ trễ bắt tay mạng).
+[275] (normal) • Vòng đời đối tượng HttpContext: Khi một HTTP Request được gửi đến, Kestrel phân tích các byte dữ liệu nhị phân thô từ socket thành đối tượng HttpContext. Đối tượng này đại diện cho toàn bộ thông tin của phiên giao dịch: HttpContext.Request (Headers, Body, Query, Path), HttpContext.Response (StatusCode, Headers, BodyStream) và HttpContext.User (danh tính ClaimsPrincipal sau khi xác thực).
+[276] (normal) 
+[277] (normal) 4.2.2. Generic Host (WebApplicationBuilder / WebApplication) và hệ thống Configuration 
+[278] (normal) Từ .NET 6 và tiếp tục chuẩn hóa trong .NET 8, mô hình Minimal Hosting thay thế cho kiến trúc Program.cs / Startup.cs cũ. Ứng dụng được khởi tạo và điều phối bởi hai đối tượng trung tâm:
+[279] (normal) • WebApplicationBuilder: Đóng vai trò là nhà xưởng cấu hình. Trước khi ứng dụng được xây dựng, lập trình viên đăng ký các dịch vụ (Services) vào DI Container qua thuộc tính 'builder.Services', đồng thời nạp cấu hình hệ thống.
+[280] (normal) • WebApplication: Thể hiện của ứng dụng sau khi gọi 'builder.Build()'. Đối tượng này chịu trách nhiệm quản lý đường ống Middleware Pipeline và lắng nghe các yêu cầu mạng.
+[281] (normal) Hệ thống cấu hình (Configuration System) của Generic Host hỗ trợ mô hình phân cấp đa tầng (Hierarchical Configuration), trong đó giá trị cấu hình được nạp tuần tự và ghi đè (Override) theo độ ưu tiên tăng dần:
+[282] (normal) • 1. appsettings.json (Cấu hình cơ sở mặc định của ứng dụng).
+[283] (normal) • 2. appsettings.{Environment}.json (Cấu hình đặc thù cho môi trường Development, Staging hoặc Production).
+[284] (normal) • 3. Biến môi trường hệ điều hành (Environment Variables - ưu tiên cao nhất, thường dùng khi đóng gói Docker Container để truyền ConnectionStrings và Secret Keys).
+[285] (normal) Khởi tạo Generic Host và quản lý cấu hình tập trung trong Program.cs
+[286] (normal) 
+[287] (normal) 4.3. Dependency Injection (DI) và Quản lý Service Lifetimes 
+[288] (normal) 4.3.1. Nguyên lý Inversion of Control (IoC) và Dependency Inversion (SOLID) 
+[289] (normal) Inversion of Control (IoC - Đảo ngược điều khiển) là nguyên lý thiết kế phần mềm trong đó quyền kiểm soát luồng thực thi và việc khởi tạo các đối tượng phụ thuộc được chuyển giao từ lớp tiêu thụ sang một Framework điều khiển trung tâm.
+[290] (normal) Dependency Inversion Principle (DIP - Chữ D trong nguyên lý thiết kế SOLID) quy định rõ:
+[291] (normal) • 1. Các module cấp cao (như ListingService) không được phụ thuộc trực tiếp vào các module cấp thấp (như ListingRepository hay SQL Server). Cả hai bắt buộc phải phụ thuộc vào Abstraction (Interface IListingRepository).
+[292] (normal) • 2. Abstraction không được phụ thuộc vào chi tiết. Chi tiết (Implementation) phải phụ thuộc vào Abstraction.
+[293] (normal) Nhờ có IoC Container trong .NET (Microsoft.Extensions.DependencyInjection), ListingService không bao giờ dùng từ khóa 'new ListingRepository()', mà chỉ khai báo Interface trong constructor. Điều này giúp hệ thống đạt độ khớp nối lỏng (Loose Coupling), cho phép thay đổi hệ quản trị CSDL hoặc viết Unit Test độc lập mà không cần chỉnh sửa mã nguồn nghiệp vụ.
+[294] (normal) 
+[295] (normal) 4.3.2. Ba vòng đời dịch vụ: Transient, Scoped, Singleton và rủi ro Captive Dependency
+[296] (normal) ASP.NET Core cung cấp 3 cơ chế quản lý vòng đời (Service Lifetime) khi đăng ký dịch vụ:
+[297] (normal) Bảng 4.1: So sánh 3 chế độ vòng đời Service Lifetime trong ASP.NET Core
+[298] (normal)  
+[299] (normal) Cảnh báo kỹ thuật về lỗi 'Captive Dependency' (Phụ thuộc bị bắt cóc):
+[300] (normal) Lỗi Captive Dependency xảy ra khi một dịch vụ có vòng đời dài (ví dụ: Singleton) lại tiêm vào constructor một dịch vụ có vòng đời ngắn hơn (ví dụ: Scoped như DbContext). Khi đó, đối tượng DbContext lẽ ra phải được giải phóng sau mỗi request lại bị 'bắt cóc' và giữ lại vĩnh viễn trong Singleton, dẫn đến hai hậu quả đặc biệt nguy hiểm:
+[301] (normal) • Rò rỉ bộ nhớ (Memory Leak): DbContext không bao giờ được Dispose(), bộ nhớ Change Tracker phình to vô hạn theo thời gian.
+[302] (normal) • Xung đột đa luồng (Concurrency Exception): DbContext trong EF Core vốn KHÔNG an toàn cho đa luồng (Not Thread-Safe). Khi hai HTTP request cùng gọi vào Singleton cùng lúc, hai luồng sẽ truy cập đồng thời vào cùng một DbContext dẫn đến sập ứng dụng ngay lập tức.
+[303] (normal) Trong PropNest, nguyên tắc vàng được áp dụng: Tuyệt đối không tiêm Scoped vào Singleton; DbContext và các Repository/Service chỉ được đăng ký Scoped.
+[304] (normal) 
+[305] (normal) 4.3.3. Tổ chức đăng ký dịch vụ theo module qua ServiceCollectionExtensions 
+[306] (normal) Để giữ cho tệp Program.cs luôn sạch sẽ và tuân thủ cấu trúc Modular Monolith, các thiết lập DI được chia nhỏ thành các phương thức mở rộng (Extension Methods) tương ứng với từng tầng kiến trúc:
+[307] (normal) Đóng gói đăng ký DI theo mô-đun qua ServiceCollectionExtensions
+[308] (normal) 
+[309] (normal) 4.4. Xử lý HTTP Request qua Middleware Pipeline 
+[310] (normal) 4.4.1. Bản chất hàm ủy thác RequestDelegate và cơ chế luân chuyển Russian Doll
+[311] (normal) Middleware Pipeline (Đường ống Middleware) là xương sống tiếp nhận và xử lý mọi tương tác mạng trong ASP.NET Core. Về bản chất, mỗi Middleware là một hàm ủy thác (Delegate) có chữ ký:
+[312] (normal) Khai báo hàm ủy thác RequestDelegate
+[313] (normal)  
+[314] (normal) Nguyên lý vận hành tuân thủ mô hình 'Búp bê Nga' (Russian Doll) hai chiều:
+[315] (normal) • Chiều xuôi (Inbound Request): Khi request từ mạng đến, nó đi xuyên qua Middleware 1, Middleware 2, ... cho đến Controller Action.
+[316] (normal) • Ủy thác 'next(context)': Mỗi middleware có quyền quyết định gọi 'await next(context)' để bàn giao quyền xử lý cho middleware tiếp theo trong chuỗi.
+[317] (normal) • Chiều ngược (Outbound Response): Sau khi Controller Action hoàn tất, response di chuyển ngược trở lại qua các middleware theo thứ tự đảo ngược trước khi gửi trả về Client.
+[318] (normal) • Cơ chế Short-circuiting (Ngắt mạch): Nếu request không hợp lệ (ví dụ: chưa xác thực JWT, gặp lỗi Exception), Middleware lập tức ngắt mạch bằng cách không gọi 'next(context)', ghi trực tiếp mã lỗi (401, 403, 500) vào response và quay đầu, bảo vệ toàn bộ các tầng nghiệp vụ phía sau.
+[319] (normal) 4.4.2. Thứ tự thực thi chuẩn của Middleware trong ASP.NET Core
+[320] (normal) Thứ tự sắp xếp Middleware trong Program.cs mang tính chất quyết định tuyệt đối đối với an ninh và sự ổn định của hệ thống:
+[321] (normal) Bảng 4.2: Thứ tự thực thi chuẩn xác của chuỗi Middleware trong PropNest
+[322] (normal)  
+[323] (normal) 4.4.3. Xây dựng Custom Middleware trong PropNest
+[324] (normal) Dự án PropNest xây dựng hai Custom Middleware nền tảng:
+[325] (normal) 1. CorrelationIdMiddleware phục vụ Distributed Tracing (truy vết luồng phân tán):
+[326] (normal) Hiện thực hóa CorrelationIdMiddleware trong PropNest.Api
+[327] (normal)  
+[328] (normal) 2. ExceptionHandlingMiddleware chuẩn hóa phản hồi lỗi toàn cục theo chuẩn RFC 7807:
+[329] (normal) Vòng lặp try-catch bắt lỗi toàn cục trong ExceptionHandlingMiddleware
+[330] (normal) 
+[331] (normal) 4.5. Routing, Controller và Chuẩn hóa phản hồi Web API
+[332] (normal) 4.5.1. Attribute Routing, Route Constraints và Model Binding
+[333] (normal) Trong ASP.NET Core Web API, Controller là lớp đón nhận và phản hồi các HTTP Request. Hệ thống định tuyến Attribute Routing cung cấp khả năng gán trực tiếp URL template lên lớp Controller và từng Action:
+[334] (normal) • [ApiController]: Thuộc tính bắt buộc, kích hoạt các hành vi tự động: tự động thẩm định dữ liệu đầu vào (Model Validation) và trả về 400 Bad Request nếu dữ liệu lỗi; tự động suy luận nguồn dữ liệu binding ([FromBody], [FromQuery]); chuẩn hóa lỗi theo ProblemDetails.
+[335] (normal) • [Route("api/v1/listings")]: Định nghĩa tiền tố đường dẫn RESTful cơ sở, hỗ trợ phân phiên bản API (API Versioning).
+[336] (normal) • Route Constraints: Ký pháp '{listingId:long}' áp đặt ràng buộc kiểu số nguyên 64-bit lên đường dẫn. Nếu client gửi chuỗi ký tự chữ '/api/v1/listings/abc', Routing Engine sẽ lập tức trả về 404 Not Found mà không cho phép request đi sâu vào Controller, giúp ngăn chặn các cuộc tấn công thăm dò và giảm tải cho máy chủ.
+[337] (normal) • Model Binding: Quá trình tự động ánh xạ dữ liệu từ HTTP Request (JSON Body, Route Parameters, Query String, Headers) sang các đối tượng tham số C# (DTOs).
+[338] (normal) Attribute Routing và Model Binding trong ListingsController
+[339] (normal)  
+[340] (normal) 
+[341] (normal) 4.5.2. So sánh Task<IActionResult> và Task<ActionResult<T>> trong Controller
+[342] (normal) Trong ASP.NET Core, lập trình viên thường đứng trước hai lựa chọn kiểu trả về cho các Action bất đồng bộ trong Controller:
+[343] (normal) Bảng 4.3: So sánh chi tiết giữa Task<IActionResult> và Task<ActionResult<T>>
+[344] (normal)  
+[345] (normal) 4.5.3. Chuẩn hóa lỗi API theo đặc tả RFC 7807 ProblemDetails
+[346] (normal) Đặc tả RFC 7807 (Problem Details for HTTP APIs) là tiêu chuẩn quốc tế quy định định dạng JSON thống nhất cho mọi thông báo lỗi do máy chủ sinh ra. Thay vì trả về chuỗi thông báo lộn xộn hoặc làm lộ vết gọi hàm (Stack Trace) nguy hiểm, máy chủ chuẩn hóa cấu trúc lỗi gồm:
+[347] (normal) • status: Mã trạng thái HTTP chuẩn số nguyên (400, 401, 403, 404, 409, 500).
+[348] (normal) • title: Tiêu đề ngắn gọn mô tả phân loại lỗi.
+[349] (normal) • detail: Giải thích chi tiết nguyên nhân cụ thể dẫn đến lỗi.
+[350] (normal) • instance: Đường dẫn URI phát sinh lỗi.
+[351] (normal) 
+[352] (normal) Bảng 4.4: Bảng ánh xạ mã HTTP Status và Exception theo chuẩn RFC 7807
+[353] (normal)  
+[354] (normal) Mẫu phản hồi lỗi JSON chuẩn RFC 7807 khi xảy ra xung đột đồng thời:
+[355] (normal) Cấu trúc phản hồi lỗi ProblemDetails chuẩn RFC 7807
+[356] (normal)  
+[357] (normal) 
+[358] (normal) 4.6. Quản lý dự án chuyên nghiệp với .NET Tooling
+[359] (normal) 4.6.1. Quản lý dependencies tập trung với Central Package Management (CPM)
+[360] (normal) Trong các giải pháp phần mềm doanh nghiệp gồm nhiều project (.NET Solution), việc quản lý phiên bản các thư viện NuGet độc lập trong từng tệp .csproj thường dẫn đến vấn đề phân mảnh phiên bản (Version Mismatch). Ví dụ: Project API dùng EntityFrameworkCore 8.0.4, trong khi project Infrastructure lại dùng 8.0.0, gây ra các lỗi xung đột DLL rất khó gỡ lỗi lúc chạy ứng dụng.
+[361] (normal) Dự án PropNest áp dụng tính năng Central Package Management (CPM) của .NET SDK. Toàn bộ phiên bản thư viện được định nghĩa DUY NHẤT TẠI MỘT NƠI trong tệp 'Directory.Packages.props' ở thư mục gốc của Solution. Các tệp .csproj chỉ khai báo gói cần dùng mà không cần chỉ định phiên bản:
+[362] (normal) Cấu hình quản lý thư viện tập trung trong Directory.Packages.props
+[363] (normal)  
+[364] (normal) 4.6.2. Kiểm soát chất lượng code với Roslyn Analyzers và TreatWarningsAsErrors
+[365] (normal) Để đảm bảo tính kỷ luật và chất lượng code cao nhất cho một dự án làm việc nhóm theo chuẩn công nghiệp, PropNest kích hoạt bộ quy tắc phân tích tĩnh (Static Code Analyzers) nghiêm ngặt nhất thông qua tệp 'Directory.Build.props':
+[366] (normal) • <TreatWarningsAsErrors>true</TreatWarningsAsErrors>: Biến toàn bộ cảnh báo của trình biên dịch (Warnings) thành lỗi biên dịch (Compile Errors). Bất kỳ dòng code nào thừa biến, thiếu CancellationToken, hoặc dùng sai cú pháp đều khiến lệnh build thất bại, buộc lập trình viên phải sửa ngay.
+[367] (normal) • <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>: Bắt buộc tuân thủ quy chuẩn định dạng code (Code Style Rules) lúc build.
+[368] (normal) • Tuân thủ cảnh báo phân tích hiệu năng: Ví dụ cảnh báo CA1848 bắt buộc dùng LoggerMessage delegate; cảnh báo CA2016 bắt buộc chuyển tiếp CancellationToken vào các hàm bất đồng bộ.
+[369] (normal) Cấu hình TreatWarningsAsErrors trong Directory.Build.props
+[370] (normal)  
+[371] (normal) KẾT LUẬN CHƯƠNG 4
+[372] (normal) Chương 4 đã phân tích toàn diện và sâu sắc các nền tảng kỹ thuật cốt lõi của hệ sinh thái .NET 8 và ngôn ngữ C# 12, đi từ các nguyên lý lập trình cơ bản đến các cơ chế kiến trúc nâng cao:
+[373] (normal) 1. Ngôn ngữ C# 12 hiện đại: Làm chủ hệ thống định kiểu tĩnh mạnh (Type System), Nullable Reference Types, tính đóng gói (Encapsulation), tính bất biến với Record Types, Primary Constructors, Pattern Matching và Source Generated Logging hiệu năng cao.
+[374] (normal) 2. Kiến trúc thực thi ASP.NET Core: Nắm vững nguyên lý hoạt động của máy chủ Kestrel Web Server, cơ chế xử lý I/O bất đồng bộ và mô hình điều phối Generic Host.
+[375] (normal) 3. Dependency Injection và Quản lý vòng đời dịch vụ: Thấu hiểu nguyên lý Inversion of Control, kiểm soát chặt chẽ ranh giới giữa Transient, Scoped, Singleton và loại trừ hoàn toàn rủi ro Captive Dependency.
+[376] (normal) 4. Đường ống xử lý yêu cầu Middleware Pipeline: Vận dụng hàm ủy thác RequestDelegate để xây dựng các Custom Middleware thực hiện truy vết luồng phân tán (Correlation ID) và bắt lỗi toàn cục chuẩn RFC 7807 ProblemDetails.
+[377] (normal) 5. Thiết kế RESTful Web API và Bộ công cụ .NET Tooling: Triển khai Controller-based API an toàn kiểu dữ liệu, tận dụng Central Package Management (CPM) và Roslyn Analyzers để duy trì chất lượng mã nguồn cấp doanh nghiệp.
+[378] (normal) Các kiến thức nền tảng vững chắc này chính là tiền đề then chốt để nhóm nghiên cứu tiếp tục triển khai các kỹ thuật chuyên sâu ở các chương tiếp theo, bao gồm thiết kế CSDL với Entity Framework Core, điều phối giao dịch phân tán Saga Orchestration và tích hợp phân hệ trí tuệ nhân tạo kiểm duyệt tin tự động.
+[379] (normal) 

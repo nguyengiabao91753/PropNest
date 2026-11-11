@@ -136,6 +136,17 @@ public sealed class Listing : AuditableEntity
         Touch();
     }
 
+    public void MarkForManualReview()
+    {
+        if (Status != ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Only a listing pending moderation can be marked for manual review.");
+        }
+
+        ModerationDecision = ModerationDecision.ManualReview;
+        Touch();
+    }
+
     public void Hide()
     {
         if (Status != ListingStatus.Published)
@@ -146,6 +157,19 @@ public sealed class Listing : AuditableEntity
         Status = ListingStatus.Hidden;
         Touch();
     }
+
+    public void Delete()
+    {
+        EnsureNotDeleted();
+        if (Status != ListingStatus.Draft)
+        {
+            throw new InvalidOperationException("Only a draft listing can be deleted.");
+        }
+        Status = ListingStatus.Deleted;
+        Touch(); // Update UpdatedAt
+    }
+
+    public void Expire() => Expire(DateTimeOffset.UtcNow);
 
     public void Expire(DateTimeOffset now)
     {
@@ -171,6 +195,16 @@ public sealed class Listing : AuditableEntity
         PackageCode = packageCode;
         StartDate = startDate;
         EndDate = endDate;
+
+        if (ModerationDecision == ModerationDecision.Approved)
+        {
+            Status = ListingStatus.Published;
+        }
+        else
+        {
+            Status = ListingStatus.PendingModeration;
+            ModerationDecision = ModerationDecision.Pending;
+        }
         Touch();
     }
 

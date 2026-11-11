@@ -11,7 +11,6 @@ using PropNest.Infrastructure.Persistence;
 namespace PropNest.Api.Controllers;
 
 [ApiController]
-[AllowAnonymous]
 [Route("api/v1/auth")]
 public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
@@ -22,6 +21,7 @@ public sealed class AuthController(
 {
     private const string SellerRole = "Seller";
 
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult<RegisterResponse>> Register(
         RegisterRequest request,
@@ -60,21 +60,64 @@ public sealed class AuthController(
             new RegisterResponse(user.Id, user.Email!));
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login(
         LoginRequest request,
         CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email.Trim());
-        if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
+        var user = await userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+        if (user is null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
         }
+
+        if (await userManager.IsLockedOutAsync(user))
+        {
+            return StatusCode(StatusCodes.Status423Locked, new { message = "Tài khoản tạm thời bị khóa do nhập sai mật khẩu quá 5 lần. Vui lòng thử lại sau 15 phút." });
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, request.Password))
+        {
+            await userManager.AccessFailedAsync(user);
+            return Unauthorized(new { message = "Invalid email or password." });
+        }
+
+        await userManager.ResetAccessFailedCountAsync(user);
 
         var roles = await userManager.GetRolesAsync(user);
         var accessToken = jwtTokenService.GenerateAccessToken(user, roles);
 
         return Ok(new LoginResponse(accessToken));
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<UserProfileDto>> Me(
+        [FromServices] ICurrentUser currentUser,
+        CancellationToken cancellationToken)
+    {
+        var userId = currentUser.UserId;
+        if (userId is null)
+        {
+            return Unauthorized(new { message = "Không tìm thấy thông tin định danh người dùng." });
+        }
+
+        var user = await userManager.FindByIdAsync(userId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (user is null)
+        {
+            return NotFound(new { message = "Không tìm thấy thông tin tài khoản người dùng." });
+        }
+
+        var roles = await userManager.GetRolesAsync(user);
+        return Ok(new UserProfileDto(
+            user.Id,
+            user.Email ?? string.Empty,
+            user.FullName,
+            user.PhoneNumber ?? string.Empty,
+            roles.FirstOrDefault() ?? user.Role,
+            user.Status,
+            user.CreatedAt));
     }
 
     private async Task<IdentityResult> EnsureSellerRoleAsync()

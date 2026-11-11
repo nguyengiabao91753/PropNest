@@ -1,3 +1,5 @@
+using Serilog.Context;
+
 namespace PropNest.Api.Middleware;
 
 public sealed class CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationIdMiddleware> logger)
@@ -14,6 +16,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next, ILogger<Correl
         context.TraceIdentifier = correlationId;
         context.Response.Headers[HeaderName] = correlationId;
 
+        using (LogContext.PushProperty("CorrelationId", correlationId))
         using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
         {
             await next(context);

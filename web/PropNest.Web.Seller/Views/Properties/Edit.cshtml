@@ -1,135 +1,683 @@
 @model PropNest.Web.Seller.Models.InputModels.CreatePropertyInputModel
 
 @{
-    var id = ViewData["ListingId"]?.ToString() ?? "";
-    ViewData["Title"] = $"Chỉnh sửa tin: {id}";
+    var listingId = Model.Id?.ToString() ?? ViewData["ListingId"]?.ToString() ?? "";
+    ViewData["Title"] = $"Chỉnh sửa tin đăng #{listingId}";
 }
 
-<div class="mx-auto max-w-4xl space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="font-display text-3xl font-bold text-neutral-900">Chỉnh Sửa Tin Đăng: <span class="font-mono text-primary">@id</span></h1>
-            <p class="text-xs text-muted-foreground mt-1">
-                Lưu ý theo quy tắc Blueprint: Sửa đổi các trường dữ liệu quan trọng sẽ tự động chuyển tin về trạng thái Chờ duyệt lại.
-            </p>
+<div class="mx-auto max-w-6xl space-y-6">
+    <!-- Top Stepper Header -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-border/80 pb-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        <i data-lucide="edit-3" class="size-3.5 mr-1"></i> Chỉnh sửa tin
+                    </span>
+                    <span class="font-mono text-xs font-bold text-neutral-500">
+                        #@listingId
+                    </span>
+                </div>
+                <h1 class="font-display text-2xl sm:text-3xl font-bold text-neutral-900 mt-2">Chỉnh Sửa Tin Đăng</h1>
+                <p class="text-xs text-muted-foreground mt-1">
+                    Cập nhật lại các thông số kỹ thuật, giá bán hoặc mô tả. Dữ liệu sẽ được bảo vệ bởi cơ chế kiểm soát đồng thời (RowVersion).
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a asp-action="Details" asp-route-id="@listingId" class="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 transition-colors rounded-xl border border-border bg-card px-3.5 py-2 hover:bg-neutral-50 shadow-xs">
+                    <i data-lucide="eye" class="size-4"></i> Xem trước
+                </a>
+                <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 transition-colors rounded-xl border border-border bg-card px-3.5 py-2 hover:bg-neutral-50 shadow-xs">
+                    <i data-lucide="arrow-left" class="size-4"></i> Danh sách
+                </a>
+            </div>
         </div>
-        <a asp-action="Index" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-neutral-900 transition-colors">
-            <i data-lucide="arrow-left" class="size-4"></i> Quay lại
-        </a>
+
+        <!-- 4-Step Progress Indicators -->
+        <ol class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pt-1" id="stepperList">
+            <li class="step-item active cursor-pointer" onclick="jumpToStep(0)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-neutral-900 text-white shadow-xs">01</span>
+                    <span class="step-label text-xs font-semibold text-neutral-900">Vị trí & Loại BĐS</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(1)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">02</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Giá & Diện tích</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(2)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">03</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Mô tả & Hình ảnh</span>
+                </div>
+            </li>
+            <li class="text-muted-foreground/40 hidden sm:inline">———</li>
+            <li class="step-item cursor-pointer" onclick="jumpToStep(3)">
+                <div class="flex items-center gap-2">
+                    <span class="step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border">04</span>
+                    <span class="step-label text-xs font-medium text-muted-foreground">Xác nhận cập nhật</span>
+                </div>
+            </li>
+        </ol>
     </div>
 
-    <form asp-action="Edit" asp-route-id="@id" method="post" class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs space-y-8">
+    <!-- Main Wizard Form & Live Preview Card -->
+    <form id="wizardForm" asp-action="Edit" asp-route-id="@listingId" method="post" enctype="multipart/form-data" novalidate>
         @Html.AntiForgeryToken()
 
-        <!-- Section 1: Basic Info -->
-        <div class="space-y-4">
-            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
-                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
-                Thông tin chung
-            </h3>
+        <!-- HIDDEN FIELDS: Id & Concurrency RowVersion -->
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="RowVersion" id="hiddenRowVersion" />
 
-            <div>
-                <label asp-for="Title" class="block text-xs font-semibold text-neutral-800 mb-1.5">Tiêu đề tin đăng *</label>
-                <input asp-for="Title" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                <span asp-validation-for="Title" class="text-[11px] text-destructive mt-1 block"></span>
+        <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <!-- Left: Wizard Step Containers -->
+            <div class="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs flex flex-col justify-between min-h-[480px]">
+                <div>
+                    <!-- BƯỚC 1: VỊ TRÍ HÀNH CHÍNH & LOẠI BĐS -->
+                    <div id="step-0" class="wizard-step space-y-6">
+                        <div class="border-b border-border/70 pb-3">
+                            <h2 class="font-display text-xl font-bold text-neutral-900">01. Vị trí & Loại hình Bất động sản</h2>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Cập nhật lại thông tin địa giới hành chính của tin đăng.
+                            </p>
+                        </div>
+
+                        <!-- Loại BĐS -->
+                        <div>
+                            <label asp-for="PropertyType" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                Loại hình bất động sản <span class="text-rose-600">*</span>
+                            </label>
+                            <select id="inputPropertyType" asp-for="PropertyType" onchange="updateLivePreview()"
+                                    class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900 font-medium">
+                                <option value="Apartment">Căn hộ / Chung cư (Apartment)</option>
+                                <option value="House">Nhà riêng / Nhà phố (House)</option>
+                                <option value="Villa">Biệt thự (Villa)</option>
+                                <option value="Townhouse">Nhà liền kề (Townhouse)</option>
+                                <option value="Land">Đất nền / Đất thổ cư (Land)</option>
+                                <option value="Commercial">Mặt bằng kinh doanh / Văn phòng (Commercial)</option>
+                            </select>
+                            <span asp-validation-for="PropertyType" class="text-rose-600 text-xs mt-1 block"></span>
+                        </div>
+
+                        <!-- Tỉnh / Quận / Phường -->
+                        <div class="grid sm:grid-cols-3 gap-3">
+                            <div>
+                                <label asp-for="City" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                    Tỉnh / Thành phố <span class="text-rose-600">*</span>
+                                </label>
+                                <input id="inputCity" asp-for="City" oninput="updateLivePreview()"
+                                       class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+                                <span asp-validation-for="City" class="text-rose-600 text-xs mt-1 block"></span>
+                            </div>
+
+                            <div>
+                                <label asp-for="District" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                    Quận / Huyện <span class="text-rose-600">*</span>
+                                </label>
+                                <input id="inputDistrict" asp-for="District" oninput="updateLivePreview()"
+                                       class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+                                <span asp-validation-for="District" class="text-rose-600 text-xs mt-1 block"></span>
+                            </div>
+
+                            <div>
+                                <label asp-for="Ward" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                    Phường / Xã
+                                </label>
+                                <input id="inputWard" asp-for="Ward" oninput="updateLivePreview()"
+                                       class="w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+                                <span asp-validation-for="Ward" class="text-rose-600 text-xs mt-1 block"></span>
+                            </div>
+                        </div>
+
+                        <!-- Địa chỉ cụ thể -->
+                        <div>
+                            <label asp-for="Address" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                Tên đường, tòa nhà hoặc số nhà cụ thể <span class="text-rose-600">*</span>
+                            </label>
+                            <input id="inputAddress" asp-for="Address" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+                            <span asp-validation-for="Address" class="text-rose-600 text-xs mt-1 block"></span>
+                        </div>
+                    </div>
+
+                    <!-- BƯỚC 2: HÌNH THỨC, MỨC GIÁ & DIỆN TÍCH -->
+                    <div id="step-1" class="wizard-step hidden space-y-6">
+                        <div class="border-b border-border/70 pb-3">
+                            <h2 class="font-display text-xl font-bold text-neutral-900">02. Hình thức giao dịch & Giá niêm yết</h2>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Điều chỉnh mức giá và diện tích của bất động sản.
+                            </p>
+                        </div>
+
+                        <!-- Hình thức giao dịch -->
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-2">Hình thức giao dịch <span class="text-rose-600">*</span></label>
+                            <div class="grid grid-cols-2 gap-3 max-w-md">
+                                <label class="flex items-center justify-center p-3 rounded-xl border border-border bg-surface cursor-pointer text-xs font-semibold hover:border-primary transition-colors text-neutral-900" id="btnSale">
+                                    <input type="radio" asp-for="ListingType" value="sale" class="mr-2 text-primary" onchange="onListingTypeChange('sale')" />
+                                    <span>Cần bán (Sale)</span>
+                                </label>
+                                <label class="flex items-center justify-center p-3 rounded-xl border border-border bg-surface cursor-pointer text-xs font-semibold hover:border-primary transition-colors text-neutral-900" id="btnRent">
+                                    <input type="radio" asp-for="ListingType" value="rent" class="mr-2 text-primary" onchange="onListingTypeChange('rent')" />
+                                    <span>Cho thuê (Rent)</span>
+                                </label>
+                            </div>
+                            <span asp-validation-for="ListingType" class="text-rose-600 text-xs mt-1 block"></span>
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-5">
+                            <!-- Giá -->
+                            <div>
+                                <label asp-for="Price" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                    Mức giá đề xuất (VNĐ) <span class="text-rose-600">*</span>
+                                </label>
+                                <div class="flex items-center rounded-xl border border-border bg-surface overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                                    <input id="inputPrice" asp-for="Price" type="number" step="1000000" oninput="updateLivePreview()"
+                                           class="w-full bg-transparent p-3 text-xs outline-none text-neutral-900 font-mono" />
+                                    <span class="shrink-0 bg-neutral-100/90 px-3.5 py-3 text-xs font-bold text-neutral-600 border-l border-border select-none">VNĐ</span>
+                                </div>
+                                <span asp-validation-for="Price" class="text-rose-600 text-xs mt-1 block"></span>
+                                <span id="priceFormatted" class="text-[11px] text-primary font-bold mt-1.5 block"></span>
+                            </div>
+
+                            <!-- Diện tích -->
+                            <div>
+                                <label asp-for="Area" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                    Diện tích sử dụng (m²) <span class="text-rose-600">*</span>
+                                </label>
+                                <div class="flex items-center rounded-xl border border-border bg-surface overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                                    <input id="inputArea" asp-for="Area" type="number" step="0.1" oninput="updateLivePreview()"
+                                           class="w-full bg-transparent p-3 text-xs outline-none text-neutral-900 font-mono" />
+                                    <span class="shrink-0 bg-neutral-100/90 px-3.5 py-3 text-xs font-bold text-neutral-600 border-l border-border select-none">m²</span>
+                                </div>
+                                <span asp-validation-for="Area" class="text-rose-600 text-xs mt-1 block"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BƯỚC 3: MÔ TẢ RICH TEXT & HÌNH ẢNH -->
+                    <div id="step-2" class="wizard-step hidden space-y-6">
+                        <div class="border-b border-border/70 pb-3">
+                            <h2 class="font-display text-xl font-bold text-neutral-900">03. Tiêu đề, Mô tả & Hình ảnh</h2>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Cập nhật nội dung chi tiết bằng Rich Text và bổ sung ảnh mới cho tin đăng.
+                            </p>
+                        </div>
+
+                        <!-- Tiêu đề -->
+                        <div>
+                            <label asp-for="Title" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                Tiêu đề bài đăng <span class="text-rose-600">*</span>
+                            </label>
+                            <input id="inputTitle" asp-for="Title" oninput="updateLivePreview()"
+                                   class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+                            <span asp-validation-for="Title" class="text-rose-600 text-xs mt-1 block"></span>
+                        </div>
+
+                        <!-- Mô tả Rich Text -->
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                Mô tả chi tiết (Rich text) <span class="text-rose-600">*</span>
+                            </label>
+                            <div class="rounded-xl border border-border bg-surface overflow-hidden">
+                                <div id="quillToolbar" class="border-b border-border bg-neutral-50 px-2 py-1">
+                                    <span class="ql-formats">
+                                        <select class="ql-header">
+                                            <option value="2">Tiêu đề 2</option>
+                                            <option value="3">Tiêu đề 3</option>
+                                            <option selected>Bình thường</option>
+                                        </select>
+                                    </span>
+                                    <span class="ql-formats">
+                                        <button class="ql-bold"></button>
+                                        <button class="ql-italic"></button>
+                                        <button class="ql-underline"></button>
+                                    </span>
+                                    <span class="ql-formats">
+                                        <button class="ql-list" value="ordered"></button>
+                                        <button class="ql-list" value="bullet"></button>
+                                    </span>
+                                    <span class="ql-formats">
+                                        <button class="ql-clean"></button>
+                                    </span>
+                                </div>
+                                <div id="quillEditor" class="min-h-[140px] p-3 text-xs font-sans text-neutral-900 bg-white">
+                                    @Html.Raw(Model.Description)
+                                </div>
+                            </div>
+                            <textarea asp-for="Description" id="hiddenDescription" class="hidden"></textarea>
+                            <span asp-validation-for="Description" class="text-rose-600 text-xs mt-1 block"></span>
+                        </div>
+
+                        <!-- Ảnh hiện có -->
+                        @if (Model.ExistingImages != null && Model.ExistingImages.Count > 0)
+                        {
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-800 mb-2">
+                                    Hình ảnh hiện có trong hệ thống (@Model.ExistingImages.Count ảnh)
+                                </label>
+                                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                                    @foreach (var img in Model.ExistingImages)
+                                    {
+                                        <div class="relative aspect-square rounded-xl overflow-hidden border border-border bg-neutral-100 shadow-xs group">
+                                            <img src="@img" alt="Existing property image" class="size-full object-cover transition-transform group-hover:scale-105" />
+                                            <div class="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[8px] text-white text-center">
+                                                Đã lưu
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Tải lên thêm ảnh mới -->
+                        <div>
+                            <label class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                                Tải lên thêm ảnh mới (Tùy chọn)
+                            </label>
+                            <div id="dropZone" class="relative rounded-2xl border-2 border-dashed border-border bg-surface/60 p-6 text-center hover:border-primary/60 transition-colors cursor-pointer group">
+                                <input type="file" asp-for="ImageFiles" id="imageInput" multiple accept=".jpg,.jpeg,.png,.webp"
+                                       class="absolute inset-0 size-full opacity-0 cursor-pointer" />
+                                <div class="flex flex-col items-center justify-center space-y-2 pointer-events-none">
+                                    <div class="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                                        <i data-lucide="cloud-upload" class="size-5"></i>
+                                    </div>
+                                    <p class="text-xs font-semibold text-neutral-800">
+                                        Kéo thả các hình ảnh mới vào đây hoặc <span class="text-primary underline">chọn từ thiết bị</span>
+                                    </p>
+                                    <p class="text-[11px] text-muted-foreground">Hỗ trợ JPG, PNG, WEBP (Tối đa 10MB/ảnh).</p>
+                                </div>
+                            </div>
+
+                            <!-- Preview ảnh vừa chọn -->
+                            <div id="newImagesPreview" class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mt-3 hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- BƯỚC 4: RÀ SOÁT & XÁC NHẬN CẬP NHẬT -->
+                    <div id="step-3" class="wizard-step hidden space-y-6">
+                        <div class="border-b border-border/70 pb-3">
+                            <h2 class="font-display text-xl font-bold text-neutral-900">04. Rà soát & Xác nhận Cập nhật</h2>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Kiểm tra lại các thay đổi trước khi lưu vào hệ thống.
+                            </p>
+                        </div>
+
+                        <div class="space-y-4 text-xs">
+                            <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                                <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                    <span class="font-bold text-neutral-900">01. Vị trí & Loại hình</span>
+                                    <button type="button" onclick="jumpToStep(0)" class="text-primary hover:underline font-semibold">Sửa</button>
+                                </div>
+                                <div class="space-y-1 text-muted-foreground">
+                                    <div>Loại BĐS: <span id="revPropertyType" class="font-semibold text-neutral-900">—</span></div>
+                                    <div>Địa chỉ: <span id="revAddress" class="font-medium text-neutral-900">—</span></div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                                <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                    <span class="font-bold text-neutral-900">02. Giá & Diện tích</span>
+                                    <button type="button" onclick="jumpToStep(1)" class="text-primary hover:underline font-semibold">Sửa</button>
+                                </div>
+                                <div class="space-y-1 text-muted-foreground">
+                                    <div>Hình thức: <span id="revListingType" class="font-semibold text-neutral-900">—</span></div>
+                                    <div>Mức giá: <span id="revPrice" class="font-bold text-primary font-display text-sm">—</span></div>
+                                    <div>Diện tích: <span id="revArea" class="font-medium text-neutral-900">—</span></div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl border border-border bg-surface p-4 space-y-2">
+                                <div class="flex items-center justify-between border-b border-border/80 pb-2">
+                                    <span class="font-bold text-neutral-900">03. Tiêu đề bài đăng</span>
+                                    <button type="button" onclick="jumpToStep(2)" class="text-primary hover:underline font-semibold">Sửa</button>
+                                </div>
+                                <div class="space-y-1 text-muted-foreground">
+                                    <div>Tiêu đề: <span id="revTitle" class="font-semibold text-neutral-900">—</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wizard Navigation Footer Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-6 mt-6 border-t border-border">
+                    <button type="button" id="prevBtn" onclick="moveStep(-1)" disabled
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:bg-surface disabled:opacity-40 transition-colors">
+                        <i data-lucide="arrow-left" class="size-4"></i> Quay lại
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Nút Tiếp theo -->
+                        <button type="button" id="nextBtn" onclick="moveStep(1)"
+                                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                            <span>Tiếp theo</span> <i data-lucide="arrow-right" class="size-4"></i>
+                        </button>
+
+                        <!-- Nút Lưu thay đổi (ở bước cuối cùng) -->
+                        <button type="submit" id="finishBtn" class="hidden inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-white hover:bg-primary-hover shadow-xs transition-colors">
+                            <i data-lucide="save" class="size-4"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid sm:grid-cols-2 gap-4">
-                <div>
-                    <label asp-for="PropertyType" class="block text-xs font-semibold text-neutral-800 mb-1.5">Loại bất động sản *</label>
-                    <select asp-for="PropertyType" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
-                        <option value="Apartment">Căn hộ / Chung cư (Apartment)</option>
-                        <option value="House">Nhà riêng / Nhà phố (House)</option>
-                        <option value="Villa">Biệt thự đơn lập / song lập (Villa)</option>
-                        <option value="Townhouse">Nhà liền kề (Townhouse)</option>
-                        <option value="Commercial">Mặt bằng kinh doanh / Văn phòng (Commercial)</option>
-                    </select>
+            <!-- Right: Live Preview Card (Luôn đồng bộ theo thời gian thực) -->
+            <aside class="space-y-4 lg:sticky lg:top-8 self-start">
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Xem trước hiển thị</span>
+                    <span class="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 font-semibold">Live Preview</span>
                 </div>
-                <div>
-                    <label asp-for="ListingType" class="block text-xs font-semibold text-neutral-800 mb-1.5">Hình thức giao dịch *</label>
-                    <select asp-for="ListingType" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900">
-                        <option value="sale">Cần bán (Sale)</option>
-                        <option value="rent">Cho thuê (Rent)</option>
-                    </select>
-                </div>
-            </div>
 
-            <div>
-                <label asp-for="Description" class="block text-xs font-semibold text-neutral-800 mb-1.5">Mô tả chi tiết *</label>
-                <textarea asp-for="Description" rows="4" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900"></textarea>
-                <span asp-validation-for="Description" class="text-[11px] text-destructive mt-1 block"></span>
-            </div>
-        </div>
+                <!-- Preview Card Component -->
+                <div class="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                    <div class="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100 flex items-center justify-center">
+                        @{
+                            var coverImg = Model.ExistingImages?.FirstOrDefault() ?? "";
+                            var hasCover = !string.IsNullOrEmpty(coverImg);
+                        }
+                        <img id="prevImg" src="@coverImg" alt="Preview cover" class="size-full object-cover transition-transform duration-300 @(hasCover ? "" : "hidden")" />
+                        <div id="prevImgPlaceholder" class="flex flex-col items-center justify-center text-neutral-400 gap-1.5 @(hasCover ? "hidden" : "")">
+                            <i data-lucide="image" class="size-8 text-neutral-400"></i>
+                            <span class="text-[11px] text-neutral-500">Chưa có hình ảnh</span>
+                        </div>
+                        
+                        <!-- Listing Type Pill -->
+                        <span id="prevTypePill" class="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] px-2.5 py-0.5 rounded-full font-medium">
+                            @(Model.ListingType == "rent" ? "Cho thuê" : "Cần bán")
+                        </span>
 
-        <!-- Section 2: Pricing & Specs -->
-        <div class="space-y-4">
-            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
-                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
-                Giá & Thông số kỹ thuật
-            </h3>
+                        <!-- Property Type Badge -->
+                        <span id="prevPropTypePill" class="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-xs text-neutral-800 text-[10px] px-2 py-0.5 rounded-lg font-bold shadow-xs">
+                            @Model.PropertyType
+                        </span>
+                    </div>
 
-            <div class="grid sm:grid-cols-2 gap-4">
-                <div>
-                    <label asp-for="Price" class="block text-xs font-semibold text-neutral-800 mb-1.5">Mức giá đề xuất (VNĐ) *</label>
-                    <input asp-for="Price" type="number" step="1000000" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
+                    <div class="p-4 space-y-2">
+                        <p id="prevPriceDisplay" class="font-display text-xl font-bold text-primary"></p>
+                        <h3 id="prevTitleDisplay" class="font-semibold text-xs text-neutral-900 line-clamp-2">
+                            @Model.Title
+                        </h3>
+                        <p id="prevAddressDisplay" class="text-[11px] text-muted-foreground truncate">
+                            📍 @Model.Address, @Model.Ward, @Model.District, @Model.City
+                        </p>
+                        <div class="flex items-center gap-3 pt-2 border-t border-border/60 text-[11px] text-neutral-700">
+                            <span id="prevAreaDisplay">@Model.Area m²</span>
+                            <span>·</span>
+                            <span class="text-neutral-500 font-semibold bg-neutral-100 px-2 py-0.5 rounded-md">ID: #@listingId</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label asp-for="Area" class="block text-xs font-semibold text-neutral-800 mb-1.5">Diện tích sử dụng (m²) *</label>
-                    <input asp-for="Area" type="number" step="1" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900 font-mono" />
-                </div>
-            </div>
 
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                    <label asp-for="Beds" class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng ngủ</label>
-                    <input asp-for="Beds" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
+                <div class="rounded-xl border border-border bg-surface p-3 text-[11px] text-muted-foreground leading-relaxed">
+                    💡 Thẻ xem trước phản ánh diện mạo tin đăng của bạn sẽ hiển thị trên thị trường sau khi cập nhật thành công.
                 </div>
-                <div>
-                    <label asp-for="Baths" class="block text-xs font-semibold text-neutral-800 mb-1.5">Số phòng tắm</label>
-                    <input asp-for="Baths" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                </div>
-                <div>
-                    <label asp-for="Carports" class="block text-xs font-semibold text-neutral-800 mb-1.5">Chỗ đỗ ô tô</label>
-                    <input asp-for="Carports" type="number" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 3: Location -->
-        <div class="space-y-4">
-            <h3 class="font-semibold text-sm text-neutral-900 border-b border-border/80 pb-2 flex items-center gap-2">
-                <span class="grid size-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
-                Địa chỉ
-            </h3>
-
-            <div class="grid sm:grid-cols-3 gap-4">
-                <div>
-                    <label asp-for="City" class="block text-xs font-semibold text-neutral-800 mb-1.5">Tỉnh / Thành phố *</label>
-                    <input asp-for="City" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                </div>
-                <div>
-                    <label asp-for="District" class="block text-xs font-semibold text-neutral-800 mb-1.5">Quận / Huyện *</label>
-                    <input asp-for="District" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                </div>
-                <div>
-                    <label asp-for="Ward" class="block text-xs font-semibold text-neutral-800 mb-1.5">Phường / Xã</label>
-                    <input asp-for="Ward" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-                </div>
-            </div>
-
-            <div>
-                <label asp-for="Address" class="block text-xs font-semibold text-neutral-800 mb-1.5">Địa chỉ chi tiết *</label>
-                <input asp-for="Address" class="w-full rounded-xl border border-border bg-surface p-3 text-xs outline-none focus:border-primary transition-colors text-neutral-900" />
-            </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <a asp-action="Index" class="rounded-xl border border-border px-5 py-2.5 text-xs font-medium text-muted-foreground hover:bg-surface hover:text-neutral-900 transition-colors">
-                Hủy bỏ
-            </a>
-            <button type="submit" class="rounded-xl bg-primary px-6 py-2.5 text-xs font-semibold text-white hover:bg-primary-hover shadow-xs transition-colors">
-                <i data-lucide="save" class="size-4 inline mr-1"></i> Lưu thay đổi (Ghi nhận Delta)
-            </button>
+            </aside>
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <!-- Quill.js CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+    <script>
+        let currentStep = 0;
+        const totalSteps = 4;
+        let quill = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Khởi tạo Quill Editor
+            quill = new Quill('#quillEditor', {
+                modules: { toolbar: '#quillToolbar' },
+                theme: 'snow',
+                placeholder: 'Nhập mô tả chi tiết vị trí, tiện ích, pháp lý và hướng nhà...'
+            });
+
+            var hiddenDesc = document.getElementById('hiddenDescription');
+            if (hiddenDesc.value) {
+                quill.root.innerHTML = hiddenDesc.value;
+            }
+
+            quill.on('text-change', function () {
+                var html = quill.root.innerHTML;
+                hiddenDesc.value = (quill.getText().trim().length === 0) ? '' : html;
+            });
+
+            // 2. Preview ảnh khi chọn file mới
+            var imageInput = document.getElementById('imageInput');
+            var previewContainer = document.getElementById('newImagesPreview');
+            var prevImg = document.getElementById('prevImg');
+
+            if (imageInput) {
+                imageInput.addEventListener('change', function () {
+                    previewContainer.innerHTML = '';
+                    if (!this.files || this.files.length === 0) {
+                        previewContainer.classList.add('hidden');
+                        return;
+                    }
+                    previewContainer.classList.remove('hidden');
+
+                    Array.from(this.files).forEach(function (file, idx) {
+                        if (!file.type.startsWith('image/')) return;
+                        var reader = new FileReader();
+                        reader.onload = function (e) {
+                            if (idx === 0) {
+                                prevImg.src = e.target.result;
+                                prevImg.classList.remove('hidden');
+                                var ph = document.getElementById('prevImgPlaceholder');
+                                if (ph) ph.classList.add('hidden');
+                            }
+                            var item = document.createElement('div');
+                            item.className = 'relative aspect-square rounded-xl overflow-hidden border border-border bg-neutral-100 shadow-xs';
+                            item.innerHTML = `
+                                <img src="${e.target.result}" class="size-full object-cover" />
+                                <div class="absolute inset-x-0 bottom-0 bg-primary/80 px-1 py-0.5 text-[8px] text-white truncate text-center">
+                                    Ảnh mới
+                                </div>
+                            `;
+                            previewContainer.appendChild(item);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                });
+            }
+
+            // Khởi tạo Live Preview ban đầu
+            updateLivePreview();
+            renderStep();
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+
+        // 3. Quản lý Stepper Navigation
+        function jumpToStep(target) {
+            if (target < 0 || target >= totalSteps) return;
+
+            if (target > currentStep) {
+                if (!validateStep(currentStep)) return;
+            }
+
+            currentStep = target;
+            renderStep();
+        }
+
+        function moveStep(delta) {
+            jumpToStep(currentStep + delta);
+        }
+
+        function renderStep() {
+            for (let i = 0; i < totalSteps; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if (el) {
+                    if (i === currentStep) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            }
+
+            // Cập nhật Stepper Header UI
+            const stepItems = document.querySelectorAll('#stepperList .step-item');
+            stepItems.forEach((item, idx) => {
+                const num = item.querySelector('.step-number');
+                const lbl = item.querySelector('.step-label');
+
+                if (idx === currentStep) {
+                    num.className = 'step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-neutral-900 text-white shadow-xs';
+                    lbl.className = 'step-label text-xs font-semibold text-neutral-900';
+                } else if (idx < currentStep) {
+                    num.className = 'step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-emerald-500 text-white shadow-xs';
+                    num.innerHTML = '✓';
+                    lbl.className = 'step-label text-xs font-semibold text-emerald-800';
+                } else {
+                    num.className = 'step-number grid size-8 place-items-center rounded-full text-xs font-bold transition-all bg-card text-muted-foreground border border-border';
+                    num.innerHTML = `0${idx + 1}`;
+                    lbl.className = 'step-label text-xs font-medium text-muted-foreground';
+                }
+            });
+
+            // Cập nhật Buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const finishBtn = document.getElementById('finishBtn');
+
+            prevBtn.disabled = (currentStep === 0);
+
+            if (currentStep === totalSteps - 1) {
+                nextBtn.classList.add('hidden');
+                finishBtn.classList.remove('hidden');
+                populateReview();
+            } else {
+                nextBtn.classList.remove('hidden');
+                finishBtn.classList.add('hidden');
+            }
+
+            if (window.lucide) lucide.createIcons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 4. Client-side Validation cho từng bước
+        function validateStep(step) {
+            let isValid = true;
+
+            if (step === 0) {
+                const city = document.getElementById('inputCity');
+                const district = document.getElementById('inputDistrict');
+                const address = document.getElementById('inputAddress');
+
+                if (!city.value.trim()) { markError(city, 'Vui lòng nhập Tỉnh / Thành phố.'); isValid = false; } else unmarkError(city);
+                if (!district.value.trim()) { markError(district, 'Vui lòng nhập Quận / Huyện.'); isValid = false; } else unmarkError(district);
+                if (!address.value.trim()) { markError(address, 'Vui lòng nhập Địa chỉ chi tiết.'); isValid = false; } else unmarkError(address);
+            } else if (step === 1) {
+                const price = document.getElementById('inputPrice');
+                const area = document.getElementById('inputArea');
+
+                if (parseFloat(price.value) < 0 || isNaN(parseFloat(price.value))) {
+                    markError(price, 'Mức giá không hợp lệ.'); isValid = false;
+                } else unmarkError(price);
+
+                if (parseFloat(area.value) <= 0 || isNaN(parseFloat(area.value))) {
+                    markError(area, 'Diện tích phải lớn hơn 0 m².'); isValid = false;
+                } else unmarkError(area);
+            } else if (step === 2) {
+                const title = document.getElementById('inputTitle');
+                const hiddenDesc = document.getElementById('hiddenDescription');
+                const textContent = quill ? quill.getText().trim() : '';
+
+                if (!title.value.trim() || title.value.trim().length < 10) {
+                    markError(title, 'Tiêu đề phải từ 10 đến 500 ký tự.'); isValid = false;
+                } else unmarkError(title);
+
+                if (textContent.length < 20) {
+                    markError(hiddenDesc, 'Mô tả cần có ít nhất 20 ký tự.'); isValid = false;
+                } else unmarkError(hiddenDesc);
+            }
+
+            return isValid;
+        }
+
+        function markError(el, msg) {
+            el.classList.add('!border-rose-500');
+            const span = document.querySelector(`[data-valmsg-for="${el.name}"]`);
+            if (span) span.textContent = msg;
+        }
+
+        function unmarkError(el) {
+            el.classList.remove('!border-rose-500');
+            const span = document.querySelector(`[data-valmsg-for="${el.name}"]`);
+            if (span) span.textContent = '';
+        }
+
+        // 5. Cập nhật Live Preview thời gian thực
+        function updateLivePreview() {
+            const title = document.getElementById('inputTitle')?.value || 'Tiêu đề bất động sản...';
+            const price = parseFloat(document.getElementById('inputPrice')?.value || 0);
+            const area = document.getElementById('inputArea')?.value || '85';
+            const city = document.getElementById('inputCity')?.value || '';
+            const district = document.getElementById('inputDistrict')?.value || '';
+            const ward = document.getElementById('inputWard')?.value || '';
+            const address = document.getElementById('inputAddress')?.value || '';
+            const propType = document.getElementById('inputPropertyType')?.value || 'Apartment';
+            const listingType = document.querySelector('input[name="ListingType"]:checked')?.value || 'sale';
+
+            document.getElementById('prevTitleDisplay').textContent = title;
+            document.getElementById('prevAreaDisplay').textContent = `${area} m²`;
+
+            const fullAddr = [address, ward, district, city].filter(Boolean).join(', ');
+            document.getElementById('prevAddressDisplay').textContent = fullAddr ? `📍 ${fullAddr}` : '📍 Chưa có địa chỉ';
+
+            let priceText = '';
+            if (price >= 1000000000) {
+                priceText = (price / 1000000000).toFixed(2).replace('.00', '') + ' tỷ VNĐ';
+            } else if (price >= 1000000) {
+                priceText = (price / 1000000).toFixed(1).replace('.0', '') + ' triệu VNĐ';
+            } else {
+                priceText = price.toLocaleString('vi-VN') + ' VNĐ';
+            }
+            if (listingType === 'rent') priceText += '/tháng';
+
+            document.getElementById('prevPriceDisplay').textContent = priceText;
+            const priceFormatted = document.getElementById('priceFormatted');
+            if (priceFormatted) priceFormatted.textContent = `≈ ${priceText}`;
+
+            document.getElementById('prevTypePill').textContent = (listingType === 'sale') ? 'Cần bán' : 'Cho thuê';
+            
+            const propTypeLabels = {
+                'Apartment': 'Căn hộ',
+                'House': 'Nhà phố',
+                'Villa': 'Biệt thự',
+                'Townhouse': 'Nhà liền kề',
+                'Land': 'Đất nền',
+                'Commercial': 'Mặt bằng'
+            };
+            document.getElementById('prevPropTypePill').textContent = propTypeLabels[propType] || propType;
+        }
+
+        function onListingTypeChange(type) {
+            updateLivePreview();
+        }
+
+        // 6. Điền dữ liệu vào Bước 4 (Review)
+        function populateReview() {
+            document.getElementById('revTitle').textContent = document.getElementById('inputTitle').value;
+            document.getElementById('revPrice').textContent = document.getElementById('prevPriceDisplay').textContent;
+            document.getElementById('revArea').textContent = document.getElementById('inputArea').value + ' m²';
+            document.getElementById('revPropertyType').textContent = document.getElementById('inputPropertyType').value;
+            document.getElementById('revListingType').textContent = (document.querySelector('input[name="ListingType"]:checked').value === 'sale') ? 'Cần bán (Sale)' : 'Cho thuê (Rent)';
+            document.getElementById('revAddress').textContent = document.getElementById('prevAddressDisplay').textContent.replace('📍 ', '');
+        }
+
+        document.getElementById('wizardForm').addEventListener('submit', function (e) {
+            if (quill) {
+                var text = quill.getText().trim();
+                document.getElementById('hiddenDescription').value = (text.length === 0) ? '' : quill.root.innerHTML;
+            }
+        });
+    </script>
+}

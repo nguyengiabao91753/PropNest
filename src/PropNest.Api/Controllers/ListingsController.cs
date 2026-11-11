@@ -20,6 +20,7 @@ public sealed class ListingsController(
     IWorkflowService workflowService) : ControllerBase
 {
     [HttpGet("{listingId:long}")]
+    [AllowAnonymous]
     public async Task<ActionResult<ListingDto>> GetById(long listingId, CancellationToken cancellationToken)
     {
         var listing = await listingService.GetByIdAsync(listingId, cancellationToken);
@@ -95,6 +96,22 @@ public sealed class ListingsController(
         catch (Exception ex)
         {
             
+            return this.HandleException(ex);
+        }
+    }
+
+    [HttpDelete("{listingId:long}")]
+    [Authorize(Roles ="Seller")]
+    public async Task<IActionResult> Delete(long listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listing = await listingService.GetByIdAsync(listingId, cancellationToken) ?? throw new KeyNotFoundException($"Listing with ID {listingId} not found.");
+            currentUser.EnsureOwner(listing.OwnerUserId);
+            await listingService.DeleteAsync(listingId, listing.OwnerUserId, cancellationToken);
+            return NoContent();
+        } catch(Exception ex)
+        {
             return this.HandleException(ex);
         }
     }

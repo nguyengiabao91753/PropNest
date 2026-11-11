@@ -1,10 +1,11 @@
 using PropNest.Web.Client.Services;
+using PropNest.Web.Client.Services.IServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddSingleton<IClientListingService, MockClientListingService>();
+builder.Services.AddBackendApiClients(builder.Configuration);
 
 var app = builder.Build();
 

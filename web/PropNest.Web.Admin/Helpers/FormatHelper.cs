@@ -84,4 +84,74 @@ public static class FormatHelper
             _ => (status.ToString(), "bg-gray-100 text-gray-700 border-gray-300")
         };
     }
+
+    public static string CleanRejectionReason(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+
+        var text = raw.Trim();
+
+        // 1. Unescape JSON structure if wrapped in array, object, or string
+        try
+        {
+            if ((text.StartsWith('[') && text.EndsWith(']')) ||
+                (text.StartsWith('{') && text.EndsWith('}')) ||
+                (text.StartsWith('"') && text.EndsWith('"')))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(text);
+                if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var items = doc.RootElement.EnumerateArray()
+                        .Select(e => e.ValueKind == System.Text.Json.JsonValueKind.String ? e.GetString() : e.ToString())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .ToList();
+                    if (items.Count > 0)
+                    {
+                        text = string.Join("; ", items);
+                    }
+                }
+                else if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    text = doc.RootElement.GetString() ?? text;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to text parsing
+        }
+
+        // 2. Unescape raw Unicode sequences like \u0110, \u1ECB, \u00F4...
+        if (text.Contains(@"\u", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                text = System.Text.RegularExpressions.Regex.Replace(
+                    text,
+                    @"\\u([0-9a-fA-F]{4})",
+                    m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString());
+            }
+            catch
+            {
+                // Ignore regex error
+            }
+        }
+
+        // 3. Strip any remaining array brackets or quotes
+        text = text.Trim();
+        if (text.StartsWith("[\"", StringComparison.Ordinal) && text.EndsWith("\"]", StringComparison.Ordinal))
+        {
+            text = text[2..^2];
+        }
+        else if (text.StartsWith('[') && text.EndsWith(']'))
+        {
+            text = text[1..^1].Trim('\"', '\'');
+        }
+        else if (text.StartsWith('"') && text.EndsWith('"'))
+        {
+            text = text[1..^1];
+        }
+
+        return text.Trim();
+    }
 }

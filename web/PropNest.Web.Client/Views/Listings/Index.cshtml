@@ -1,139 +1,195 @@
 @model PropNest.Web.Client.Models.ViewModels.ListingsViewModel
 
 @{
-    ViewData["Title"] = "Khám phá Bất động sản";
+    ViewData["Title"] = "Danh sách Bất động sản";
     var hasActiveFilters = !string.IsNullOrWhiteSpace(Model.Query) ||
-                           Model.Type != "all" ||
-                           !string.IsNullOrWhiteSpace(Model.HomeType) ||
+                           (Model.Type != "all" && !string.IsNullOrWhiteSpace(Model.Type)) ||
+                           !string.IsNullOrWhiteSpace(Model.PropertyType) ||
+                           !string.IsNullOrWhiteSpace(Model.City) ||
+                           !string.IsNullOrWhiteSpace(Model.District) ||
                            Model.MinPrice.HasValue ||
-                           Model.MaxPrice.HasValue ||
-                           Model.Beds > 0 ||
-                           Model.Baths > 0 ||
-                           Model.SavedOnly;
+                           Model.MaxPrice.HasValue;
 }
 
-<div class="mx-auto max-w-[1400px] px-4 py-6 md:px-8 space-y-6">
-    <!-- Filter Bar Form -->
-    <form method="get" asp-action="Index" id="filterBarForm" class="space-y-3">
-        <input type="hidden" name="layout" value="@Model.Layout" />
+<div class="mx-auto max-w-7xl px-4 py-6 md:px-8">
+    <!-- ================= MOBILE HEADER & TOOLBAR (chỉ hiện trên màn hình nhỏ < lg) ================= -->
+    <div class="lg:hidden mb-5">
+        <!-- 1. Thông báo số lượng tin đăng (swap lên trên cùng) -->
+        <div class="mb-3">
+            <h1 class="font-display text-xl font-bold text-neutral-900">
+                @Model.TotalCount tin đăng phù hợp
+            </h1>
+            <p class="text-xs text-muted-foreground mt-0.5">
+                Dữ liệu tin đăng chính thức đã được kiểm duyệt từ hệ thống PropNest.
+            </p>
+        </div>
 
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <!-- Search Input -->
-            <label class="relative flex h-11 flex-1 items-center rounded-xl border border-border bg-card px-3 shadow-xs focus-within:border-primary transition-colors">
-                <i data-lucide="search" class="size-4 text-muted-foreground mr-2 shrink-0"></i>
-                <input type="search" name="q" value="@Model.Query"
-                       placeholder="Tìm theo địa chỉ, quận huyện, tên dự án, mã tin..."
-                       class="h-full min-w-0 flex-1 bg-transparent text-xs outline-none text-neutral-900 placeholder:text-muted-foreground" />
-                @if (!string.IsNullOrWhiteSpace(Model.Query))
-                {
-                    <a asp-action="Index" class="text-muted-foreground hover:text-neutral-900">
-                        <i data-lucide="x" class="size-3.5"></i>
-                    </a>
-                }
-            </label>
-
-            <!-- Dropdown Filters Toolbar -->
-            <div class="flex flex-wrap items-center gap-2">
-                <!-- Buy / Rent Filter -->
-                <select name="type" onchange="this.form.submit()"
-                        class="h-11 rounded-xl border border-border bg-card px-3 text-xs font-medium text-neutral-800 outline-none focus:border-primary shadow-xs transition-colors">
-                    <option value="all" selected="@(Model.Type == "all")">Mua hoặc Thuê</option>
-                    <option value="sale" selected="@(Model.Type == "sale")">Cần bán (For Sale)</option>
-                    <option value="rent" selected="@(Model.Type == "rent")">Cho thuê (For Rent)</option>
-                </select>
-
-                <!-- Property Type Filter -->
-                <select name="homeType" onchange="this.form.submit()"
-                        class="h-11 rounded-xl border border-border bg-card px-3 text-xs font-medium text-neutral-800 outline-none focus:border-primary shadow-xs transition-colors">
-                    <option value="" selected="@(string.IsNullOrEmpty(Model.HomeType))">Tất cả loại BĐS</option>
-                    <option value="Apartment" selected="@(Model.HomeType == "Apartment")">Căn hộ chung cư</option>
-                    <option value="Villa" selected="@(Model.HomeType == "Villa")">Biệt thự (Villa)</option>
-                    <option value="House" selected="@(Model.HomeType == "House")">Nhà riêng / Nhà phố</option>
-                    <option value="Commercial" selected="@(Model.HomeType == "Commercial")">Mặt bằng kinh doanh</option>
-                </select>
-
-                <!-- Bedrooms Filter -->
-                <select name="beds" onchange="this.form.submit()"
-                        class="h-11 rounded-xl border border-border bg-card px-3 text-xs font-medium text-neutral-800 outline-none focus:border-primary shadow-xs transition-colors">
-                    <option value="0" selected="@(Model.Beds == 0)">Số PN: Bất kỳ</option>
-                    <option value="1" selected="@(Model.Beds == 1)">1+ Phòng ngủ</option>
-                    <option value="2" selected="@(Model.Beds == 2)">2+ Phòng ngủ</option>
-                    <option value="3" selected="@(Model.Beds == 3)">3+ Phòng ngủ</option>
-                    <option value="4" selected="@(Model.Beds == 4)">4+ Phòng ngủ</option>
-                </select>
-
-                <!-- Price Range Filter -->
-                <select name="maxPrice" onchange="this.form.submit()"
-                        class="h-11 rounded-xl border border-border bg-card px-3 text-xs font-medium text-neutral-800 outline-none focus:border-primary shadow-xs transition-colors">
-                    <option value="" selected="@(!Model.MaxPrice.HasValue)">Mức giá: Tất cả</option>
-                    <option value="50000000" selected="@(Model.MaxPrice == 50000000m)">Dưới 50 triệu</option>
-                    <option value="200000000" selected="@(Model.MaxPrice == 200000000m)">Dưới 200 triệu</option>
-                    <option value="5000000000" selected="@(Model.MaxPrice == 5000000000m)">Dưới 5 tỷ VNĐ</option>
-                    <option value="10000000000" selected="@(Model.MaxPrice == 10000000000m)">Dưới 10 tỷ VNĐ</option>
-                    <option value="50000000000" selected="@(Model.MaxPrice == 50000000000m)">Dưới 50 tỷ VNĐ</option>
-                </select>
-
-                <!-- Saved Only Checkbox Button -->
-                <label class="flex h-11 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium cursor-pointer shadow-xs transition-colors @(Model.SavedOnly ? "border-primary bg-brand-soft text-primary font-bold" : "border-border bg-card text-neutral-700 hover:border-primary")">
-                    <input type="checkbox" name="savedOnly" value="true" checked="@Model.SavedOnly" onchange="this.form.submit()" class="sr-only" />
-                    <i data-lucide="heart" class="size-3.5 @(Model.SavedOnly ? "fill-primary" : "")"></i>
-                    <span>Đã lưu</span>
-                </label>
-
-                <!-- Sort Filter -->
-                <select name="sort" onchange="this.form.submit()"
-                        class="h-11 rounded-xl border border-border bg-card px-3 text-xs font-medium text-neutral-800 outline-none focus:border-primary shadow-xs transition-colors">
-                    <option value="newest" selected="@(Model.Sort == "newest")">Mới nhất</option>
-                    <option value="price-asc" selected="@(Model.Sort == "price-asc")">Giá: Thấp đến cao</option>
-                    <option value="price-desc" selected="@(Model.Sort == "price-desc")">Giá: Cao đến thấp</option>
-                    <option value="rating" selected="@(Model.Sort == "rating")">Đánh giá cao nhất</option>
-                </select>
-
+        <!-- 2. Hàng thanh công cụ: [Nút Bộ lọc] cùng hàng với [Cụm nút Grid / List] -->
+        <div class="flex items-center justify-between gap-3">
+            <!-- Nút Bộ lọc nhỏ gọn -->
+            <button type="button" id="toggleMobileFilterBtn"
+                    class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-neutral-800 shadow-xs hover:border-primary/50 transition-colors">
+                <i data-lucide="filter" class="size-3.5 text-primary"></i>
+                <span>Bộ lọc</span>
                 @if (hasActiveFilters)
                 {
-                    <a asp-action="Index" class="inline-flex h-11 items-center gap-1 rounded-xl border border-border px-3 text-xs font-medium text-muted-foreground hover:text-neutral-900 transition-colors">
-                        <i data-lucide="x" class="size-3.5"></i> Xóa lọc
+                    <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                        Đang lọc
+                    </span>
+                }
+                <i id="filterToggleIcon" data-lucide="chevron-down" class="size-3.5 text-muted-foreground transition-transform duration-200 @(hasActiveFilters ? "rotate-180" : "")"></i>
+            </button>
+
+            <!-- Cụm Grid / List trên Mobile -->
+            <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-surface shrink-0">
+                <a asp-action="Index"
+                   asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                   asp-route-city="@Model.City" asp-route-district="@Model.District"
+                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-page="@Model.PageNumber" asp-route-layout="grid"
+                   class="rounded-lg p-1.5 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
+                   title="Chế độ lưới">
+                    <i data-lucide="layout-grid" class="size-4"></i>
+                </a>
+                <a asp-action="Index"
+                   asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                   asp-route-city="@Model.City" asp-route-district="@Model.District"
+                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-page="@Model.PageNumber" asp-route-layout="list"
+                   class="rounded-lg p-1.5 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
+                   title="Chế độ danh sách">
+                    <i data-lucide="list" class="size-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+        <!-- ================= CỘT TRÁI: FILTER SIDEBAR ================= -->
+        <aside id="filterSidebar"
+               class="w-full lg:w-72 shrink-0 rounded-2xl border border-border bg-card p-5 shadow-xs relative lg:sticky lg:top-20 @(hasActiveFilters ? "block" : "hidden lg:block")">
+            <div class="flex items-center justify-between border-b border-border/80 pb-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="filter" class="size-4 text-primary"></i>
+                    <h2 class="text-sm font-bold text-neutral-900">Bộ lọc tìm kiếm</h2>
+                </div>
+                @if (hasActiveFilters)
+                {
+                    <a asp-action="Index" class="text-xs font-semibold text-primary hover:underline">
+                        Xóa tất cả
                     </a>
                 }
             </div>
-        </div>
-    </form>
 
-    <!-- Main Results Area with Map Split -->
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
-        <!-- Results Column -->
-        <section aria-labelledby="results-title">
-            <div class="flex items-start justify-between gap-4 pb-4 border-b border-border">
+            <form method="get" asp-action="Index" id="filterSidebarForm" class="space-y-4">
+                <input type="hidden" name="layout" value="@Model.Layout" />
+
+                <!-- 1. Từ khóa tìm kiếm -->
                 <div>
-                    <h1 id="results-title" class="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-                        @Model.TotalCount bất động sản phù hợp
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Từ khóa</label>
+                    <input type="search" name="q" value="@Model.Query" placeholder="Địa chỉ, tên dự án..."
+                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
+                </div>
+
+                <!-- 2. Hình thức giao dịch (ListingType) -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Hình thức</label>
+                    <select name="type" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
+                        <option value="all" selected="@(Model.Type == "all")">Tất cả (Mua & Thuê)</option>
+                        <option value="sale" selected="@(string.Equals(Model.Type, "sale", StringComparison.OrdinalIgnoreCase))">Cần bán</option>
+                        <option value="rent" selected="@(string.Equals(Model.Type, "rent", StringComparison.OrdinalIgnoreCase))">Cho thuê</option>
+                    </select>
+                </div>
+
+                <!-- 3. Loại hình bất động sản (PropertyType) -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Loại bất động sản</label>
+                    <select name="propertyType" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
+                        <option value="" selected="@(string.IsNullOrEmpty(Model.PropertyType))">Tất cả loại hình</option>
+                        <option value="Apartment" selected="@(Model.PropertyType == "Apartment")">Căn hộ chung cư</option>
+                        <option value="House" selected="@(Model.PropertyType == "House")">Nhà riêng / Nhà phố</option>
+                        <option value="Villa" selected="@(Model.PropertyType == "Villa")">Biệt thự (Villa)</option>
+                        <option value="Land" selected="@(Model.PropertyType == "Land")">Đất nền</option>
+                    </select>
+                </div>
+
+                <!-- 4. Tỉnh / Thành phố (City) -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Tỉnh / Thành phố</label>
+                    <input type="text" name="city" value="@Model.City" placeholder="Ví dụ: TP. Hồ Chí Minh"
+                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
+                </div>
+
+                <!-- 5. Quận / Huyện (District) -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Quận / Huyện</label>
+                    <input type="text" name="district" value="@Model.District" placeholder="Ví dụ: Quận 7, Thủ Đức..."
+                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
+                </div>
+
+                <!-- 6. Khoảng giá (MinPrice - MaxPrice) -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Khoảng giá (VNĐ)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="minPrice" value="@Model.MinPrice" placeholder="Từ"
+                               class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
+                        <input type="number" name="maxPrice" value="@Model.MaxPrice" placeholder="Đến"
+                               class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
+                    </div>
+                </div>
+
+                <!-- Nút áp dụng bộ lọc -->
+                <button type="submit"
+                        class="w-full mt-2 h-10 rounded-xl bg-primary text-white font-semibold text-xs shadow-xs hover:bg-primary-hover transition-colors flex items-center justify-center gap-1.5">
+                    <i data-lucide="search" class="size-3.5"></i>
+                    <span>Áp dụng bộ lọc</span>
+                </button>
+            </form>
+        </aside>
+
+        <!-- ================= CỘT PHẢI: DANH SÁCH TIN ĐĂNG ================= -->
+        <main class="flex-1 min-w-0">
+            <!-- Header Toolbar trên Desktop (chỉ hiện trên màn hình lớn >= lg) -->
+            <div class="hidden lg:flex items-center justify-between gap-4 pb-4 border-b border-border">
+                <div>
+                    <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900">
+                        @Model.TotalCount tin đăng phù hợp
                     </h1>
                     <p class="text-xs text-muted-foreground mt-0.5">
-                        Tất cả tin đăng đều đã được xác thực giấy tờ pháp lý và kiểm duyệt nội dung minh bạch.
+                        Dữ liệu tin đăng chính thức đã được kiểm duyệt từ hệ thống PropNest.
                     </p>
                 </div>
 
                 <!-- Layout Toggle (Grid vs List) -->
                 <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-surface shrink-0">
-                    <a asp-action="Index" asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-homeType="@Model.HomeType" asp-route-beds="@Model.Beds" asp-route-maxPrice="@Model.MaxPrice" asp-route-savedOnly="@Model.SavedOnly" asp-route-sort="@Model.Sort" asp-route-layout="grid"
+                    <a asp-action="Index"
+                       asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                       asp-route-city="@Model.City" asp-route-district="@Model.District"
+                       asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                       asp-route-page="@Model.PageNumber" asp-route-layout="grid"
                        class="rounded-lg p-2 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                       title="Hiển thị dạng lưới">
+                       title="Chế độ lưới">
                         <i data-lucide="layout-grid" class="size-4"></i>
                     </a>
-                    <a asp-action="Index" asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-homeType="@Model.HomeType" asp-route-beds="@Model.Beds" asp-route-maxPrice="@Model.MaxPrice" asp-route-savedOnly="@Model.SavedOnly" asp-route-sort="@Model.Sort" asp-route-layout="list"
+                    <a asp-action="Index"
+                       asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                       asp-route-city="@Model.City" asp-route-district="@Model.District"
+                       asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                       asp-route-page="@Model.PageNumber" asp-route-layout="list"
                        class="rounded-lg p-2 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                       title="Hiển thị dạng danh sách">
+                       title="Chế độ danh sách">
                         <i data-lucide="list" class="size-4"></i>
                     </a>
                 </div>
             </div>
 
-            <!-- List or Grid Result -->
+            <!-- Danh sách hiển thị -->
             @if (Model.TotalCount == 0)
             {
                 <div class="mt-8 rounded-2xl border border-dashed border-border bg-card p-12 text-center text-xs text-muted-foreground">
                     <i data-lucide="search-x" class="size-10 mx-auto mb-3 text-muted-foreground/60"></i>
-                    <p class="text-sm font-bold text-neutral-800">Không tìm thấy bất động sản nào phù hợp</p>
+                    <p class="text-sm font-bold text-neutral-800">Không tìm thấy bất động sản nào</p>
                     <p class="mt-1">Hãy thử nới rộng khoảng giá hoặc xóa bớt tiêu chí lọc.</p>
                     <a asp-action="Index" class="mt-4 inline-flex items-center gap-1 rounded-full border border-primary px-4 py-2 font-semibold text-primary hover:bg-primary hover:text-white transition-colors">
                         Xóa tất cả bộ lọc
@@ -142,50 +198,84 @@
             }
             else
             {
-                <div class="mt-6 @(Model.Layout == "list" ? "space-y-4" : "grid gap-6 sm:grid-cols-2")">
+                <div class="mt-6 @(Model.Layout == "list" ? "space-y-4" : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3")">
                     @foreach (var p in Model.Properties)
                     {
                         <partial name="_PropertyCard" model="p" />
                     }
                 </div>
-            }
-        </section>
 
-        <!-- Interactive Visual Map Column -->
-        <aside class="sticky top-20 hidden h-[calc(100vh-6rem)] lg:block rounded-2xl overflow-hidden border border-border shadow-xs bg-card" aria-label="Bản đồ vị trí">
-            <div class="h-full flex flex-col justify-between p-4 bg-gradient-to-b from-amber-50/40 to-surface">
-                <div class="flex items-center justify-between border-b border-border/80 pb-3">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="map-pin" class="size-4 text-primary"></i>
-                        <span class="text-xs font-bold text-neutral-900">Bản đồ vị trí trực quan</span>
-                    </div>
-                    <span class="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
-                        @Model.TotalCount ghim vị trí
-                    </span>
-                </div>
-
-                <!-- Visual Pin Representation -->
-                <div class="relative flex-1 my-4 rounded-xl border border-border bg-neutral-100 overflow-hidden flex items-center justify-center">
-                    <img src="/images/categories-bg.png" alt="Bản đồ" class="size-full object-cover opacity-20 filter grayscale" />
-
-                    <!-- Pins positioned on map -->
-                    <div class="absolute inset-0 p-6 flex flex-wrap content-around justify-around">
-                        @foreach (var p in Model.Properties.Take(6))
+                <!-- ================= PHÂN TRANG (PAGINATION) ================= -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Phân trang" class="mt-10 flex items-center justify-center gap-1.5 text-xs font-semibold">
+                        <!-- Nút Trang trước -->
+                        @if (Model.PageNumber > 1)
                         {
-                            <a asp-controller="Properties" asp-action="Details" asp-route-id="@p.Id"
-                               class="group flex items-center gap-1.5 rounded-full bg-neutral-900 text-white px-2.5 py-1 text-[11px] font-bold shadow-md hover:bg-primary hover:scale-110 transition-all">
-                                <span class="size-2 rounded-full bg-emerald-400"></span>
-                                <span>@FormatHelper.FormatCompactPrice(p.Price, p.ListingType)</span>
+                            <a asp-action="Index"
+                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                               asp-route-city="@Model.City" asp-route-district="@Model.District"
+                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                               asp-route-page="@(Model.PageNumber - 1)" asp-route-layout="@Model.Layout"
+                               class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <i data-lucide="chevron-left" class="size-3.5"></i>
+                                <span>Trước</span>
                             </a>
                         }
-                    </div>
-                </div>
 
-                <div class="p-3 rounded-xl bg-card border border-border text-[11px] text-muted-foreground flex items-center justify-between">
-                    <span>📍 Nhấn vào ghim giá để xem nhanh chi tiết bất động sản.</span>
-                    <span class="font-semibold text-primary">Việt Nam</span>
-                </div>
-            </div>
-        </aside>
+                        <!-- Các số trang -->
+                        @for (var i = 1; i <= Model.TotalPages; i++)
+                        {
+                            var pageIndex = i;
+                            <a asp-action="Index"
+                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                               asp-route-city="@Model.City" asp-route-district="@Model.District"
+                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                               asp-route-page="@pageIndex" asp-route-layout="@Model.Layout"
+                               class="size-9 rounded-xl border flex items-center justify-center transition-colors @(pageIndex == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
+                                @pageIndex
+                            </a>
+                        }
+
+                        <!-- Nút Trang sau -->
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a asp-action="Index"
+                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                               asp-route-city="@Model.City" asp-route-district="@Model.District"
+                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                               asp-route-page="@(Model.PageNumber + 1)" asp-route-layout="@Model.Layout"
+                               class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                                <span>Sau</span>
+                                <i data-lucide="chevron-right" class="size-3.5"></i>
+                            </a>
+                        }
+                    </nav>
+                }
+            }
+        </main>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleBtn = document.getElementById('toggleMobileFilterBtn');
+            const sidebar = document.getElementById('filterSidebar');
+            const toggleIcon = document.getElementById('filterToggleIcon');
+
+            if (toggleBtn && sidebar && toggleIcon) {
+                toggleBtn.addEventListener('click', function () {
+                    const isHidden = sidebar.classList.contains('hidden');
+                    if (isHidden) {
+                        sidebar.classList.remove('hidden');
+                        toggleIcon.classList.add('rotate-180');
+                    } else {
+                        sidebar.classList.add('hidden');
+                        toggleIcon.classList.remove('rotate-180');
+                    }
+                });
+            }
+        });
+    </script>
+}

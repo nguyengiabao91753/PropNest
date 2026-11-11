@@ -25,7 +25,8 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
 
             var replay = await workflowRepository.GetByCorrelationIdAsync(existing.CorrelationId, cancellationToken)
                 ?? throw new InvalidOperationException("The idempotent request does not have an associated workflow.");
-            return ToDto(replay);
+            var steps = await workflowRepository.GetStepsByCorrelationIdAsync(replay.CorrelationId, cancellationToken);
+            return ToDto(replay, steps);
         }
 
         var correlationId = Guid.NewGuid();
@@ -51,13 +52,19 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
         await workflowRepository.AddOutboxMessageAsync(new OutboxMessage("PurchasePackageRequested", payload, correlationId), cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(workflow);
+        return ToDto(workflow, Array.Empty<WorkflowStep>());
     }
 
     public async Task<WorkflowDto?> GetByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)
     {
         var workflow = await workflowRepository.GetByCorrelationIdAsync(correlationId, cancellationToken);
-        return workflow is null ? null : ToDto(workflow);
+        if (workflow is null)
+        {
+            return null;
+        }
+
+        var steps = await workflowRepository.GetStepsByCorrelationIdAsync(correlationId, cancellationToken);
+        return ToDto(workflow, steps);
     }
 
     public static string ComputeRequestHash(string content)
@@ -66,7 +73,7 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
         return Convert.ToHexString(bytes);
     }
 
-    private static WorkflowDto ToDto(WorkflowInstance workflow) => new(
+    private static WorkflowDto ToDto(WorkflowInstance workflow, IReadOnlyList<WorkflowStep> steps) => new(
         workflow.CorrelationId,
         workflow.ListingId,
         workflow.UserId,
@@ -75,5 +82,13 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
         workflow.Status,
         workflow.RetryCount,
         workflow.ErrorMessage,
-        workflow.UpdatedAt);
+        workflow.CreatedAt,
+        workflow.UpdatedAt,
+        steps.Select(s => new WorkflowStepDto(
+            s.StepName,
+            s.Status,
+            s.Attempt,
+            s.StartedAt,
+            s.FinishedAt,
+            s.Error)).ToList());
 }

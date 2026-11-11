@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using PropNest.Web.Admin.Services;
+using PropNest.Web.Admin.Filters;
+using PropNest.Web.Admin.Services.IServices;
 
 namespace PropNest.Web.Admin.Controllers;
 
+[AdminAuthorize]
 [Route("Properties")]
 [Route("Admin/Properties")]
 public class PropertiesController : Controller
