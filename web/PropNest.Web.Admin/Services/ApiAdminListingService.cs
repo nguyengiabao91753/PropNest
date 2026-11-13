@@ -51,6 +51,8 @@ public sealed partial class ApiAdminListingService : IAdminListingService
 
     [LoggerMessage(EventId = 109, Level = LogLevel.Warning, Message = "Could not hydrate history for listing {Id}")]
     private static partial void LogHistoryHydrationWarning(ILogger logger, Exception ex, string id);
+    [LoggerMessage(EventId = 110, Level = LogLevel.Warning, Message = "Failed to fetch AME result for listing {Id}")]
+    private static partial void LogFailedToFetchAmeResult(ILogger logger, Exception ex, string id);
 
     public async Task<ModerationQueueViewModel> GetModerationQueueAsync(string? selectedId = null)
     {
@@ -132,6 +134,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             var vm = MapListingElementToViewModel(doc.RootElement);
 
             await HydrateHistoriesAsync(vm);
+            vm.AmeRecommendation = await GetAmeResultAsync(vm.Id);
             return vm;
         }
         catch (Exception ex)
@@ -512,6 +515,82 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         }
 
         return vm;
+    }
+
+    public async Task<AmeRecommendationViewModel> GetAmeResultAsync(string listingId)
+    {
+        var result = new AmeRecommendationViewModel();
+
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/v1/moderation/listings/{listingId}/ame-result");
+            if (!response.IsSuccessStatusCode)
+                return result;
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            var decision = GetString(root, "decision") ?? "ManualReview";
+            result.Decision = decision;
+            result.Source = GetString(root, "source") ?? "AI-RuleEngine";
+            result.IsAvailable = true;
+
+            var score = root.TryGetProperty("score", out var s) ? s.GetDouble() : 0.5;
+            result.ConfidenceScore = (int)(score * 100);
+
+            // Map decision → RecommendationText
+            result.RecommendationText = decision switch
+            {
+                "Approved" => "Khuyên duyệt",
+                "Rejected" => "Khuyên từ chối",
+                "ManualReview" => "Cần xem xét thủ công",
+                _ => decision
+            };
+
+            // Parse violations
+            if (root.TryGetProperty("violations", out var viols) && viols.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var v in viols.EnumerateArray())
+                {
+                    var rule = v.TryGetProperty("rule", out var r) ? r.GetString() ?? "" : "";
+                    result.Violations.Add(new AmeViolationViewModel
+                    {
+                        Rule = rule,
+                        Severity = v.TryGetProperty("severity", out var sv) ? sv.GetString() ?? "info" : "info",
+                        Message = v.TryGetProperty("message", out var m) ? m.GetString() ?? "" : ""
+                    });
+
+                    // Map specific rules
+                    if (rule.Contains("BADWORD") || rule.Contains("PHONE"))
+                        result.BadwordsPassed = false;
+                    if (rule.Contains("PRICE"))
+                        result.PriceBenchmarkText = v.TryGetProperty("message", out var pm) ? pm.GetString() ?? "Bất thường" : "Bất thường";
+                }
+            }
+
+            if (result.BadwordsPassed && !result.Violations.Any(v => v.Rule.Contains("PRICE")))
+                result.PriceBenchmarkText = "Chuẩn khu vực";
+
+            // Parse LLM result
+            if (root.TryGetProperty("llmResult", out var llm) && llm.ValueKind == JsonValueKind.Object)
+            {
+                result.LlmResult = new AmeLlmViewModel
+                {
+                    QualityScore = llm.TryGetProperty("qualityScore", out var qs) ? qs.GetDouble() : 0.5,
+                    IsFraudulent = llm.TryGetProperty("isFraudulent", out var fr) && fr.GetBoolean(),
+                    Category = llm.TryGetProperty("category", out var cat) ? cat.GetString() ?? "unknown" : "unknown",
+                    Explanation = llm.TryGetProperty("explanation", out var ex) ? ex.GetString() ?? "" : "",
+                    IsAvailable = llm.TryGetProperty("isAvailable", out var av) && av.GetBoolean()
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            LogFailedToFetchAmeResult(_logger, ex, listingId);
+        }
+
+        return result;
     }
 
     private static bool TryGetProp(JsonElement elem, string name, out JsonElement value)

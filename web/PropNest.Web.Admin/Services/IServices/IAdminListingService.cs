@@ -11,4 +11,5 @@ public interface IAdminListingService
     Task<bool> ApproveListingAsync(string id);
     Task<bool> RejectListingAsync(string id, string reason);
     Task<int> GetPendingCountAsync();
+    Task<AmeRecommendationViewModel> GetAmeResultAsync(string listingId);
 }

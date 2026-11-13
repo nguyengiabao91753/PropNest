@@ -4,11 +4,32 @@ namespace PropNest.Web.Admin.Models.ViewModels;
 
 public sealed class AmeRecommendationViewModel
 {
-    public int ConfidenceScore { get; set; } = 96;
-    public string RecommendationText { get; set; } = "Khuyên duyệt";
+    public string Decision { get; set; } = "Pending";         
+    public int? ConfidenceScore { get; set; } = 0;             
+    public string RecommendationText { get; set; } = "Đang phân tích...";  
+    public string Source { get; set; } = "AI-RuleEngine";     
     public bool BadwordsPassed { get; set; } = true;
-    public string PriceBenchmarkText { get; set; } = "Chuẩn khu vực (0.98x)";
+    public string PriceBenchmarkText { get; set; } = "Chưa có dữ liệu";   
     public bool ImageQualityPassed { get; set; } = true;
+    public bool? IsAvailable { get; set; } = false;            
+    public List<AmeViolationViewModel> Violations { get; set; } = new();    
+    public AmeLlmViewModel? LlmResult { get; set; }           
+}
+
+public sealed class AmeViolationViewModel                      
+{
+    public string Rule { get; set; } = string.Empty;
+    public string Severity { get; set; } = "info";
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class AmeLlmViewModel                            
+{
+    public double QualityScore { get; set; }
+    public bool IsFraudulent { get; set; }
+    public string Category { get; set; } = "unknown";
+    public string Explanation { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; }
 }
 
 public sealed class ListingDeltaViewModel

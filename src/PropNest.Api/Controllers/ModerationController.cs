@@ -309,4 +309,79 @@ public sealed class ModerationController(
 
         return Ok(listing);
     }
+
+    [HttpGet("listings/{listingId:long}/ame-result")]
+    public async Task<IActionResult> GetAmeResult(
+    long listingId,
+    CancellationToken cancellationToken)
+    {
+        // 1. Lấy listing từ DB
+        var listing = await dbContext.Listings.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.ListingId == listingId, cancellationToken);
+
+        if (listing is null)
+            return NotFound(new { message = $"Listing {listingId} not found" });
+
+        // 2. Gọi FastAPI AME service
+        using var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:8001") };
+        httpClient.Timeout = TimeSpan.FromSeconds(35);
+
+        var ameRequest = new
+        {
+            listing_id = listing.ListingId,
+            title = listing.Title,
+            description = listing.Description ?? "",
+            property_type = listing.PropertyType,
+            listing_type = listing.ListingType,
+            price = (double)listing.Price,
+            area = (double)listing.Area,
+            city = listing.City,
+            district = listing.District,
+            ward = listing.Ward,
+            address = listing.Address
+        };
+
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync("/api/v1/moderate", ameRequest, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var ameResult = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+            return Ok(new
+            {
+                decision = ameResult.GetProperty("decision").GetString(),
+                source = ameResult.GetProperty("source").GetString(),
+                score = ameResult.GetProperty("score").GetDouble(),
+                violations = ameResult.GetProperty("violations").EnumerateArray().Select(v => new
+                {
+                    rule = v.GetProperty("rule").GetString(),
+                    severity = v.GetProperty("severity").GetString(),
+                    message = v.GetProperty("message").GetString()
+                }),
+                llmResult = ameResult.TryGetProperty("llm_result", out var llm) && llm.ValueKind != JsonValueKind.Null
+                    ? new
+                    {
+                        qualityScore = llm.GetProperty("quality_score").GetDouble(),
+                        isFraudulent = llm.GetProperty("is_fraudulent").GetBoolean(),
+                        category = llm.GetProperty("category").GetString(),
+                        explanation = llm.GetProperty("explanation").GetString(),
+                        isAvailable = llm.GetProperty("is_available").GetBoolean()
+                    }
+                    : null
+            });
+        }
+        catch (Exception ex)
+        {
+            // AME service offline → trả fallback
+            return Ok(new
+            {
+                decision = "ManualReview",
+                source = "AI-Unavailable",
+                score = 0.5,
+                violations = new[] { new { rule = "AME_SERVICE_UNAVAILABLE", severity = "info", message = $"AME service không khả dụng: {ex.Message}" } },
+                llmResult = (object?)null
+            });
+        }
+    }
 }
