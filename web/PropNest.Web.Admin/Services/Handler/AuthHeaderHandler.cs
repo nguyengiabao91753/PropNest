@@ -28,11 +28,6 @@ public sealed class AuthHeaderHandler : DelegatingHandler
             {
                 token = adminToken;
             }
-            else if (httpContext.Request.Cookies.TryGetValue(AccessTokenCookieName, out var accessToken) &&
-                     !string.IsNullOrWhiteSpace(accessToken))
-            {
-                token = accessToken;
-            }
 
             if (!string.IsNullOrWhiteSpace(token) && request.Headers.Authorization == null)
             {

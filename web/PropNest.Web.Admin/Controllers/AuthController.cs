@@ -103,8 +103,9 @@ public class AuthController : Controller
                 Expires = model.RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(8)
             };
 
+            // Chỉ ghi cookie riêng của Admin. KHÔNG ghi "propnest_access_token" vì cookie trên localhost
+            // được chia sẻ giữa các port -> sẽ ghi đè phiên đăng nhập của Seller/Client.
             Response.Cookies.Append(AuthHeaderHandler.AdminTokenCookieName, accessToken, cookieOptions);
-            Response.Cookies.Append(AuthHeaderHandler.AccessTokenCookieName, accessToken, cookieOptions);
 
             TempData["SuccessMessage"] = $"Chào mừng trở lại, {profile.FullName}!";
             return LocalRedirect(GetSafeReturnUrl(model.ReturnUrl));
@@ -120,8 +121,8 @@ public class AuthController : Controller
     [HttpPost("logout")]
     public IActionResult Logout()
     {
+        // Chỉ xóa cookie của Admin để không đăng xuất luôn phiên Seller/Client.
         Response.Cookies.Delete(AuthHeaderHandler.AdminTokenCookieName);
-        Response.Cookies.Delete(AuthHeaderHandler.AccessTokenCookieName);
 
         TempData["SuccessMessage"] = "Đã đăng xuất khỏi hệ thống quản trị.";
         return RedirectToAction(nameof(Login));

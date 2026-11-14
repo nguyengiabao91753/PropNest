@@ -18,6 +18,9 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<ListingHistory> ListingHistories => Set<ListingHistory>();
     public DbSet<ListingModerationReview> ListingModerationReviews => Set<ListingModerationReview>();
+    public DbSet<ContentRule> ContentRules => Set<ContentRule>();
+    public DbSet<MarketPriceBenchmark> MarketPriceBenchmarks => Set<MarketPriceBenchmark>();
+    public DbSet<AmeModerationResult> AmeModerationResults => Set<AmeModerationResult>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
@@ -42,6 +45,11 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
                     if (string.Equals(property.GetColumnType(), "nvarchar(max)", StringComparison.OrdinalIgnoreCase))
                     {
                         property.SetColumnType("TEXT");
+                    }
+
+                    if (property.IsConcurrencyToken && property.ClrType == typeof(byte[]))
+                    {
+                        property.SetDefaultValueSql("randomblob(8)");
                     }
                 }
             }

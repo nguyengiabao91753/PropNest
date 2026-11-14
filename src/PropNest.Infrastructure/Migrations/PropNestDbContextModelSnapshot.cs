@@ -155,6 +155,143 @@ namespace PropNest.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PropNest.Domain.Listings.AmeModerationResult", b =>
+                {
+                    b.Property<long>("ResultId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ResultId"));
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<long>("ListingId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModelInfo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ReasonsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ScoreJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WarningsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ResultId");
+
+                    b.HasIndex("CorrelationId")
+                        .IsUnique();
+
+                    b.HasIndex("ListingId", "CheckedAt");
+
+                    b.ToTable("AmeModerationResults", (string)null);
+                });
+
+            modelBuilder.Entity("PropNest.Domain.Listings.ContentRule", b =>
+                {
+                    b.Property<long>("RuleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RuleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("RuleId");
+
+                    b.HasIndex("RuleType", "IsActive");
+
+                    b.ToTable("ContentRules", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            RuleId = 1L,
+                            Description = "Từ khóa vi phạm pháp luật hoặc lừa đảo nghiêm trọng",
+                            IsActive = true,
+                            Pattern = "lừa đảo|cờ bạc|cá độ|tín dụng đen",
+                            RuleType = "BadWord",
+                            Severity = "Reject",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            RuleId = 2L,
+                            Description = "Từ khóa cam kết tài chính sai sự thật hoặc giấy tờ bất hợp pháp",
+                            IsActive = true,
+                            Pattern = "cam kết lợi nhuận 100%|x2 tài sản sau 1 tháng|sổ đỏ giả",
+                            RuleType = "BadWord",
+                            Severity = "Reject",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            RuleId = 3L,
+                            Description = "Chặn chèn số điện thoại trực tiếp trong tiêu đề hoặc nội dung mô tả",
+                            IsActive = true,
+                            Pattern = "(?:\\+84|0)(?:3|5|7|8|9)\\d(?:[\\s\\.\\-]?\\d){7}",
+                            RuleType = "PhonePattern",
+                            Severity = "Reject",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            RuleId = 4L,
+                            Description = "Tỷ lệ chữ IN HOA vượt quá 50% gây phản cảm hoặc spam",
+                            IsActive = true,
+                            Pattern = "UPPERCASE_RATIO_EXCEEDED:0.5",
+                            RuleType = "Formatting",
+                            Severity = "ManualReview",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            RuleId = 5L,
+                            Description = "Mô tả tin đăng quá ngắn (dưới 30 ký tự), thiếu thông tin chi tiết",
+                            IsActive = true,
+                            Pattern = "MIN_DESCRIPTION_LENGTH:30",
+                            RuleType = "Formatting",
+                            Severity = "Warning",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
+                });
+
             modelBuilder.Entity("PropNest.Domain.Listings.Listing", b =>
                 {
                     b.Property<long>("ListingId")
@@ -379,6 +516,131 @@ namespace PropNest.Infrastructure.Migrations
                     b.HasIndex("ListingId", "ReviewedAt");
 
                     b.ToTable("ListingModerationReviews", (string)null);
+                });
+
+            modelBuilder.Entity("PropNest.Domain.Listings.MarketPriceBenchmark", b =>
+                {
+                    b.Property<long>("BenchmarkId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BenchmarkId"));
+
+                    b.Property<decimal>("AvgPricePerSqm")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CityCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DistrictCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("EffectiveFrom")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ListingType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("MaxPricePerSqm")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinPricePerSqm")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PropertyType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("BenchmarkId");
+
+                    b.HasIndex("CityCode", "DistrictCode", "PropertyType", "ListingType", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("MarketPriceBenchmarks", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            BenchmarkId = 1L,
+                            AvgPricePerSqm = 150000000m,
+                            CityCode = "TP. Hồ Chí Minh",
+                            DistrictCode = "Quận 1",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Sale",
+                            MaxPricePerSqm = 350000000m,
+                            MinPricePerSqm = 80000000m,
+                            PropertyType = "Apartment"
+                        },
+                        new
+                        {
+                            BenchmarkId = 2L,
+                            AvgPricePerSqm = 65000000m,
+                            CityCode = "TP. Hồ Chí Minh",
+                            DistrictCode = "Quận 7",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Sale",
+                            MaxPricePerSqm = 130000000m,
+                            MinPricePerSqm = 35000000m,
+                            PropertyType = "Apartment"
+                        },
+                        new
+                        {
+                            BenchmarkId = 3L,
+                            AvgPricePerSqm = 120000000m,
+                            CityCode = "TP. Hồ Chí Minh",
+                            DistrictCode = "Quận 7",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Sale",
+                            MaxPricePerSqm = 250000000m,
+                            MinPricePerSqm = 60000000m,
+                            PropertyType = "House"
+                        },
+                        new
+                        {
+                            BenchmarkId = 4L,
+                            AvgPricePerSqm = 55000000m,
+                            CityCode = "TP. Hồ Chí Minh",
+                            DistrictCode = "Thành phố Thủ Đức",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Sale",
+                            MaxPricePerSqm = 120000000m,
+                            MinPricePerSqm = 30000000m,
+                            PropertyType = "Apartment"
+                        },
+                        new
+                        {
+                            BenchmarkId = 5L,
+                            AvgPricePerSqm = 70000000m,
+                            CityCode = "Hà Nội",
+                            DistrictCode = "Quận Cầu Giấy",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Sale",
+                            MaxPricePerSqm = 130000000m,
+                            MinPricePerSqm = 40000000m,
+                            PropertyType = "Apartment"
+                        },
+                        new
+                        {
+                            BenchmarkId = 6L,
+                            AvgPricePerSqm = 220000m,
+                            CityCode = "TP. Hồ Chí Minh",
+                            DistrictCode = "Quận 7",
+                            EffectiveFrom = new DateTimeOffset(new DateTime(2026, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ListingType = "Rent",
+                            MaxPricePerSqm = 450000m,
+                            MinPricePerSqm = 120000m,
+                            PropertyType = "Apartment"
+                        });
                 });
 
             modelBuilder.Entity("PropNest.Domain.Packages.PackageDefinitions", b =>
@@ -934,6 +1196,15 @@ namespace PropNest.Infrastructure.Migrations
                     b.HasOne("PropNest.Domain.Users.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PropNest.Domain.Listings.AmeModerationResult", b =>
+                {
+                    b.HasOne("PropNest.Domain.Listings.Listing", null)
+                        .WithMany()
+                        .HasForeignKey("ListingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

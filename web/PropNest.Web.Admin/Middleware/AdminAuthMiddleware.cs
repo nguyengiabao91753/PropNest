@@ -38,11 +38,6 @@ public sealed class AdminAuthMiddleware
         {
             token = adminToken;
         }
-        else if (context.Request.Cookies.TryGetValue(AuthHeaderHandler.AccessTokenCookieName, out var accessToken) &&
-                 !string.IsNullOrWhiteSpace(accessToken))
-        {
-            token = accessToken;
-        }
         else if (context.Request.Headers.TryGetValue("Authorization", out var authHeader))
         {
             var headerValue = authHeader.ToString();
