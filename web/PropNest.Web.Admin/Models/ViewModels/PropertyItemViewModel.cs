@@ -13,7 +13,16 @@ public sealed class AmeRecommendationViewModel
     public bool ImageQualityPassed { get; set; } = true;
     public bool? IsAvailable { get; set; } = false;            
     public List<AmeViolationViewModel> Violations { get; set; } = new();    
-    public AmeLlmViewModel? LlmResult { get; set; }           
+    public AmeLlmViewModel? LlmResult { get; set; }
+    public string? ModelInfo { get; set; }
+    public DateTimeOffset? CheckedAt { get; set; }
+    public decimal TotalRiskScore { get; set; }
+    public decimal KeywordRiskScore { get; set; }
+    public decimal PriceAnomalyScore { get; set; }
+    public decimal CompletenessScore { get; set; }
+    public decimal AiSemanticScore { get; set; }
+    public string? Summary { get; set; }
+    public List<string> ReasonCodes { get; set; } = new();
 }
 
 public sealed class AmeViolationViewModel                      

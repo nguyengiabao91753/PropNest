@@ -28,7 +28,7 @@ public sealed class ListingsController(
     }
 
     [HttpGet("mine")]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<ActionResult<ListingCollectionDto>> GetMyListings(CancellationToken cancellationToken)
     {
         return Ok(await listingService.GetByOwnerAsync(
@@ -37,7 +37,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost]
-    [Authorize(Roles ="Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<ActionResult<ListingDto>> Create(CreateListingRequest request, CancellationToken cancellationToken)
     {
         var listing = await listingService.CreateAsync(new CreateListingCommand(
@@ -57,7 +57,7 @@ public sealed class ListingsController(
     }
 
     [HttpPut("{listingId:long}")]
-    [Authorize(Roles ="Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<ActionResult<ListingDto>> Update(long listingId, UpdateListingRequest request, CancellationToken cancellationToken)
     {
         try
@@ -101,7 +101,7 @@ public sealed class ListingsController(
     }
 
     [HttpDelete("{listingId:long}")]
-    [Authorize(Roles ="Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<IActionResult> Delete(long listingId, CancellationToken cancellationToken)
     {
         try
@@ -117,7 +117,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost("{listingId:long}/submit")]
-    [Authorize(Roles ="Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<IActionResult> Submit(long listingId, CancellationToken cancellationToken)
     {
         try
@@ -134,7 +134,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost("{listingId:long}/purchase-package")]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<ActionResult<WorkflowDto>> PurchasePackage(
         long listingId,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
@@ -169,7 +169,7 @@ public sealed class ListingsController(
     }
 
     [HttpPost("{listingId:long}/hide")]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<IActionResult> Hide(long listingId, CancellationToken cancellationToken)
     {
         try

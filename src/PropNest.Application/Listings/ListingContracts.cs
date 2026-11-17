@@ -55,7 +55,8 @@ public sealed record ListingDto(
     string? OwnerEmail = null,
     string? OwnerPhoneNumber = null,
     DateTimeOffset? CreatedAt = null,
-    IReadOnlyList<string>? Images = null
+    IReadOnlyList<string>? Images = null,
+    string? LatestRejectReason = null
     );
 
 public sealed record ListingOwnerContactDto(
@@ -83,6 +84,16 @@ public sealed record ListingSummaryDto(
 public sealed record ListingCollectionDto(
     int Total,
     IReadOnlyList<ListingDto> Items);
+
+public sealed record AmeModerationResultDto(
+    long ListingId,
+    string Decision,        // "Approved" | "Rejected" | "ManualReview"
+    string? ScoreJson,      // JSON breakdown: TotalRisk, Keyword, Price, ...
+    string? ReasonsJson,    // JSON: { Summary, ReasonCodes[] }
+    string? WarningsJson,   // JSON: ["RULE_1", ...]
+    string? ModelInfo,      // "PropNest-AME-v1"
+    DateTimeOffset CheckedAt
+);
 
 public interface IListingRepository
 {
@@ -122,6 +133,10 @@ public interface IListingRepository
     void AddImage(ListingImage image);
 
     void RemoveImage(ListingImage image);
+
+    Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public interface IListingService
@@ -148,6 +163,8 @@ public interface IListingService
     Task<ListingDto> RejectAsync(long listingId, long moderatorUserId, string reasonsJson, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<AmeModerationResultDto?> GetAmeResultAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public sealed record GetPublicListingsQuery(

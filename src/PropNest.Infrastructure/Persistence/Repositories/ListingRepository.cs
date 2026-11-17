@@ -202,4 +202,26 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public void AddImage(ListingImage image) => dbContext.ListingImages.Add(image);
 
     public void RemoveImage(ListingImage image) => dbContext.ListingImages.Remove(image);
+
+    public async Task<AmeModerationResult?> GetLatestAmeResultAsync(
+    long listingId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.AmeModerationResults
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId)
+            .OrderByDescending(r => r.CheckedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string?> GetLatestRejectReasonAsync(
+        long listingId, CancellationToken cancellationToken = default)
+    {
+        var review = await dbContext.Set<ListingModerationReview>()
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .OrderByDescending(r => r.ReviewedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return review?.ReasonsJson;
+    }
 }

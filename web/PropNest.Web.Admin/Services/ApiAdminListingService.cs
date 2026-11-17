@@ -533,13 +533,9 @@ public sealed partial class ApiAdminListingService : IAdminListingService
 
             var decision = GetString(root, "decision") ?? "ManualReview";
             result.Decision = decision;
-            result.Source = GetString(root, "source") ?? "AI-RuleEngine";
+            result.Source = "AME";
             result.IsAvailable = true;
 
-            var score = root.TryGetProperty("score", out var s) ? s.GetDouble() : 0.5;
-            result.ConfidenceScore = (int)(score * 100);
-
-            // Map decision → RecommendationText
             result.RecommendationText = decision switch
             {
                 "Approved" => "Khuyên duyệt",
@@ -548,42 +544,85 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 _ => decision
             };
 
-            // Parse violations
-            if (root.TryGetProperty("violations", out var viols) && viols.ValueKind == JsonValueKind.Array)
+            result.ModelInfo = GetString(root, "modelInfo") ?? "Unknown";
+            if (TryGetProp(root, "checkedAt", out var checkedElem) &&
+            checkedElem.TryGetDateTimeOffset(out var checkedAt))
             {
-                foreach (var v in viols.EnumerateArray())
-                {
-                    var rule = v.TryGetProperty("rule", out var r) ? r.GetString() ?? "" : "";
-                    result.Violations.Add(new AmeViolationViewModel
-                    {
-                        Rule = rule,
-                        Severity = v.TryGetProperty("severity", out var sv) ? sv.GetString() ?? "info" : "info",
-                        Message = v.TryGetProperty("message", out var m) ? m.GetString() ?? "" : ""
-                    });
+                result.CheckedAt = checkedAt;
+            }
 
-                    // Map specific rules
-                    if (rule.Contains("BADWORD") || rule.Contains("PHONE"))
-                        result.BadwordsPassed = false;
-                    if (rule.Contains("PRICE"))
-                        result.PriceBenchmarkText = v.TryGetProperty("message", out var pm) ? pm.GetString() ?? "Bất thường" : "Bất thường";
+            var scoreJsonStr = GetString(root, "scoreJson");
+            if (!string.IsNullOrWhiteSpace(scoreJsonStr))
+            {
+                using var scoreDoc = JsonDocument.Parse(scoreJsonStr);
+                var s = scoreDoc.RootElement;
+                result.TotalRiskScore = GetDecimal(s, "TotalRiskScore");
+                result.KeywordRiskScore = GetDecimal(s, "KeywordRiskScore");
+                result.PriceAnomalyScore = GetDecimal(s, "PriceAnomalyScore");
+                result.CompletenessScore = GetDecimal(s, "CompletenessScore");
+                result.AiSemanticScore = GetDecimal(s, "AiSemanticScore");
+                // ConfidenceScore = 100 - TotalRiskScore (đảo thang risk → confidence)
+                result.ConfidenceScore = Math.Max(0,
+                    (int)(100m - result.TotalRiskScore));
+            }
+
+            var reasonsJsonStr = GetString(root, "reasonsJson");
+            if (!string.IsNullOrWhiteSpace(reasonsJsonStr))
+            {
+                using var reasonsDoc = JsonDocument.Parse(reasonsJsonStr);
+                var r = reasonsDoc.RootElement;
+                result.Summary = GetString(r, "Summary");
+                if (r.TryGetProperty("ReasonCodes", out var codesElem) &&
+                    codesElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var code in codesElem.EnumerateArray())
+                    {
+                        var codeStr = code.GetString();
+                        if (!string.IsNullOrEmpty(codeStr))
+                            result.ReasonCodes.Add(codeStr);
+                    }
                 }
             }
 
-            if (result.BadwordsPassed && !result.Violations.Any(v => v.Rule.Contains("PRICE")))
-                result.PriceBenchmarkText = "Chuẩn khu vực";
-
-            // Parse LLM result
-            if (root.TryGetProperty("llmResult", out var llm) && llm.ValueKind == JsonValueKind.Object)
+            foreach (var code in result.ReasonCodes)
             {
-                result.LlmResult = new AmeLlmViewModel
+                if (code.Contains("BADWORD", StringComparison.OrdinalIgnoreCase) ||
+                    code.Contains("PHONE", StringComparison.OrdinalIgnoreCase))
                 {
-                    QualityScore = llm.TryGetProperty("qualityScore", out var qs) ? qs.GetDouble() : 0.5,
-                    IsFraudulent = llm.TryGetProperty("isFraudulent", out var fr) && fr.GetBoolean(),
-                    Category = llm.TryGetProperty("category", out var cat) ? cat.GetString() ?? "unknown" : "unknown",
-                    Explanation = llm.TryGetProperty("explanation", out var ex) ? ex.GetString() ?? "" : "",
-                    IsAvailable = llm.TryGetProperty("isAvailable", out var av) && av.GetBoolean()
-                };
+                    result.BadwordsPassed = false;
+                }
+                if (code.Contains("PRICE", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.PriceBenchmarkText = "Giá bất thường so với khu vực";
+                }
             }
+
+            if (result.BadwordsPassed &&
+            !result.ReasonCodes.Any(c => c.Contains("PRICE", StringComparison.OrdinalIgnoreCase)))
+            {
+                result.PriceBenchmarkText = "Chuẩn khu vực";
+            }
+
+            var warningsJsonStr = GetString(root, "warningsJson");
+            if (!string.IsNullOrWhiteSpace(warningsJsonStr))
+            {
+                using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
+                if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var w in warningsDoc.RootElement.EnumerateArray())
+                    {
+                        var warnCode = w.GetString() ?? "";
+                        result.Violations.Add(new AmeViolationViewModel
+                        {
+                            Rule = warnCode,
+                            Severity = ClassifyWarningSeverity(warnCode),
+                            Message = MapWarningMessage(warnCode)
+                        });
+                    }
+                }
+            }
+
+            result.LlmResult = null;
         }
         catch (Exception ex)
         {
@@ -646,6 +685,31 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         }
         return null;
     }
+
+    private static string ClassifyWarningSeverity(string code) => code switch
+    {
+        _ when code.Contains("REJECT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("BLOCK", StringComparison.OrdinalIgnoreCase) => "critical",
+        _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase) => "warning",
+        _ => "info"
+    };
+
+    private static string MapWarningMessage(string code) => code switch
+    {
+        _ when code.Contains("BADWORD", StringComparison.OrdinalIgnoreCase)
+            => "Phát hiện từ khóa nhạy cảm hoặc vi phạm",
+        _ when code.Contains("PHONE", StringComparison.OrdinalIgnoreCase)
+            => "Phát hiện số điện thoại trong nội dung",
+        _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase)
+            => "Giá bất thường so với khung giá khu vực",
+        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase)
+            => "Định dạng nội dung không đạt chuẩn",
+        _ when code.Contains("FALLBACK", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase)
+            => "Chuyển sang kiểm duyệt thủ công",
+        _ => code
+    };
 
     private static string GetFieldDisplayName(string fieldName)
     {

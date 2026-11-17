@@ -318,6 +318,11 @@ public sealed class AmeModerationFlowTests
         public void AddImage(ListingImage image) { }
 
         public void RemoveImage(ListingImage image) { }
+
+        public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork
