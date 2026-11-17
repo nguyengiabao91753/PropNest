@@ -192,7 +192,8 @@ public sealed class ModerationController(
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
+null);
 
         var items = await query.ToListAsync(cancellationToken);
         return Ok(new { total = items.Count, items });
