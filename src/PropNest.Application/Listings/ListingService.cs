@@ -62,7 +62,16 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
     {
         var listings = await listingRepository.GetByOwnerUserIdAsync(ownerUserId, cancellationToken);
-        var items = listings.Select(ToDto).ToList();
+        var items = new List<ListingDto>(listings.Count);
+        foreach (var l in listings)
+        {
+            string? rejectReason = null;
+            if (l.Status == ListingStatus.Rejected)
+            {
+                rejectReason = await listingRepository.GetLatestRejectReasonAsync(l.ListingId, cancellationToken);
+            }
+            items.Add(ToDto(l, null, rejectReason));
+        }
         return new ListingCollectionDto(items.Count, items);
     }
 
