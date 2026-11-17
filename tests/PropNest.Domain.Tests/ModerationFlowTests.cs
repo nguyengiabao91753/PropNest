@@ -326,6 +326,9 @@ public sealed class ModerationFlowTests
 
         public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default)
             => Task.FromResult<AmeModerationResult?>(null);
+
+        public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

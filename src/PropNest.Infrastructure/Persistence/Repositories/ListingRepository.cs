@@ -77,7 +77,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
+                        null);
 
         return await query.ToListAsync(cancellationToken);
     }
@@ -222,6 +223,17 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .OrderByDescending(r => r.ReviewedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return review?.ReasonsJson;
+        if (review != null && !string.IsNullOrWhiteSpace(review.ReasonsJson))
+        {
+            return review.ReasonsJson;
+        }
+
+        var ameResult = await dbContext.AmeModerationResults
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .OrderByDescending(r => r.CheckedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ameResult?.ReasonsJson;
     }
 }
