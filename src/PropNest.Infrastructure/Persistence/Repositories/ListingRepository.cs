@@ -76,7 +76,6 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
                         l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
-                        null);
                         l.Floors,
                         l.Bedrooms,
                         l.Bathrooms,
@@ -86,7 +85,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         l.DistrictCode,
                         l.WardCode,
                         l.LegacyAddress,
-                        l.PackageEndDate);
+                        l.PackageEndDate,
+                        null);
 
         return await query.ToListAsync(cancellationToken);
     }

@@ -81,33 +81,9 @@ namespace PropNest.Web.Seller.Services
                     };
 
                     // 2. Chuyển đổi dữ liệu sang SellerPropertyItemViewModel
-                    var allItems = response.Items.Select(x => new SellerPropertyItemViewModel
-                    {
-                        Id = x.ListingId,
-                        Title = x.Title,
-                        Description = x.Description ?? string.Empty,
-                        PropertyType = x.PropertyType,
-                        ListingType = x.ListingType,
-                        Price = x.Price,
-                        Area = x.Area,
-                        City = x.City,
-                        District = x.District,
-                        Ward = x.Ward,
-                        Address = x.Address,
-                        Status = x.Status,
-                        PackageCode = x.PackageCode ?? "Standard",
-                        SellerName = x.OwnerName ?? "Người bán",
-                        Images = (x.Images != null && x.Images.Count > 0)
-                            ? x.Images
-                            : new List<string>(),
-                        CreatedAt = x.StartDate ?? DateTimeOffset.UtcNow,
-                        RowVersion = x.RowVersion != null ? Convert.ToBase64String(x.RowVersion) : string.Empty,
-                        RejectReason = FormatRejectReason(x.LatestRejectReason)
-                    }).ToList();
-
-                    // 3. Lọc theo Tab được chọn
                     var allItems = response.Items.Select(MapToViewModel).ToList();
 
+                    // 3. Lọc theo Tab được chọn
                     var filtered = allItems.AsEnumerable();
                     if (!string.Equals(model.CurrentStatus, "all", StringComparison.OrdinalIgnoreCase))
                     {
@@ -120,7 +96,7 @@ namespace PropNest.Web.Seller.Services
                         filtered = filtered.Where(x =>
                             x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             x.Address.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            x.District.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrWhiteSpace(x.District) && x.District.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
                             x.City.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             (!string.IsNullOrWhiteSpace(x.LegacyAddress) && x.LegacyAddress.Contains(term, StringComparison.OrdinalIgnoreCase)));
                     }
@@ -218,31 +194,6 @@ namespace PropNest.Web.Seller.Services
             try
             {
                 var dto = await _httpClient.GetFromJsonAsync<ApiListingDto>(url, _jsonOptions, cancellationToken);
-                if (dto == null) return null;
-
-                return new SellerPropertyItemViewModel
-                {
-                    Id = dto.ListingId,
-                    Title = dto.Title,
-                    Description = dto.Description ?? string.Empty,
-                    PropertyType = dto.PropertyType,
-                    ListingType = dto.ListingType,
-                    Price = dto.Price,
-                    Area = dto.Area,
-                    City = dto.City,
-                    District = dto.District,
-                    Ward = dto.Ward,
-                    Address = dto.Address,
-                    Status = dto.Status,
-                    PackageCode = dto.PackageCode ?? "Standard",
-                    SellerName = dto.OwnerName ?? "Người bán",
-                    Images = (dto.Images != null && dto.Images.Count > 0)
-                        ? dto.Images
-                        : new List<string>(),
-                    CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
-                    RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
-                    RejectReason = FormatRejectReason(dto.LatestRejectReason)
-                };
                 return dto == null ? null : MapToViewModel(dto);
             }
             catch (HttpRequestException ex)
@@ -666,7 +617,8 @@ namespace PropNest.Web.Seller.Services
             SellerName = dto.OwnerName ?? "Người bán",
             Images = (dto.Images != null && dto.Images.Count > 0) ? dto.Images : new List<string>(),
             CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
-            RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty
+            RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
+            RejectReason = FormatRejectReason(dto.LatestRejectReason)
         };
 
         // ==========================================

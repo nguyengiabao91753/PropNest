@@ -44,12 +44,12 @@ public sealed class AmeModerationFlowTests
         //   → Hệ thống gọi ApproveAsync tương tự moderator duyệt thủ công
         var result = await service.ApproveAsync(listingId, ameSystemUserId);
 
-        // Assert ─ Listing phải chuyển sang Published
-        Assert.Equal(ListingStatus.Published, result.Status);
+        // Assert ─ Listing chuyển sang PendingPayment (theo flow gói dịch vụ/thanh toán)
+        Assert.Equal(ListingStatus.PendingPayment, result.Status);
         Assert.Equal(ModerationDecision.Approved, result.ModerationDecision);
-        Assert.NotNull(result.StartDate);
-        Assert.NotNull(result.EndDate);
-        Assert.True(result.EndDate > result.StartDate);
+        Assert.Null(result.StartDate);
+        Assert.Null(result.EndDate);
+        Assert.Null(result.PackageEndDate);
 
         // Kiểm tra ghi nhận Moderation Review (audit trail)
         var review = Assert.Single(repository.Reviews);
@@ -63,9 +63,9 @@ public sealed class AmeModerationFlowTests
         Assert.Equal(listingId, history.ListingId);
         Assert.Equal("Approve", history.ActionType);
 
-        // Kiểm tra Outbox message cho event ListingPublished
+        // Kiểm tra Outbox message cho event ListingApprovedPendingPayment
         var outbox = Assert.Single(repository.OutboxMessages);
-        Assert.Equal("ListingPublished", outbox.Type);
+        Assert.Equal("ListingApprovedPendingPayment", outbox.Type);
 
         // Kiểm tra lưu thay đổi vào cơ sở dữ liệu
         Assert.Equal(1, unitOfWork.SaveChangesCalls);
@@ -232,7 +232,7 @@ public sealed class AmeModerationFlowTests
                 break;
             case ListingStatus.Published:
                 listing.SubmitForModeration();
-                listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30));
+                listing.Approve(DateTimeOffset.UtcNow);
                 break;
             case ListingStatus.Rejected:
                 listing.SubmitForModeration();
@@ -279,6 +279,12 @@ public sealed class AmeModerationFlowTests
 
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default)
             => Task.FromResult(Package != null && Package.PackageCode.Equals(packageCode, StringComparison.OrdinalIgnoreCase) ? Package : null);
+
+        public Task<IReadOnlyList<PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PackageDefinitions>>(Package != null ? [Package] : []);
+
+        public Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Listing>>([]);
 
         public void AddModerationReview(ListingModerationReview review) => Reviews.Add(review);
 

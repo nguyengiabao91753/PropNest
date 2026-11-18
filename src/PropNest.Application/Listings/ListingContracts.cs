@@ -74,8 +74,6 @@ public sealed record ListingDto(
     string? OwnerPhoneNumber = null,
     DateTimeOffset? CreatedAt = null,
     IReadOnlyList<string>? Images = null,
-    string? LatestRejectReason = null
-    );
     int? Floors = null,
     int? Bedrooms = null,
     int? Bathrooms = null,
@@ -85,7 +83,9 @@ public sealed record ListingDto(
     int? DistrictCode = null,
     int? WardCode = null,
     string? LegacyAddress = null,
-    DateTimeOffset? PackageEndDate = null);
+    DateTimeOffset? PackageEndDate = null,
+    string? LatestRejectReason = null
+    );
 
 public sealed record ListingOwnerContactDto(
     long UserId,

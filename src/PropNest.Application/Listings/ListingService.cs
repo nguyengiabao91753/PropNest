@@ -216,31 +216,6 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.PackageEndDate);
 
     private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null, string? rejectReason = null) => new(
-    listing.ListingId,
-    listing.OwnerUserId,
-    listing.Title,
-    listing.Description,
-    listing.PropertyType,
-    listing.ListingType,
-    listing.Price,
-    listing.Area,
-    listing.City,
-    listing.District,
-    listing.Ward,
-    listing.Address,
-    listing.Status,
-    listing.ModerationDecision,
-    listing.PackageCode,
-    listing.StartDate,
-    listing.EndDate,
-    listing.RowVersion,
-    owner?.FullName,
-    owner?.Email,
-    owner?.PhoneNumber,
-    listing.CreatedAt,
-    listing.Images.Select(img => img.Url).ToList(),
-    rejectReason);
-    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null) => new(
         listing.ListingId,
         listing.OwnerUserId,
         listing.Title,
@@ -263,7 +238,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         owner?.Email,
         owner?.PhoneNumber,
         listing.CreatedAt,
-        listing.Images.Select(img => img.Url).ToList(),
+        listing.Images?.Select(img => img.Url).ToList() ?? new List<string>(),
         listing.Floors,
         listing.Bedrooms,
         listing.Bathrooms,
@@ -273,7 +248,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.DistrictCode,
         listing.WardCode,
         listing.LegacyAddress,
-        listing.PackageEndDate);
+        listing.PackageEndDate,
+        rejectReason);
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
