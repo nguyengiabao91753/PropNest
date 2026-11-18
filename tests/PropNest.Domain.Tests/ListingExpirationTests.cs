@@ -22,10 +22,11 @@ public sealed class ListingExpirationTests
     public async Task ExpireListingsAsync_WhenPublishedListingPastEndDate_ShouldSetStatusExpired_AddHistory_AndAddOutbox()
     {
         // Arrange
+        var past = DateTimeOffset.UtcNow.AddDays(-20);
         var listing = CreateListingWithId(101);
         listing.SubmitForModeration();
-        var now = DateTimeOffset.UtcNow;
-        listing.Approve(now.AddDays(-10), now.AddDays(-1)); // EndDate is yesterday
+        listing.Approve(past);
+        listing.ApplyPackagePurchase("Standard", 7, past); // Expired already relative to UtcNow
 
         var repository = new MockListingRepository([listing]);
         var unitOfWork = new MockUnitOfWork();
@@ -38,35 +39,58 @@ public sealed class ListingExpirationTests
         Assert.Equal(1, processedCount);
         Assert.Equal(ListingStatus.Expired, listing.Status);
 
-        // Kiểm tra history
         var history = Assert.Single(repository.Histories);
         Assert.Equal(101, history.ListingId);
         Assert.Null(history.ActorUserId);
         Assert.Equal("Expire", history.ActionType);
 
-        // Kiểm tra outbox message
         var outbox = Assert.Single(repository.OutboxMessages);
         Assert.Equal("ListingExpired", outbox.Type);
         using var jsonDoc = JsonDocument.Parse(outbox.PayloadJson);
         Assert.Equal(101, jsonDoc.RootElement.GetProperty("ListingId").GetInt64());
         Assert.Equal(listing.OwnerUserId, jsonDoc.RootElement.GetProperty("OwnerUserId").GetInt64());
 
-        // Kiểm tra commit transaction
+        Assert.Equal(1, unitOfWork.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task ExpireListingsAsync_WhenVipPackageEndedButBaseLifespanRemains_ShouldDowngradeToStandard()
+    {
+        // Arrange: base lifespan 15d starting 10 days ago (still valid for 5 more days), VIP 7d ended 3 days ago
+        var start = DateTimeOffset.UtcNow.AddDays(-10);
+        var listing = CreateListingWithId(102);
+        listing.SubmitForModeration();
+        listing.Approve(start);
+        listing.ApplyPackagePurchase("Standard", 15, start);
+        listing.ApplyPackagePurchase("VIP", 7, start); // VIP expired at start + 6d < UtcNow, base EndDate still > UtcNow
+
+        var repository = new MockListingRepository([], [listing]);
+        var unitOfWork = new MockUnitOfWork();
+        var service = new ListingExpirationService(repository, unitOfWork);
+
+        // Act
+        var expiredCount = await service.ExpireListingsAsync();
+
+        // Assert
+        Assert.Equal(0, expiredCount);
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("Standard", listing.PackageCode);
+        Assert.Null(listing.PackageEndDate);
+        var history = Assert.Single(repository.Histories);
+        Assert.Equal("DowngradePackage", history.ActionType);
+        Assert.Empty(repository.OutboxMessages);
         Assert.Equal(1, unitOfWork.SaveChangesCalls);
     }
 
     [Fact]
     public async Task ExpireListingsAsync_WhenNoCandidates_ShouldDoNothing()
     {
-        // Arrange
         var repository = new MockListingRepository([]);
         var unitOfWork = new MockUnitOfWork();
         var service = new ListingExpirationService(repository, unitOfWork);
 
-        // Act
         var processedCount = await service.ExpireListingsAsync();
 
-        // Assert
         Assert.Equal(0, processedCount);
         Assert.Empty(repository.Histories);
         Assert.Empty(repository.OutboxMessages);
@@ -76,12 +100,13 @@ public sealed class ListingExpirationTests
     [Fact]
     public async Task ExpireListingsAsync_ProcessesMultipleBatches()
     {
-        // Arrange
+        var past = DateTimeOffset.UtcNow.AddDays(-20);
         var batch1 = Enumerable.Range(1, 100).Select(i =>
         {
             var l = CreateListingWithId(i);
             l.SubmitForModeration();
-            l.Approve(DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-1));
+            l.Approve(past);
+            l.ApplyPackagePurchase("Standard", 7, past);
             return l;
         }).ToList();
 
@@ -89,7 +114,8 @@ public sealed class ListingExpirationTests
         {
             var l = CreateListingWithId(i);
             l.SubmitForModeration();
-            l.Approve(DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-1));
+            l.Approve(past);
+            l.ApplyPackagePurchase("Standard", 7, past);
             return l;
         }).ToList();
 
@@ -97,20 +123,17 @@ public sealed class ListingExpirationTests
         var unitOfWork = new MockUnitOfWork();
         var service = new ListingExpirationService(repository, unitOfWork);
 
-        // Act
         var processedCount = await service.ExpireListingsAsync();
 
-        // Assert
         Assert.Equal(120, processedCount);
         Assert.Equal(120, repository.Histories.Count);
         Assert.Equal(120, repository.OutboxMessages.Count);
-        Assert.Equal(2, unitOfWork.SaveChangesCalls); // 2 batches saved separately
+        Assert.Equal(2, unitOfWork.SaveChangesCalls);
     }
 
     [Fact]
     public async Task ListingExpirationJob_ExecutesExpirationServiceThroughScope()
     {
-        // Arrange
         var mockExpirationService = new Mock<IListingExpirationService>();
         mockExpirationService
             .Setup(s => s.ExpireListingsAsync(It.IsAny<CancellationToken>()))
@@ -126,25 +149,20 @@ public sealed class ListingExpirationTests
         var mockJobExecutionContext = new Mock<IJobExecutionContext>();
         mockJobExecutionContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // Act
         await job.Execute(mockJobExecutionContext.Object);
 
-        // Assert
         mockExpirationService.Verify(s => s.ExpireListingsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public void QuartzCronExpression_Every5Minutes_IsCalculatedCorrectly()
     {
-        // Arrange
         var cronSchedule = new CronExpression("0 0/5 * * * ?");
         var baseTime = new DateTimeOffset(2026, 10, 13, 12, 0, 0, TimeSpan.Zero);
 
-        // Act
         var nextFireTime = cronSchedule.GetNextValidTimeAfter(baseTime);
         var secondFireTime = nextFireTime.HasValue ? cronSchedule.GetNextValidTimeAfter(nextFireTime.Value) : null;
 
-        // Assert
         Assert.NotNull(nextFireTime);
         Assert.Equal(new DateTimeOffset(2026, 10, 13, 12, 5, 0, TimeSpan.Zero), nextFireTime.Value);
 
@@ -172,15 +190,23 @@ public sealed class ListingExpirationTests
         return listing;
     }
 
-    private sealed class MockListingRepository(List<Listing> candidates) : IListingRepository
+    private sealed class MockListingRepository(List<Listing> expireCandidates, List<Listing>? downgradeCandidates = null) : IListingRepository
     {
+        private readonly List<Listing> _downgradeCandidates = downgradeCandidates ?? [];
         public List<ListingHistory> Histories { get; } = [];
         public List<OutboxMessage> OutboxMessages { get; } = [];
 
         public Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
         {
-            var result = candidates.Take(batchSize).ToList();
-            candidates.RemoveAll(result.Contains);
+            var result = expireCandidates.Take(batchSize).ToList();
+            expireCandidates.RemoveAll(result.Contains);
+            return Task.FromResult<IReadOnlyList<Listing>>(result);
+        }
+
+        public Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
+        {
+            var result = _downgradeCandidates.Take(batchSize).ToList();
+            _downgradeCandidates.RemoveAll(result.Contains);
             return Task.FromResult<IReadOnlyList<Listing>>(result);
         }
 
@@ -197,6 +223,7 @@ public sealed class ListingExpirationTests
         public Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default) => Task.FromResult(new PagedResult<ListingSummaryDto>([], 0, 1, 10));
         public Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingHistoryDto>>([]);
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) => Task.FromResult<PackageDefinitions?>(null);
+        public Task<IReadOnlyList<PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PackageDefinitions>>([]);
         public void AddModerationReview(ListingModerationReview review) { }
         public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
         public Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingImage>>([]);
@@ -221,6 +248,9 @@ public sealed class ListingExpirationTests
             return Task.FromResult<IReadOnlyList<Listing>>([]);
         }
 
+        public Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Listing>>([]);
+
         public void AddHistory(ListingHistory history) => Histories.Add(history);
         public void AddOutboxMessage(OutboxMessage message) => OutboxMessages.Add(message);
 
@@ -234,6 +264,7 @@ public sealed class ListingExpirationTests
         public Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default) => Task.FromResult(new PagedResult<ListingSummaryDto>([], 0, 1, 10));
         public Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingHistoryDto>>([]);
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) => Task.FromResult<PackageDefinitions?>(null);
+        public Task<IReadOnlyList<PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PackageDefinitions>>([]);
         public void AddModerationReview(ListingModerationReview review) { }
         public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<Listing?>(null);
         public Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ListingImage>>([]);
