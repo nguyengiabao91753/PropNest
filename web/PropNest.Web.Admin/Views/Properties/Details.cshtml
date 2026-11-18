@@ -40,19 +40,34 @@
                         <i data-lucide="map-pin" class="size-3.5 text-primary"></i>
                         @Model.FullAddress
                     </p>
+                    @if (!string.IsNullOrWhiteSpace(Model.LegacyAddress))
+                    {
+                        <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 inline-flex items-center gap-1.5">
+                            <i data-lucide="history" class="size-3.5 shrink-0"></i>
+                            <span>Trước sáp nhập: <strong>@Model.LegacyAddress</strong></span>
+                        </p>
+                    }
                     <p class="mt-4 text-3xl font-extrabold text-primary font-display">
                         @FormatHelper.FormatPrice(Model.Price, Model.ListingType)
                     </p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
                     <div>
                         <strong class="text-sm block text-neutral-900">@Model.Beds</strong>
                         <span class="text-muted-foreground">Phòng ngủ</span>
                     </div>
                     <div>
                         <strong class="text-sm block text-neutral-900">@Model.Baths</strong>
-                        <span class="text-muted-foreground">Phòng tắm</span>
+                        <span class="text-muted-foreground">Toilet / WC</span>
+                    </div>
+                    <div>
+                        <strong class="text-sm block text-neutral-900">@(Model.Floors.HasValue ? $"{Model.Floors.Value} tầng" : "—")</strong>
+                        <span class="text-muted-foreground">Số tầng</span>
+                    </div>
+                    <div>
+                        <strong class="text-sm block text-neutral-900">@(!string.IsNullOrWhiteSpace(Model.BalconyDirection) ? Model.BalconyDirection : "—")</strong>
+                        <span class="text-muted-foreground">Ban công</span>
                     </div>
                     <div>
                         <strong class="text-sm block text-neutral-900">@FormatHelper.FormatArea(Model.Area)</strong>
@@ -63,7 +78,17 @@
                 <div class="p-4 rounded-xl border border-border bg-surface/50 text-xs space-y-1">
                     <p><strong>Người đăng:</strong> @Model.SellerName (Mã: @Model.SellerId)</p>
                     <p><strong>Ngày gửi:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
-                    <p><strong>Gói dịch vụ:</strong> @Model.PackageCode</p>
+                    <p>
+                        <strong>Gói dịch vụ:</strong> @Model.PackageCode
+                        @if (Model.PackageEndDate.HasValue && Model.PackageEndDate.Value > DateTimeOffset.UtcNow)
+                        {
+                            <span class="text-amber-700 font-medium">(VIP đến @Model.PackageEndDate.Value.ToOffset(PropNest.Domain.Listings.ListingPackagePolicy.VietnamUtcOffset).ToString("dd/MM/yyyy HH:mm"))</span>
+                        }
+                        @if (Model.EndDate.HasValue)
+                        {
+                            <span class="text-muted-foreground">(Hiển thị đến @Model.EndDate.Value.ToOffset(PropNest.Domain.Listings.ListingPackagePolicy.VietnamUtcOffset).ToString("dd/MM/yyyy HH:mm"))</span>
+                        }
+                    </p>
                     @if (!string.IsNullOrWhiteSpace(Model.RejectReason))
                     {
                         <p class="text-destructive"><strong>Lý do từ chối:</strong> @Model.RejectReason</p>
@@ -75,9 +100,9 @@
         <!-- Description -->
         <div class="border-t border-border pt-4">
             <h3 class="text-xs font-semibold uppercase text-muted-foreground mb-2">Nội dung mô tả chi tiết</h3>
-            <p class="text-sm text-neutral-800 leading-relaxed bg-surface/50 p-4 rounded-xl border border-border/60">
-                @Model.Description
-            </p>
+            <div class="propnest-richtext text-sm text-neutral-800 leading-relaxed bg-surface/50 p-4 rounded-xl border border-border/60">
+                @Html.Raw(Model.SafeFormattedDescriptionHtml)
+            </div>
         </div>
 
         <!-- Additional Images -->

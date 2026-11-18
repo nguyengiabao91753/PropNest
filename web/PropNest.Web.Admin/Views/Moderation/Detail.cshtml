@@ -154,21 +154,24 @@
                     <tbody class="divide-y divide-border">
                         @foreach (var delta in Model.ResubmissionDeltas)
                         {
+                            var isDescriptionDelta = string.Equals(delta.FieldName, "Description", StringComparison.OrdinalIgnoreCase);
+                            var oldDisplay = isDescriptionDelta ? RichTextHtmlHelper.ToPlainTextPreview(delta.OldValue) : delta.OldValue;
+                            var newDisplay = isDescriptionDelta ? RichTextHtmlHelper.ToPlainTextPreview(delta.NewValue) : delta.NewValue;
                             <tr class="hover:bg-surface/40 transition-colors">
                                 <td class="p-3.5 font-semibold text-neutral-900 align-top">
                                     <span>@delta.FieldDisplayName</span>
                                     <span class="block font-mono text-[10px] text-muted-foreground">@delta.FieldName</span>
                                 </td>
-                                <td class="p-3.5 bg-rose-50/30 text-rose-900 align-top line-through decoration-rose-400">
+                                <td class="p-3.5 bg-rose-50/30 text-rose-900 align-top @(isDescriptionDelta ? "" : "line-through decoration-rose-400")">
                                     <div class="flex items-start gap-1.5">
                                         <i data-lucide="minus-circle" class="size-3.5 text-rose-500 shrink-0 mt-0.5"></i>
-                                        <span class="whitespace-pre-line">@delta.OldValue</span>
+                                        <span class="whitespace-pre-line">@(string.IsNullOrWhiteSpace(oldDisplay) ? "(Trống)" : oldDisplay)</span>
                                     </div>
                                 </td>
                                 <td class="p-3.5 bg-emerald-50/40 text-emerald-950 font-medium align-top">
                                     <div class="flex items-start gap-1.5">
                                         <i data-lucide="plus-circle" class="size-3.5 text-emerald-600 shrink-0 mt-0.5"></i>
-                                        <span class="whitespace-pre-line font-semibold">@delta.NewValue</span>
+                                        <span class="whitespace-pre-line @(isDescriptionDelta ? "font-normal" : "font-semibold")">@(string.IsNullOrWhiteSpace(newDisplay) ? "(Trống)" : newDisplay)</span>
                                     </div>
                                 </td>
                                 <td class="p-3.5 text-center align-top">
@@ -261,6 +264,13 @@
                             <i data-lucide="map-pin" class="size-4 text-primary shrink-0"></i>
                             <span class="font-medium">@Model.FullAddress</span>
                         </p>
+                        @if (!string.IsNullOrWhiteSpace(Model.LegacyAddress))
+                        {
+                            <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
+                                <i data-lucide="history" class="size-3.5 shrink-0"></i>
+                                <span>Trước sáp nhập: <strong>@Model.LegacyAddress</strong></span>
+                            </p>
+                        }
                     </div>
 
                     <div class="text-left sm:text-right shrink-0 bg-surface sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-border">
@@ -289,25 +299,34 @@
                             <i data-lucide="bed" class="size-3.5 text-neutral-600"></i> Phòng ngủ
                         </span>
                         <strong class="text-base font-bold text-neutral-900 mt-1 block">
-                            @(Model.Beds > 0 ? $"{Model.Beds} phòng" : "Chưa xác định")
+                            @(Model.Bedrooms.HasValue ? $"{Model.Bedrooms.Value} phòng" : "Không có / Trống")
                         </strong>
                     </div>
 
                     <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
                         <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
-                            <i data-lucide="bath" class="size-3.5 text-neutral-600"></i> Phòng tắm
+                            <i data-lucide="bath" class="size-3.5 text-neutral-600"></i> Toilet / WC
                         </span>
                         <strong class="text-base font-bold text-neutral-900 mt-1 block">
-                            @(Model.Baths > 0 ? $"{Model.Baths} phòng" : "Chưa xác định")
+                            @(Model.Bathrooms.HasValue ? $"{Model.Bathrooms.Value} phòng" : "Không có / Trống")
                         </strong>
                     </div>
 
                     <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
                         <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
-                            <i data-lucide="package-check" class="size-3.5 text-neutral-600"></i> Gói tin
+                            <i data-lucide="building-2" class="size-3.5 text-neutral-600"></i> Số tầng
                         </span>
-                        <strong class="text-base font-bold text-amber-700 mt-1 block">
-                            @Model.PackageCode
+                        <strong class="text-base font-bold text-neutral-900 mt-1 block">
+                            @(Model.Floors.HasValue ? $"{Model.Floors.Value} tầng" : "—")
+                        </strong>
+                    </div>
+
+                    <div class="rounded-xl border border-border bg-surface/80 p-3.5 text-center">
+                        <span class="text-xs text-muted-foreground block flex items-center justify-center gap-1">
+                            <i data-lucide="compass" class="size-3.5 text-neutral-600"></i> Hướng ban công
+                        </span>
+                        <strong class="text-sm font-bold text-neutral-900 mt-1 block">
+                            @(!string.IsNullOrWhiteSpace(Model.BalconyDirection) ? Model.BalconyDirection : "—")
                         </strong>
                     </div>
                 </div>
@@ -318,8 +337,8 @@
                         <i data-lucide="file-text" class="size-4 text-primary"></i>
                         <span>Nội dung mô tả chi tiết của Người bán</span>
                     </h4>
-                    <div class="rounded-xl border border-border bg-surface/40 p-4 sm:p-5 text-neutral-800 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-sans">
-                        @Model.Description
+                    <div class="propnest-richtext rounded-xl border border-border bg-surface/40 p-4 sm:p-5 text-neutral-800 text-xs sm:text-sm leading-relaxed font-sans">
+                        @Html.Raw(Model.SafeFormattedDescriptionHtml)
                     </div>
                 </div>
             </section>

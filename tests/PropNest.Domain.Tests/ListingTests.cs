@@ -20,10 +20,9 @@ public sealed class ListingTests
     {
         var listing = CreateListing();
 
-        Assert.Throws<InvalidOperationException>(() => listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7)));
+        Assert.Throws<InvalidOperationException>(() => listing.Approve(DateTimeOffset.UtcNow));
     }
 
-    //Nộp lại tin đăng đã bị từ chối để đưa về trạng thái đang chờ duyệt
     [Fact]
     public void SubmitForModerationFromRejectedShouldMovesToPendingModeration()
     {
@@ -33,7 +32,6 @@ public sealed class ListingTests
         Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
     }
 
-    //Nộp lại tin đăng đã bị ẩn để đưa về trạng thái đang chờ duyệt
     [Fact]
     public void SubmitForModerationFromHiddenShouldMoveToPendingModeration()
     {
@@ -43,17 +41,82 @@ public sealed class ListingTests
         Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
     }
 
-    //Duyệt tin hợp lệ -> Published
     [Fact]
-    public void ApproveFromPendingModerationShouldMoveToPublished()
+    public void ApproveFromPendingModerationWithoutActivePaidPeriodMovesToPendingPayment()
     {
         var listing = CreatePendingListing();
-        listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7));
-        Assert.Equal(ListingStatus.Published, listing.Status);
+
+        listing.Approve(DateTimeOffset.UtcNow);
+
+        Assert.Equal(ListingStatus.PendingPayment, listing.Status);
         Assert.Equal(ModerationDecision.Approved, listing.ModerationDecision);
+        Assert.Null(listing.StartDate);
+        Assert.Null(listing.EndDate);
+        Assert.Null(listing.PackageEndDate);
     }
 
-    //Từ chối tin hợp lệ -> Rejected
+    [Fact]
+    public void ApproveEditedPublishedListingWithinPaidWindowRestoresPublishedWithoutRepayment()
+    {
+        var nov18 = new DateTimeOffset(2026, 11, 18, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var listing = CreatePendingListing();
+        listing.Approve(nov18);
+        listing.ApplyPackagePurchase("Standard", 15, nov18);
+        var paidEndDate = listing.EndDate;
+
+        listing.UpdateContent(
+            "Updated apartment title",
+            "Updated description content.",
+            "Apartment",
+            "Sale",
+            4_600_000_000m,
+            75m,
+            "Ho Chi Minh City",
+            "District 7",
+            "Tan Phu",
+            "1 Nguyen Van Linh");
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+
+        listing.Approve(nov18.AddDays(2));
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal(ModerationDecision.Approved, listing.ModerationDecision);
+        Assert.Equal(paidEndDate, listing.EndDate);
+    }
+
+    [Theory]
+    [InlineData(ListingStatus.PendingPayment)]
+    [InlineData(ListingStatus.Expired)]
+    public void UpdateContentFromPendingPaymentOrExpiredRequiresReModeration(ListingStatus initialStatus)
+    {
+        var nov1 = new DateTimeOffset(2026, 11, 1, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var listing = CreatePendingListing();
+        listing.Approve(nov1);
+
+        if (initialStatus == ListingStatus.Expired)
+        {
+            listing.ApplyPackagePurchase("Standard", 7, nov1);
+            listing.Expire(nov1.AddDays(10));
+        }
+
+        Assert.Equal(initialStatus, listing.Status);
+
+        listing.UpdateContent(
+            "Modified title after approval",
+            "Modified description content.",
+            "Apartment",
+            "Sale",
+            5_000_000_000m,
+            80m,
+            "Ho Chi Minh City",
+            "District 7",
+            "Tan Phu",
+            "1 Nguyen Van Linh");
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
+    }
+
     [Fact]
     public void RejectFromPendingModerationShouldMoveToRejected()
     {
@@ -91,7 +154,6 @@ public sealed class ListingTests
         Assert.Equal(ListingStatus.Hidden, listing.Status);
     }
 
-    //Nộp duyệt tin khi tin đã Published -> InvalidOperationException
     [Fact]
     public void SubmitForModerationFromPublishedShouldThrowInvalidOperationException()
     {
@@ -99,7 +161,6 @@ public sealed class ListingTests
         Assert.Throws<InvalidOperationException>(() => listing.SubmitForModeration());
     }
 
-    //Nộp duyệt 2 lần liên tiếp -> InvalidOperationException
     [Fact]
     public void SubmitForModerationWhenAlreadyPendingModerationShouldThrowInvalidOperationException()
     {
@@ -108,7 +169,6 @@ public sealed class ListingTests
         Assert.Throws<InvalidOperationException>(() => listing.SubmitForModeration());
     }
 
-    //Ẩn tin khi đang ở trạng thái Draft -> InvalidOperationException
     [Fact]
     public void HideFromDraftShouldThrowInvalidOperationException()
     {
@@ -116,7 +176,6 @@ public sealed class ListingTests
         Assert.Throws<InvalidOperationException>(() => listing.Hide());
     }
 
-    //Ẩn tin khi đang chờ duyệt -> InvalidOperationException
     [Fact]
     public void HideFromPendingModerationShouldThrowInvalidOperationException()
     {
@@ -124,7 +183,6 @@ public sealed class ListingTests
         Assert.Throws<InvalidOperationException>(() => listing.Hide());
     }
 
-    //Từ chối duyệt tin khi đang ở trạng thái Draft -> InvalidOperationException
     [Fact]
     public void RejectFromDraftShouldThrowInvalidOperationException()
     {
@@ -136,20 +194,24 @@ public sealed class ListingTests
     public void ExpireFromPublishedWithPastEndDateShouldMoveToExpired()
     {
         var listing = CreatePendingListing();
-        var now = DateTimeOffset.UtcNow;
-        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+        var past = DateTimeOffset.UtcNow.AddDays(-20);
+        listing.Approve(past);
+        listing.ApplyPackagePurchase("Standard", 7, past);
 
-        listing.Expire(now);
+        listing.Expire(DateTimeOffset.UtcNow);
 
         Assert.Equal(ListingStatus.Expired, listing.Status);
+        Assert.Equal("Standard", listing.PackageCode);
+        Assert.Null(listing.PackageEndDate);
     }
 
     [Fact]
     public void ExpireParameterlessShouldMoveToExpiredWhenEndDatePast()
     {
         var listing = CreatePendingListing();
-        var now = DateTimeOffset.UtcNow;
-        listing.Approve(now.AddDays(-10), now.AddDays(-1));
+        var past = DateTimeOffset.UtcNow.AddDays(-20);
+        listing.Approve(past);
+        listing.ApplyPackagePurchase("Standard", 7, past);
 
         listing.Expire();
 
@@ -159,11 +221,9 @@ public sealed class ListingTests
     [Fact]
     public void ExpireFromPublishedWithFutureEndDateShouldRemainPublished()
     {
-        var listing = CreatePendingListing();
-        var now = DateTimeOffset.UtcNow;
-        listing.Approve(now, now.AddDays(7));
+        var listing = CreatePublishedListing();
 
-        listing.Expire(now);
+        listing.Expire(DateTimeOffset.UtcNow);
 
         Assert.Equal(ListingStatus.Published, listing.Status);
     }
@@ -178,7 +238,143 @@ public sealed class ListingTests
         Assert.Equal(ListingStatus.Draft, listing.Status);
     }
 
-    //Tạo tin đăng đang chờ duyệt
+    [Fact]
+    public void ApplyPackagePurchaseFromDraftOrPendingModerationShouldThrowInvalidOperationException()
+    {
+        var draft = CreateListing();
+        Assert.Throws<InvalidOperationException>(() => draft.ApplyPackagePurchase("Standard", 15, DateTimeOffset.UtcNow));
+
+        var pending = CreatePendingListing();
+        Assert.Throws<InvalidOperationException>(() => pending.ApplyPackagePurchase("VIP", 7, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void BuyingVip7WhenStandardHasLongerEndDatePreservesStandardEndDateAndDowngradesLater()
+    {
+        // Standard 15d starting 12/11 -> expires 26/11 23:59:59 +07:00
+        var nov12 = new DateTimeOffset(2026, 11, 12, 10, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var nov18 = new DateTimeOffset(2026, 11, 18, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var nov25 = new DateTimeOffset(2026, 11, 25, 0, 5, 0, ListingPackagePolicy.VietnamUtcOffset);
+
+        var listing = CreatePendingListing();
+        listing.Approve(nov12);
+        listing.ApplyPackagePurchase("Standard", 15, nov12);
+        Assert.Equal(new DateTimeOffset(2026, 11, 26, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.EndDate);
+
+        // Buy VIP 7d on 18/11 -> VIP until 24/11 23:59:59, listing still lives until 26/11 23:59:59
+        listing.ApplyPackagePurchase("VIP", 7, nov18);
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
+        Assert.Equal(new DateTimeOffset(2026, 11, 24, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.PackageEndDate);
+        Assert.Equal(new DateTimeOffset(2026, 11, 26, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.EndDate);
+
+        // On 25/11: VIP ended, listing downgrades to Standard until 26/11
+        var downgraded = listing.DowngradePackageIfExpired(nov25);
+        Assert.True(downgraded);
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("Standard", listing.PackageCode);
+        Assert.Null(listing.PackageEndDate);
+        Assert.Equal(new DateTimeOffset(2026, 11, 26, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.EndDate);
+
+        // On 27/11: Standard lifespan expires
+        listing.Expire(new DateTimeOffset(2026, 11, 27, 0, 1, 0, ListingPackagePolicy.VietnamUtcOffset));
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+    }
+
+    [Fact]
+    public void BuyingVip30WhenStandardRemainingIsShorterExtendsListingEndDateToVipEndDate()
+    {
+        var nov12 = new DateTimeOffset(2026, 11, 12, 10, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var nov18 = new DateTimeOffset(2026, 11, 18, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+
+        var listing = CreatePendingListing();
+        listing.Approve(nov12);
+        listing.ApplyPackagePurchase("Standard", 15, nov12); // until 26/11
+
+        listing.ApplyPackagePurchase("VIP", 30, nov18); // 18/11 + 29d = 17/12 23:59:59 +07:00
+        var expectedVip30End = new DateTimeOffset(2026, 12, 17, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset);
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal("VIP", listing.PackageCode);
+        Assert.Equal(expectedVip30End, listing.PackageEndDate);
+        Assert.Equal(expectedVip30End, listing.EndDate);
+    }
+
+    [Fact]
+    public void BuyingStandardWhileVipIsActiveExtendsLifespanAndPreservesVipWindow()
+    {
+        var nov18 = new DateTimeOffset(2026, 11, 18, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var listing = CreatePendingListing();
+        listing.Approve(nov18);
+        listing.ApplyPackagePurchase("VIP", 7, nov18); // VIP & EndDate = 24/11 23:59:59
+
+        listing.ApplyPackagePurchase("Standard", 15, nov18); // Extend EndDate by 15d -> 09/12 23:59:59
+
+        Assert.Equal("VIP", listing.PackageCode);
+        Assert.Equal(new DateTimeOffset(2026, 11, 24, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.PackageEndDate);
+        Assert.Equal(new DateTimeOffset(2026, 12, 9, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset), listing.EndDate);
+    }
+
+    [Fact]
+    public void BuyingVipWhileVipIsActiveStacksBothVipAndListingEndDate()
+    {
+        var nov18 = new DateTimeOffset(2026, 11, 18, 9, 0, 0, ListingPackagePolicy.VietnamUtcOffset);
+        var listing = CreatePendingListing();
+        listing.Approve(nov18);
+        listing.ApplyPackagePurchase("VIP", 7, nov18); // 24/11
+
+        listing.ApplyPackagePurchase("VIP", 7, nov18); // +7d -> 01/12
+
+        var expectedDec01 = new DateTimeOffset(2026, 12, 1, 23, 59, 59, ListingPackagePolicy.VietnamUtcOffset);
+        Assert.Equal("VIP", listing.PackageCode);
+        Assert.Equal(expectedDec01, listing.PackageEndDate);
+        Assert.Equal(expectedDec01, listing.EndDate);
+    }
+
+    [Fact]
+    public void UnhideFromHiddenShouldRestorePreviousPublishedStatus()
+    {
+        var listing = CreateHiddenListing();
+
+        listing.Unhide(ListingStatus.Published, DateTimeOffset.UtcNow);
+
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal(ModerationDecision.Approved, listing.ModerationDecision);
+    }
+
+    [Fact]
+    public void UnhideToPublishedWhenEndDatePastShouldMoveToExpired()
+    {
+        var past = DateTimeOffset.UtcNow.AddDays(-15);
+        var listing = CreatePendingListing();
+        listing.Approve(past);
+        listing.ApplyPackagePurchase("Standard", 7, past);
+        listing.Hide();
+
+        listing.Unhide(ListingStatus.Published, DateTimeOffset.UtcNow);
+
+        Assert.Equal(ListingStatus.Expired, listing.Status);
+        Assert.Equal(ModerationDecision.Approved, listing.ModerationDecision);
+    }
+
+    [Fact]
+    public void UnhideFromNonHiddenShouldThrowInvalidOperationException()
+    {
+        var listing = CreatePublishedListing();
+
+        Assert.Throws<InvalidOperationException>(() => listing.Unhide(ListingStatus.Draft));
+    }
+
+    [Theory]
+    [InlineData(ListingStatus.Hidden)]
+    [InlineData(ListingStatus.Deleted)]
+    public void UnhideToInvalidTargetStatusShouldThrowArgumentException(ListingStatus targetStatus)
+    {
+        var listing = CreateHiddenListing();
+
+        Assert.Throws<ArgumentException>(() => listing.Unhide(targetStatus));
+    }
+
     private static Listing CreatePendingListing()
     {
         var listing = CreateListing();
@@ -186,15 +382,15 @@ public sealed class ListingTests
         return listing;
     }
 
-    //Tạo tin đăng đã được duyệt
     private static Listing CreatePublishedListing()
     {
         var listing = CreatePendingListing();
-        listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7));
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now);
+        listing.ApplyPackagePurchase("Standard", 15, now);
         return listing;
     }
 
-    //Tạo tin đăng đã bị từ chối
     private static Listing CreateRejectedListing()
     {
         var listing = CreatePendingListing();
@@ -202,61 +398,11 @@ public sealed class ListingTests
         return listing;
     }
 
-    //Tạo tin đăng đã bị ẩn đi
     private static Listing CreateHiddenListing()
     {
         var listing = CreatePublishedListing();
         listing.Hide();
         return listing;
-    }
-
-    [Fact]
-    public void UpgradePackageFromDraftShouldTransitionToPendingModeration()
-    {
-        var listing = CreateListing();
-        var now = DateTimeOffset.UtcNow;
-
-        listing.UpgradePackage("VIP", now, now.AddDays(30));
-
-        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
-        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
-        Assert.Equal("VIP", listing.PackageCode);
-    }
-
-    [Fact]
-    public void UpgradePackageFromHiddenShouldTransitionToPublished()
-    {
-        var listing = CreateHiddenListing();
-        var now = DateTimeOffset.UtcNow;
-
-        listing.UpgradePackage("VIP", now, now.AddDays(30));
-
-        Assert.Equal(ListingStatus.Published, listing.Status);
-        Assert.Equal("VIP", listing.PackageCode);
-    }
-
-    [Fact]
-    public void UpgradePackageFromRejectedShouldTransitionToPendingModeration()
-    {
-        var listing = CreateRejectedListing();
-        var now = DateTimeOffset.UtcNow;
-
-        listing.UpgradePackage("VIP", now, now.AddDays(30));
-
-        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
-        Assert.Equal(ModerationDecision.Pending, listing.ModerationDecision);
-    }
-
-    [Fact]
-    public void UpgradePackageFromPublishedShouldRemainPublished()
-    {
-        var listing = CreatePublishedListing();
-        var now = DateTimeOffset.UtcNow;
-
-        listing.UpgradePackage("VIP", now, now.AddDays(30));
-
-        Assert.Equal(ListingStatus.Published, listing.Status);
-        Assert.Equal("VIP", listing.PackageCode);
     }
 
     private static Listing CreateListing() => new(

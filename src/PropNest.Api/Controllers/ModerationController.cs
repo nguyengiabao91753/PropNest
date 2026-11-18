@@ -33,6 +33,7 @@ public sealed class ModerationController(
 
         var publishedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Published), 0);
         var pendingCount = statusDict.GetValueOrDefault(nameof(ListingStatus.PendingModeration), 0);
+        var pendingPaymentCount = statusDict.GetValueOrDefault(nameof(ListingStatus.PendingPayment), 0);
         var rejectedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Rejected), 0);
         var draftCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Draft), 0);
         var hiddenCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Hidden), 0);
@@ -131,6 +132,7 @@ public sealed class ModerationController(
         {
             publishedCount,
             pendingCount,
+            pendingPaymentCount,
             rejectedCount,
             draftCount,
             hiddenCount,
@@ -145,6 +147,7 @@ public sealed class ModerationController(
             {
                 ["Published"] = publishedCount,
                 ["PendingModeration"] = pendingCount,
+                ["PendingPayment"] = pendingPaymentCount,
                 ["Draft"] = draftCount,
                 ["Rejected"] = rejectedCount,
                 ["Hidden"] = hiddenCount,
@@ -194,6 +197,16 @@ public sealed class ModerationController(
                         l.CreatedAt,
                         l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
                         null);
+                        l.Floors,
+                        l.Bedrooms,
+                        l.Bathrooms,
+                        l.BalconyDirection,
+                        l.AdministrativeMode,
+                        l.ProvinceCode,
+                        l.DistrictCode,
+                        l.WardCode,
+                        l.LegacyAddress,
+                        l.PackageEndDate);
 
         var items = await query.ToListAsync(cancellationToken);
         return Ok(new { total = items.Count, items });

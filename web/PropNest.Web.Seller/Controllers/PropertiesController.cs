@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PropNest.Domain.Listings;
 using PropNest.Web.Seller.Filters;
 using PropNest.Web.Seller.Models.InputModels;
 using PropNest.Web.Seller.Models.ViewModels;
@@ -120,7 +121,6 @@ public class PropertiesController : Controller
     {
         ViewData["ActiveNav"] = "Create";
 
-        // Xử lý khi user bấm nút "Lưu bản nháp (Draft)"
         if (string.Equals(submitAction, "save_draft", StringComparison.OrdinalIgnoreCase))
         {
             ModelState.Clear();
@@ -136,23 +136,20 @@ public class PropertiesController : Controller
             }
 
             var rawDesc = model.Description?.Trim();
-            if (string.IsNullOrWhiteSpace(rawDesc))
-            {
-                model.Description = "Bản nháp đang soạn thảo, nội dung chi tiết sẽ được bổ sung sau.";
-            }
-            else
-            {
-                model.Description = rawDesc;
-            }
+            model.Description = string.IsNullOrWhiteSpace(rawDesc)
+                ? "Bản nháp đang soạn thảo, nội dung chi tiết sẽ được bổ sung sau."
+                : rawDesc;
 
             if (string.IsNullOrWhiteSpace(model.City))
             {
-                model.City = "TP. Hồ Chí Minh";
+                model.City = "Thành phố Hồ Chí Minh";
             }
-            if (string.IsNullOrWhiteSpace(model.District))
+            if (string.Equals(model.AdministrativeMode, "PreMerger", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(model.District))
             {
                 model.District = "Quận 1";
             }
+            model.District ??= string.Empty;
+
             if (string.IsNullOrWhiteSpace(model.Address))
             {
                 model.Address = "Đang cập nhật địa chỉ";
@@ -165,7 +162,6 @@ public class PropertiesController : Controller
             {
                 model.ListingType = "sale";
             }
-
             if (!model.Price.HasValue || model.Price < 0m)
             {
                 model.Price = 0m;
@@ -186,7 +182,12 @@ public class PropertiesController : Controller
             return View(model);
         }
 
-        // Luồng chuẩn: Add Listing -> Validate -> Submit tạo tin -> Chuyển sang Add Images
+        if (string.Equals(model.AdministrativeMode, "PreMerger", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(model.District))
+        {
+            ModelState.AddModelError(nameof(model.District), "Vui lòng chọn Quận / Huyện cho địa chỉ trước sáp nhập.");
+        }
+
         if (string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 10)
         {
             model.Title = "Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn";
@@ -211,7 +212,6 @@ public class PropertiesController : Controller
             return View(model);
         }
 
-        // Chuyển sang màn hình Add Images
         TempData["SuccessMessage"] = $"Tin đăng #{createdListingId} đã được tạo ở trạng thái Bản nháp! Vui lòng tải lên hình ảnh cho tin.";
         return RedirectToAction(nameof(UploadImages), new { id = createdListingId });
     }
@@ -225,6 +225,12 @@ public class PropertiesController : Controller
         {
             TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id}.";
             return RedirectToAction(nameof(Index));
+        }
+
+        if (item.Status == ListingStatus.PendingModeration || item.Status == ListingStatus.Deleted)
+        {
+            TempData["ErrorMessage"] = "Tin đăng đang chờ kiểm duyệt hoặc đã xóa, không thể chỉnh sửa lúc này.";
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         return View(item);
@@ -248,7 +254,6 @@ public class PropertiesController : Controller
             }
         }
 
-        // Hoàn tất: Chuyển về tab Bản nháp
         return RedirectToAction(nameof(Index), new { status = "draft" });
     }
 
@@ -256,14 +261,19 @@ public class PropertiesController : Controller
     public async Task<IActionResult> Edit(long id, CancellationToken cancellationToken)
     {
         ViewData["ActiveNav"] = "Properties";
-        // 1. Lấy thông tin tin đăng hiện có từ Backend API
         var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
         if (item == null)
         {
             TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id}.";
             return RedirectToAction(nameof(Index));
         }
-        // 2. Map dữ liệu sang InputModel (chứa RowVersion và ảnh cũ)
+
+        if (item.Status == ListingStatus.PendingModeration || item.Status == ListingStatus.Deleted)
+        {
+            TempData["ErrorMessage"] = "Tin đăng đang chờ kiểm duyệt hoặc đã xóa, không thể chỉnh sửa lúc này.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var model = new CreatePropertyInputModel
         {
             Id = item.Id,
@@ -273,12 +283,21 @@ public class PropertiesController : Controller
             ListingType = item.ListingType,
             Price = item.Price,
             Area = item.Area,
+            Floors = item.Floors,
+            Bedrooms = item.Bedrooms,
+            Bathrooms = item.Bathrooms,
+            BalconyDirection = item.BalconyDirection,
             City = item.City,
             District = item.District,
             Ward = item.Ward,
             Address = item.Address,
-            RowVersion = item.RowVersion,                      // Chuỗi Base64 concurrency token
-            ExistingImages = item.Images ?? new List<string>() // Danh sách ảnh đã có
+            AdministrativeMode = item.AdministrativeMode,
+            ProvinceCode = item.ProvinceCode,
+            DistrictCode = item.DistrictCode,
+            WardCode = item.WardCode,
+            LegacyAddress = item.LegacyAddress,
+            RowVersion = item.RowVersion,
+            ExistingImages = item.Images ?? new List<string>()
         };
         return View(model);
     }
@@ -288,12 +307,18 @@ public class PropertiesController : Controller
     public async Task<IActionResult> Edit(long id, CreatePropertyInputModel model, CancellationToken cancellationToken)
     {
         ViewData["ActiveNav"] = "Properties";
-        // 1. Kiểm tra validation
+
+        if (string.Equals(model.AdministrativeMode, "PreMerger", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(model.District))
+        {
+            ModelState.AddModelError(nameof(model.District), "Vui lòng chọn Quận / Huyện cho địa chỉ trước sáp nhập.");
+        }
+
         if (!ModelState.IsValid)
         {
             return View(model);
         }
-        // 2. Gọi Service gửi PUT /api/v1/listings/{id}
+
         var result = await _sellerService.UpdatePropertyAsync(id, model, cancellationToken);
         switch (result)
         {
@@ -301,9 +326,7 @@ public class PropertiesController : Controller
                 TempData["SuccessMessage"] = $"Cập nhật tin đăng #{id} thành công!";
                 return RedirectToAction(nameof(Details), new { id });
             case UpdatePropertyStatus.ConcurrencyConflict:
-                // ĐÚNG YÊU CẦU ĐỀ BÀI: Optimistic Concurrency fail (HTTP 409)
                 TempData["ErrorMessage"] = "Tin đã bị người khác chỉnh sửa, vui lòng tải lại.";
-                // Tải lại dữ liệu mới nhất để cập nhật RowVersion mới và ảnh vào form
                 var refreshed = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
                 if (refreshed != null)
                 {
@@ -324,7 +347,6 @@ public class PropertiesController : Controller
     public async Task<IActionResult> History(long id, CancellationToken cancellationToken)
     {
         ViewData["ActiveNav"] = "Properties";
-        // 1. Lấy thông tin cơ bản của tin đăng để hiển thị header
         var property = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
         if (property == null)
         {
@@ -332,9 +354,94 @@ public class PropertiesController : Controller
             return RedirectToAction(nameof(Index));
         }
         ViewData["Property"] = property;
-        // 2. Lấy danh sách lịch sử thay đổi & timeline
         var history = await _sellerService.GetHistoryDeltaAsync(id, cancellationToken);
         return View(history);
+    }
+
+    // ==========================================
+    // Vietnam Address Lookup (Before/After Merger) & AI Description Suggestion
+    // ==========================================
+
+    [HttpGet("Locations/Provinces")]
+    public async Task<IActionResult> GetLocationProvinces(
+        [FromQuery] string mode = "post",
+        CancellationToken cancellationToken = default)
+    {
+        var data = await _sellerService.GetProvincesAsync(mode, cancellationToken);
+        return Ok(data);
+    }
+
+    [HttpGet("Locations/Districts/{provinceCode:int}")]
+    public async Task<IActionResult> GetLocationDistricts(int provinceCode, CancellationToken cancellationToken = default)
+    {
+        var data = await _sellerService.GetDistrictsByProvinceAsync(provinceCode, cancellationToken);
+        return Ok(data);
+    }
+
+    [HttpGet("Locations/ProvinceWards/{provinceCode:int}")]
+    public async Task<IActionResult> GetLocationProvinceWards(int provinceCode, CancellationToken cancellationToken = default)
+    {
+        var data = await _sellerService.GetWardsByProvinceAsync(provinceCode, cancellationToken);
+        return Ok(data);
+    }
+
+    [HttpGet("Locations/DistrictWards/{districtCode:int}")]
+    public async Task<IActionResult> GetLocationDistrictWards(int districtCode, CancellationToken cancellationToken = default)
+    {
+        var data = await _sellerService.GetWardsByDistrictAsync(districtCode, cancellationToken);
+        return Ok(data);
+    }
+
+    [HttpGet("Locations/ConvertLegacy")]
+    public async Task<IActionResult> ConvertLegacyWard(
+        [FromQuery] int? legacyWardCode,
+        [FromQuery] string? legacyWardName,
+        [FromQuery] int? legacyProvinceCode,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _sellerService.ConvertLegacyWardAsync(
+            legacyWardCode,
+            legacyWardName,
+            legacyProvinceCode,
+            cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    public sealed record ParseAddressInput(string RawAddress);
+
+    [HttpPost("ParseAddress")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> ParseAddress(
+        [FromBody] ParseAddressInput? input,
+        CancellationToken cancellationToken = default)
+    {
+        if (input is null || string.IsNullOrWhiteSpace(input.RawAddress))
+        {
+            return BadRequest(new { matched = false, explanation = "Vui lòng nhập hoặc dán địa chỉ cần nhận dạng." });
+        }
+
+        var result = await _sellerService.ParseAddressAsync(input.RawAddress, cancellationToken);
+        return result is null
+            ? StatusCode(502, new { matched = false, explanation = "Không thể kết nối tới dịch vụ nhận dạng địa chỉ." })
+            : Ok(result);
+    }
+
+    [HttpPost("SuggestDescription")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> SuggestDescription(
+        [FromBody] SellerSuggestDescriptionInput? input,
+        CancellationToken cancellationToken = default)
+    {
+        if (input is null)
+        {
+            return BadRequest(new { message = "Dữ liệu form không hợp lệ." });
+        }
+
+        var result = await _sellerService.SuggestDescriptionAsync(input, cancellationToken);
+        return result is null
+            ? StatusCode(502, new { message = "Không thể tạo gợi ý mô tả lúc này. Vui lòng thử lại." })
+            : Ok(result);
     }
 
     // ==========================================
@@ -367,12 +474,18 @@ public class PropertiesController : Controller
         }
     }
 
+    [HttpGet("GetPackages")]
+    public async Task<IActionResult> GetPackages(CancellationToken cancellationToken = default)
+    {
+        var packages = await _sellerService.GetActivePackagesAsync(cancellationToken);
+        return Ok(packages);
+    }
+
     [HttpPost("PurchasePackage")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> PurchasePackage([FromBody] PurchasePackageInputModel input, CancellationToken cancellationToken = default)
     {
-        // 1. Validate dữ liệu đầu vào cơ bản (input.Amount < 0 để cho phép gói 0đ nếu có)
-        if (input == null || input.ListingId <= 0 || string.IsNullOrWhiteSpace(input.PackageCode) || input.Amount < 0)
+        if (input == null || input.ListingId <= 0 || string.IsNullOrWhiteSpace(input.PackageCode))
         {
             return BadRequest(new
             {
@@ -381,49 +494,78 @@ public class PropertiesController : Controller
             });
         }
 
-        // 2. Kiểm tra số dư ví trước khi gọi flow Saga (Issue #3)
-        if (input.Amount > 0)
+        var listing = await _sellerService.GetPropertyByIdAsync(input.ListingId, cancellationToken);
+        if (listing == null)
+        {
+            return NotFound(new
+            {
+                success = false,
+                message = $"Không tìm thấy tin đăng #{input.ListingId}."
+            });
+        }
+
+        if (!ListingPackagePolicy.CanPurchasePackage(listing.Status, listing.ModerationDecision))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Chỉ tin đăng đã được duyệt (Chờ thanh toán, Đang hiển thị hoặc Hết hạn) mới có thể mua hoặc gia hạn gói."
+            });
+        }
+
+        var packages = await _sellerService.GetActivePackagesAsync(cancellationToken);
+        var selectedPackage = packages.FirstOrDefault(p =>
+            string.Equals(p.PackageCode, input.PackageCode.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (selectedPackage is null || selectedPackage.Price <= 0m)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = $"Gói dịch vụ '{input.PackageCode}' không tồn tại hoặc đã ngừng áp dụng."
+            });
+        }
+
+        var authoritativeAmount = selectedPackage.Price;
+        if (authoritativeAmount > 0)
         {
             try
             {
                 var wallet = await _walletService.GetWalletAsync(1, null, null, cancellationToken);
-                if (wallet.TotalBalance < input.Amount)
+                if (wallet.TotalBalance < authoritativeAmount)
                 {
                     return BadRequest(new
                     {
                         success = false,
-                        message = $"Số dư ví của bạn ({wallet.TotalBalance:N0} ₫) không đủ để thanh toán gói {input.Amount:N0} ₫. Vui lòng nạp thêm tiền vào ví."
+                        message = $"Số dư ví của bạn ({wallet.TotalBalance:N0} ₫) không đủ để thanh toán gói {authoritativeAmount:N0} ₫. Vui lòng nạp thêm tiền vào ví."
                     });
                 }
             }
             catch (Exception)
             {
-                // Nếu lỗi kết nối kiểm tra số dư tạm thời, tiếp tục để Backend API xử lý
             }
         }
 
-        // 3. Gọi Service gửi POST sang Backend API kèm Idempotency-Key
-        var correlationId = await _sellerService.PurchasePackageAsync(
+        var result = await _sellerService.PurchasePackageAsync(
             input.ListingId,
-            input.PackageCode,
-            input.Amount,
+            selectedPackage.PackageCode,
+            authoritativeAmount,
             input.IdempotencyKey,
             cancellationToken);
 
-        if (correlationId == null)
+        if (!result.Success || result.CorrelationId == null)
         {
             return BadRequest(new
             {
                 success = false,
-                message = "Không thể khởi tạo giao dịch mua gói. Vui lòng kiểm tra lại số dư ví hoặc thử lại sau."
+                message = result.ErrorMessage ?? "Không thể khởi tạo giao dịch mua gói. Vui lòng kiểm tra lại điều kiện gói tin hoặc số dư ví."
             });
         }
 
-        // 4. Trả về correlationId cho Client Javascript thực thi Polling ngầm
         return Ok(new
         {
             success = true,
-            correlationId = correlationId.Value
+            correlationId = result.CorrelationId.Value
         });
     }
 
@@ -442,7 +584,6 @@ public class PropertiesController : Controller
             });
         }
 
-        // Trả về toàn bộ WorkflowStatusViewModel (đã có sẵn isCompleted, isFailed, currentStepIndex, statusText)
         return Ok(workflow);
     }
 }

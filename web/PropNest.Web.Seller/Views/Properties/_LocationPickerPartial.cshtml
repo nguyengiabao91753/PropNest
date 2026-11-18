@@ -1,0 +1,131 @@
+@model PropNest.Web.Seller.Models.InputModels.CreatePropertyInputModel
+
+<!-- Hidden fields bound to ASP.NET Model -->
+<input type="hidden" asp-for="City" id="inputCity" />
+<input type="hidden" asp-for="District" id="inputDistrict" />
+<input type="hidden" asp-for="Ward" id="inputWard" />
+<input type="hidden" asp-for="AdministrativeMode" id="inputAdminMode" />
+<input type="hidden" asp-for="ProvinceCode" id="inputProvinceCode" />
+<input type="hidden" asp-for="DistrictCode" id="inputDistrictCode" />
+<input type="hidden" asp-for="WardCode" id="inputWardCode" />
+<input type="hidden" asp-for="LegacyAddress" id="inputLegacyAddress" />
+
+<!-- Tùy chọn 1: Dán địa chỉ để hệ thống nhận dạng & quy đổi tự động -->
+<div class="rounded-xl border border-primary/25 bg-primary/[0.03] p-4 space-y-2.5">
+    <div class="flex items-center justify-between gap-2 flex-wrap">
+        <label for="pasteAddressInput" class="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+            <i data-lucide="wand-2" class="size-4 text-primary"></i>
+            <span>Tùy chọn 1: Dán địa chỉ để nhận dạng & quy đổi tự động (Trước / Sau sáp nhập)</span>
+        </label>
+        <span class="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+            Tự động chuẩn hóa
+        </span>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2">
+        <input type="text"
+               id="pasteAddressInput"
+               placeholder="Ví dụ: 208 Nguyễn Hữu Cảnh, Phường 22, Quận Bình Thạnh, TP. Hồ Chí Minh"
+               class="flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900" />
+        <button type="button"
+                id="btnParseAddress"
+                onclick="parseAndFillAddress()"
+                class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-neutral-800 transition-colors shrink-0 disabled:opacity-60">
+            <i data-lucide="search-check" class="size-4"></i>
+            <span>Nhận dạng địa chỉ</span>
+        </button>
+    </div>
+    <div id="addressParseFeedback" class="hidden rounded-lg px-3 py-2 text-[11px] leading-relaxed"></div>
+</div>
+
+<!-- Tùy chọn 2: Chọn thủ công từ danh mục có thanh tìm kiếm -->
+<div class="space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <span class="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+            <i data-lucide="map-pinned" class="size-4 text-primary"></i>
+            <span>Tùy chọn 2: Chọn địa chỉ hành chính Việt Nam</span>
+        </span>
+
+        <div class="inline-flex rounded-xl border border-border bg-surface p-1 gap-1 self-start sm:self-auto">
+            <button type="button"
+                    id="btnModePost"
+                    onclick="switchAdminMode('PostMerger')"
+                    class="rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all bg-primary text-white shadow-2xs">
+                Sau sáp nhập (2 cấp: Tỉnh → Phường/Xã)
+            </button>
+            <button type="button"
+                    id="btnModePre"
+                    onclick="switchAdminMode('PreMerger')"
+                    class="rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all text-neutral-600 hover:text-neutral-900">
+                Trước sáp nhập (3 cấp: Tỉnh → Quận → Phường)
+            </button>
+        </div>
+    </div>
+
+    <div id="adminSelectorsGrid" class="grid sm:grid-cols-2 gap-3">
+        <!-- Tỉnh / Thành phố -->
+        <div>
+            <label for="selectProvince" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                Tỉnh / Thành phố <span class="text-rose-600">*</span>
+            </label>
+            <select id="selectProvince"
+                    data-search-placeholder="Tìm Tỉnh / Thành phố..."
+                    class="searchable-location-select w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900 font-medium">
+                <option value="">-- Đang tải Tỉnh / Thành phố... --</option>
+            </select>
+            <span asp-validation-for="City" class="text-rose-600 text-xs mt-1 block"></span>
+        </div>
+
+        <!-- Quận / Huyện (chỉ hiển thị khi PreMerger) -->
+        <div id="districtFieldWrapper" class="hidden">
+            <label for="selectDistrict" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                Quận / Huyện <span class="text-rose-600">*</span>
+            </label>
+            <select id="selectDistrict"
+                    data-search-placeholder="Tìm Quận / Huyện..."
+                    class="searchable-location-select w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900 font-medium">
+                <option value="">-- Chọn Quận / Huyện --</option>
+            </select>
+            <span asp-validation-for="District" class="text-rose-600 text-xs mt-1 block"></span>
+        </div>
+
+        <!-- Phường / Xã -->
+        <div>
+            <label for="selectWard" class="block text-xs font-semibold text-neutral-800 mb-1.5">
+                Phường / Xã / Đặc khu
+            </label>
+            <select id="selectWard"
+                    data-search-placeholder="Tìm Phường / Xã..."
+                    class="searchable-location-select w-full rounded-xl border border-border bg-surface p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-neutral-900 font-medium">
+                <option value="">-- Chọn Phường / Xã --</option>
+            </select>
+            <span asp-validation-for="Ward" class="text-rose-600 text-xs mt-1 block"></span>
+        </div>
+    </div>
+
+    <!-- Banner gợi ý quy đổi khi chọn địa chỉ Trước sáp nhập -->
+    <div id="legacyConversionBanner" class="hidden rounded-xl border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="space-y-0.5">
+            <p class="font-bold flex items-center gap-1.5">
+                <i data-lucide="git-compare" class="size-4 text-amber-700"></i>
+                <span>Đối chiếu địa chỉ sau sáp nhập:</span>
+            </p>
+            <p id="legacyConversionText" class="text-[11px] text-amber-900"></p>
+        </div>
+        <button type="button"
+                id="btnApplyPostMerger"
+                onclick="applyConvertedPostMerger()"
+                class="inline-flex items-center justify-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-amber-700 transition-colors shrink-0">
+            <i data-lucide="arrow-right-circle" class="size-3.5"></i>
+            <span>Chuyển sang địa chỉ mới</span>
+        </button>
+    </div>
+
+    <!-- Hiển thị địa chỉ trước sáp nhập đã lưu / quy đổi -->
+    <div id="savedLegacyAddressBox" class="@(string.IsNullOrWhiteSpace(Model.LegacyAddress) ? "hidden" : "") rounded-xl border border-border bg-surface px-3.5 py-2 text-[11px] text-neutral-700 flex items-center justify-between gap-2">
+        <span>
+            <strong class="text-neutral-900">Địa chỉ trước sáp nhập tham chiếu:</strong>
+            <span id="savedLegacyAddressText">@Model.LegacyAddress</span>
+        </span>
+        <button type="button" onclick="clearLegacyAddress()" class="text-rose-600 hover:underline font-semibold shrink-0">Xóa</button>
+    </div>
+</div>

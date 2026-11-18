@@ -40,15 +40,30 @@ public sealed class CreatePropertyInputModel
     [Display(Name = "Diện tích (m²)")]
     public decimal? Area { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập Tỉnh / Thành phố.")]
+    [Range(1, 200, ErrorMessage = "Số tầng phải từ 1 đến 200.")]
+    [Display(Name = "Số tầng")]
+    public int? Floors { get; set; }
+
+    [Range(0, 100, ErrorMessage = "Số phòng ngủ phải từ 0 đến 100.")]
+    [Display(Name = "Số phòng ngủ")]
+    public int? Bedrooms { get; set; }
+
+    [Range(0, 100, ErrorMessage = "Số toilet/WC phải từ 0 đến 100.")]
+    [Display(Name = "Số toilet / WC")]
+    public int? Bathrooms { get; set; }
+
+    [StringLength(50)]
+    [Display(Name = "Hướng ban công")]
+    public string? BalconyDirection { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng chọn Tỉnh / Thành phố.")]
     [StringLength(100)]
     [Display(Name = "Tỉnh / Thành phố")]
     public string City { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Vui lòng nhập Quận / Huyện.")]
     [StringLength(100)]
     [Display(Name = "Quận / Huyện")]
-    public string District { get; set; } = string.Empty;
+    public string? District { get; set; }
 
     [StringLength(100)]
     [Display(Name = "Phường / Xã")]
@@ -58,6 +73,19 @@ public sealed class CreatePropertyInputModel
     [StringLength(500, ErrorMessage = "Địa chỉ tối đa 500 ký tự.")]
     [Display(Name = "Địa chỉ chi tiết")]
     public string Address { get; set; } = string.Empty;
+
+    [StringLength(20)]
+    public string AdministrativeMode { get; set; } = "PostMerger";
+
+    public int? ProvinceCode { get; set; }
+
+    public int? DistrictCode { get; set; }
+
+    public int? WardCode { get; set; }
+
+    [StringLength(500)]
+    [Display(Name = "Địa chỉ trước sáp nhập")]
+    public string? LegacyAddress { get; set; }
 
     /// <summary>
     /// Base64 string của byte[] RowVersion - Bắt buộc khi Update để kiểm tra Optimistic Concurrency (409 Conflict)
