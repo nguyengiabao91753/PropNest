@@ -205,7 +205,8 @@ public sealed class ModerationController(
                         l.DistrictCode,
                         l.WardCode,
                         l.LegacyAddress,
-                        l.PackageEndDate);
+                        l.PackageEndDate,
+                        null);
 
         var items = await query.ToListAsync(cancellationToken);
         return Ok(new { total = items.Count, items });
@@ -321,5 +322,15 @@ public sealed class ModerationController(
             cancellationToken);
 
         return Ok(listing);
+    }
+
+    [HttpGet("listings/{listingId:long}/ame-result")]
+    public async Task<IActionResult> GetAmeResult(
+    long listingId, CancellationToken cancellationToken)
+    {
+        var result = await listingService.GetAmeResultAsync(listingId, cancellationToken);
+        return result is null
+            ? NotFound(new { message = $"Chưa có kết quả AME cho listing {listingId}" })
+            : Ok(result);
     }
 }

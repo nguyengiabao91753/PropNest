@@ -30,7 +30,7 @@ public sealed class SellerPropertyItemViewModel
     public int Carports { get; set; } = 1;
     public string Condition { get; set; } = "Nhà mới đẹp";
     public string City { get; set; } = string.Empty;
-    public string District { get; set; } = string.Empty;
+    public string? District { get; set; } = string.Empty;
     public string? Ward { get; set; }
     public string Address { get; set; } = string.Empty;
     public string AdministrativeMode { get; set; } = "PostMerger";

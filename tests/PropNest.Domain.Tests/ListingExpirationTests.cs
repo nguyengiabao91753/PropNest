@@ -230,6 +230,8 @@ public sealed class ListingExpirationTests
         public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) => Task.FromResult<ListingImage?>(null);
         public void AddImage(ListingImage image) { }
         public void RemoveImage(ListingImage image) { }
+        public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<AmeModerationResult?>(null);
+        public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
     }
 
     private sealed class BatchingMockListingRepository(List<List<Listing>> batches) : IListingRepository
@@ -271,6 +273,8 @@ public sealed class ListingExpirationTests
         public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) => Task.FromResult<ListingImage?>(null);
         public void AddImage(ListingImage image) { }
         public void RemoveImage(ListingImage image) { }
+        public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<AmeModerationResult?>(null);
+        public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
     }
 
     private sealed class MockUnitOfWork : IUnitOfWork

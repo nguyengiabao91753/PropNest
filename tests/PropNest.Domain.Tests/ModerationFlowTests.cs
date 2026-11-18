@@ -407,6 +407,12 @@ public sealed class ModerationFlowTests
         public void AddImage(ListingImage image) { }
 
         public void RemoveImage(ListingImage image) { }
+
+        public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<AmeModerationResult?>(null);
+
+        public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

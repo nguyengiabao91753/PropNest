@@ -80,8 +80,10 @@ namespace PropNest.Web.Seller.Services
                         Expired = response.Items.Count(x => x.Status == ListingStatus.Expired)
                     };
 
+                    // 2. Chuyển đổi dữ liệu sang SellerPropertyItemViewModel
                     var allItems = response.Items.Select(MapToViewModel).ToList();
 
+                    // 3. Lọc theo Tab được chọn
                     var filtered = allItems.AsEnumerable();
                     if (!string.Equals(model.CurrentStatus, "all", StringComparison.OrdinalIgnoreCase))
                     {
@@ -94,7 +96,7 @@ namespace PropNest.Web.Seller.Services
                         filtered = filtered.Where(x =>
                             x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             x.Address.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            x.District.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrWhiteSpace(x.District) && x.District.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
                             x.City.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             (!string.IsNullOrWhiteSpace(x.LegacyAddress) && x.LegacyAddress.Contains(term, StringComparison.OrdinalIgnoreCase)));
                     }
@@ -615,7 +617,8 @@ namespace PropNest.Web.Seller.Services
             SellerName = dto.OwnerName ?? "Người bán",
             Images = (dto.Images != null && dto.Images.Count > 0) ? dto.Images : new List<string>(),
             CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
-            RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty
+            RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
+            RejectReason = FormatRejectReason(dto.LatestRejectReason)
         };
 
         // ==========================================
@@ -704,6 +707,7 @@ namespace PropNest.Web.Seller.Services
             public byte[]? RowVersion { get; set; }
             public string? OwnerName { get; set; }
             public List<string>? Images { get; set; }
+            public string? LatestRejectReason { get; set; }
         }
 
         private sealed record ApiPurchasePackageRequest(string PackageCode, decimal ChargeAmount);
@@ -719,6 +723,67 @@ namespace PropNest.Web.Seller.Services
             public int RetryCount { get; set; }
             public string? ErrorMessage { get; set; }
             public DateTimeOffset UpdatedAt { get; set; }
+        }
+
+        private static string? FormatRejectReason(string? reasonsJson)
+        {
+            if (string.IsNullOrWhiteSpace(reasonsJson)) return null;
+
+            try
+            {
+                // ReasonsJson from AME: {"Summary":"...", "ReasonCodes":["..."]}
+                // ReasonsJson from manual moderator: plain text or JSON array ["reason1"]
+                using var doc = System.Text.Json.JsonDocument.Parse(reasonsJson);
+                var root = doc.RootElement;
+
+                // Case 1: AME format { "Summary": "...", "ReasonCodes": [...] }
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    var summary = root.TryGetProperty("Summary", out var s)
+                        ? s.GetString()
+                        : root.TryGetProperty("summary", out var s2)
+                            ? s2.GetString()
+                            : null;
+
+                    var codes = new List<string>();
+                    if (root.TryGetProperty("ReasonCodes", out var rc) || root.TryGetProperty("reasonCodes", out rc))
+                    {
+                        if (rc.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var item in rc.EnumerateArray())
+                            {
+                                var val = item.GetString();
+                                if (!string.IsNullOrWhiteSpace(val)) codes.Add(val);
+                            }
+                        }
+                    }
+
+                    var parts = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(summary)) parts.Add(summary);
+                    if (codes.Count > 0) parts.Add("Mã cảnh báo: " + string.Join(", ", codes));
+
+                    return parts.Count > 0 ? string.Join(" — ", parts) : reasonsJson;
+                }
+
+                // Case 2: JSON array ["reason1", "reason2"]
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var reasons = new List<string>();
+                    foreach (var item in root.EnumerateArray())
+                    {
+                        var val = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(val)) reasons.Add(val);
+                    }
+                    return reasons.Count > 0 ? string.Join("; ", reasons) : reasonsJson;
+                }
+
+                return reasonsJson;
+            }
+            catch
+            {
+                // Not valid JSON — return as-is (plain text reject reason from moderator)
+                return reasonsJson;
+            }
         }
 
         private static string NormalizeActionType(string actionType) => actionType switch

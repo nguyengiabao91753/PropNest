@@ -6,6 +6,11 @@ namespace PropNest.Api.Extensions
     {
         public static void EnsureOwner(this ICurrentUser currentUser, long ownerUserId)
         {
+            if (currentUser.IsInRole("Admin"))
+            {
+                return;
+            }
+
             if (!currentUser.UserId.HasValue || currentUser.UserId.Value != ownerUserId)
             {
                 throw new UnauthorizedAccessException("The current user is not the owner of the resource.");

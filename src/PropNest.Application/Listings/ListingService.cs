@@ -58,13 +58,28 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
 
         var owner = await listingRepository.GetOwnerContactAsync(listing.OwnerUserId, cancellationToken);
 
-        return ToDto(listing, owner);
+        string? rejectReason = null;
+        if (listing.Status == ListingStatus.Rejected)
+        {
+            rejectReason = await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken);
+        }
+
+        return ToDto(listing, owner, rejectReason);
     }
 
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
     {
         var listings = await listingRepository.GetByOwnerUserIdAsync(ownerUserId, cancellationToken);
-        var items = listings.Select(ToDto).ToList();
+        var items = new List<ListingDto>(listings.Count);
+        foreach (var l in listings)
+        {
+            string? rejectReason = null;
+            if (l.Status == ListingStatus.Rejected)
+            {
+                rejectReason = await listingRepository.GetLatestRejectReasonAsync(l.ListingId, cancellationToken);
+            }
+            items.Add(ToDto(l, null, rejectReason));
+        }
         return new ListingCollectionDto(items.Count, items);
     }
 
@@ -200,7 +215,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.LegacyAddress,
         listing.PackageEndDate);
 
-    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null) => new(
+    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null, string? rejectReason = null) => new(
         listing.ListingId,
         listing.OwnerUserId,
         listing.Title,
@@ -223,7 +238,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         owner?.Email,
         owner?.PhoneNumber,
         listing.CreatedAt,
-        listing.Images.Select(img => img.Url).ToList(),
+        listing.Images?.Select(img => img.Url).ToList() ?? new List<string>(),
         listing.Floors,
         listing.Bedrooms,
         listing.Bathrooms,
@@ -233,7 +248,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.DistrictCode,
         listing.WardCode,
         listing.LegacyAddress,
-        listing.PackageEndDate);
+        listing.PackageEndDate,
+        rejectReason);
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
@@ -523,5 +539,21 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.Delete();
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Delete"));
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<AmeModerationResultDto?> GetAmeResultAsync(
+    long listingId, CancellationToken cancellationToken = default)
+    {
+        var result = await listingRepository.GetLatestAmeResultAsync(listingId, cancellationToken);
+        if (result is null) return null;
+
+        return new AmeModerationResultDto(
+            result.ListingId,
+            result.Decision.ToString(),
+            result.ScoreJson,
+            result.ReasonsJson,
+            result.WarningsJson,
+            result.ModelInfo,
+            result.CheckedAt);
     }
 }

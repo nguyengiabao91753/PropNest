@@ -85,7 +85,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         l.DistrictCode,
                         l.WardCode,
                         l.LegacyAddress,
-                        l.PackageEndDate);
+                        l.PackageEndDate,
+                        null);
 
         return await query.ToListAsync(cancellationToken);
     }
@@ -241,4 +242,37 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public void AddImage(ListingImage image) => dbContext.ListingImages.Add(image);
 
     public void RemoveImage(ListingImage image) => dbContext.ListingImages.Remove(image);
+
+    public async Task<AmeModerationResult?> GetLatestAmeResultAsync(
+    long listingId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.AmeModerationResults
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId)
+            .OrderByDescending(r => r.CheckedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string?> GetLatestRejectReasonAsync(
+        long listingId, CancellationToken cancellationToken = default)
+    {
+        var review = await dbContext.Set<ListingModerationReview>()
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .OrderByDescending(r => r.ReviewedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (review != null && !string.IsNullOrWhiteSpace(review.ReasonsJson))
+        {
+            return review.ReasonsJson;
+        }
+
+        var ameResult = await dbContext.AmeModerationResults
+            .AsNoTracking()
+            .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .OrderByDescending(r => r.CheckedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ameResult?.ReasonsJson;
+    }
 }

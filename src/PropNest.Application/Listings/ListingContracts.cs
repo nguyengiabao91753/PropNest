@@ -83,7 +83,9 @@ public sealed record ListingDto(
     int? DistrictCode = null,
     int? WardCode = null,
     string? LegacyAddress = null,
-    DateTimeOffset? PackageEndDate = null);
+    DateTimeOffset? PackageEndDate = null,
+    string? LatestRejectReason = null
+    );
 
 public sealed record ListingOwnerContactDto(
     long UserId,
@@ -117,6 +119,15 @@ public sealed record ListingCollectionDto(
     int Total,
     IReadOnlyList<ListingDto> Items);
 
+public sealed record AmeModerationResultDto(
+    long ListingId,
+    string Decision,        // "Approved" | "Rejected" | "ManualReview"
+    string? ScoreJson,      // JSON breakdown: TotalRisk, Keyword, Price, ...
+    string? ReasonsJson,    // JSON: { Summary, ReasonCodes[] }
+    string? WarningsJson,   // JSON: ["RULE_1", ...]
+    string? ModelInfo,      // "PropNest-AME-v1"
+    DateTimeOffset CheckedAt
+);
 public sealed record PackageDto(
     string PackageCode,
     string Name,
@@ -167,6 +178,10 @@ public interface IListingRepository
     void AddImage(ListingImage image);
 
     void RemoveImage(ListingImage image);
+
+    Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public interface IListingService
@@ -196,6 +211,7 @@ public interface IListingService
 
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default);
 
+    Task<AmeModerationResultDto?> GetAmeResultAsync(long listingId, CancellationToken cancellationToken = default);
     Task<PackageDto?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PackageDto>> GetActivePackagesAsync(CancellationToken cancellationToken = default);

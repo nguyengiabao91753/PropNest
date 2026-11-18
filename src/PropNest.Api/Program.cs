@@ -176,7 +176,7 @@ public partial class Program
                 return;
             }
 
-            await userManager.AddToRolesAsync(admin, new[] { "Admin", "Moderator" });
+            await userManager.AddToRolesAsync(admin, new[] { "Admin", "Moderator", "Seller" });
             LogAdminSeeded(logger, adminEmail);
         }
         else
@@ -189,6 +189,10 @@ public partial class Program
             if (!userRoles.Contains("Moderator"))
             {
                 await userManager.AddToRoleAsync(admin, "Moderator");
+            }
+            if (!userRoles.Contains("Seller"))
+            {
+                await userManager.AddToRoleAsync(admin, "Seller");
             }
         }
     }
