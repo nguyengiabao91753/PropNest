@@ -298,14 +298,14 @@
                                                             </td>
                                                             <!-- Old Value (Red Highlight) -->
                                                             <td class="px-4 py-3 align-top border-l border-border/60 bg-rose-50/30">
-                                                                <div class="inline-flex items-start gap-2 rounded-lg bg-rose-100/70 border border-rose-200 px-2.5 py-1.5 text-xs text-rose-900 font-mono break-all w-full">
+                                                                <div class="inline-flex items-start gap-2 rounded-lg bg-rose-100/70 border border-rose-200 px-2.5 py-1.5 text-xs text-rose-900 whitespace-pre-line break-words font-sans w-full">
                                                                     <i data-lucide="minus-circle" class="size-3.5 text-rose-600 shrink-0 mt-0.5"></i>
-                                                                    <span class="line-through decoration-rose-500/80">@(d.OldValue ?? "(Trống)")</span>
+                                                                    <span class="@(string.Equals(d.Field, "Mô tả chi tiết", StringComparison.Ordinal) ? "" : "line-through decoration-rose-500/80")">@(d.OldValue ?? "(Trống)")</span>
                                                                 </div>
                                                             </td>
                                                             <!-- New Value (Green Highlight) -->
                                                             <td class="px-4 py-3 align-top border-l border-border/60 bg-emerald-50/30">
-                                                                <div class="inline-flex items-start gap-2 rounded-lg bg-emerald-100/70 border border-emerald-200 px-2.5 py-1.5 text-xs text-emerald-900 font-mono font-semibold break-all w-full">
+                                                                <div class="inline-flex items-start gap-2 rounded-lg bg-emerald-100/70 border border-emerald-200 px-2.5 py-1.5 text-xs text-emerald-900 whitespace-pre-line break-words font-sans font-medium w-full">
                                                                     <i data-lucide="plus-circle" class="size-3.5 text-emerald-600 shrink-0 mt-0.5"></i>
                                                                     <span>@(d.NewValue ?? "(Trống)")</span>
                                                                 </div>
