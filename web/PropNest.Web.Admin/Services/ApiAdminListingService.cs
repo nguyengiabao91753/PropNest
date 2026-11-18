@@ -403,7 +403,30 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                             try
                             {
                                 using var deltaDoc = JsonDocument.Parse(deltasJson);
-                                if (deltaDoc.RootElement.ValueKind == JsonValueKind.Object)
+                                if (deltaDoc.RootElement.ValueKind == JsonValueKind.Array)
+                                {
+                                    vm.ResubmissionDeltas.Clear();
+                                    foreach (var item in deltaDoc.RootElement.EnumerateArray())
+                                    {
+                                        var fieldName = GetString(item, "fieldName", "FieldName") ?? string.Empty;
+                                        if (string.IsNullOrWhiteSpace(fieldName)) continue;
+                                        var oldVal = GetDeltaStringValue(item, "oldValue", "OldValue");
+                                        var newVal = GetDeltaStringValue(item, "newValue", "NewValue");
+                                        if (string.Equals(fieldName, "Description", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            oldVal = PropNest.Domain.Common.RichTextHtmlHelper.ToPlainTextPreview(oldVal);
+                                            newVal = PropNest.Domain.Common.RichTextHtmlHelper.ToPlainTextPreview(newVal);
+                                        }
+                                        vm.ResubmissionDeltas.Add(new ListingDeltaViewModel
+                                        {
+                                            FieldName = fieldName,
+                                            FieldDisplayName = GetFieldDisplayName(fieldName),
+                                            OldValue = oldVal,
+                                            NewValue = newVal
+                                        });
+                                    }
+                                }
+                                else if (deltaDoc.RootElement.ValueKind == JsonValueKind.Object)
                                 {
                                     foreach (var prop in deltaDoc.RootElement.EnumerateObject())
                                     {
@@ -453,15 +476,19 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         vm.Price = GetDecimal(elem, "price", "Price");
         vm.Area = GetDecimal(elem, "area", "Area");
 
-        // Beds & Baths
-        vm.Beds = GetInt(elem, "beds", "Beds") ?? 2;
-        vm.Baths = GetInt(elem, "baths", "Baths") ?? 2;
+        // Specs (Floors, Bedrooms, Bathrooms, BalconyDirection)
+        vm.Floors = GetInt(elem, "floors", "Floors");
+        vm.Bedrooms = GetInt(elem, "bedrooms", "Bedrooms", "beds", "Beds");
+        vm.Bathrooms = GetInt(elem, "bathrooms", "Bathrooms", "baths", "Baths");
+        vm.BalconyDirection = GetString(elem, "balconyDirection", "BalconyDirection");
 
         // Location
         vm.City = GetString(elem, "city", "City") ?? string.Empty;
         vm.District = GetString(elem, "district", "District") ?? string.Empty;
         vm.Ward = GetString(elem, "ward", "Ward");
         vm.Address = GetString(elem, "address", "Address") ?? string.Empty;
+        vm.AdministrativeMode = GetString(elem, "administrativeMode", "AdministrativeMode") ?? "PostMerger";
+        vm.LegacyAddress = GetString(elem, "legacyAddress", "LegacyAddress");
 
         // Status
         if (TryGetProp(elem, "status", out var statusElem) || TryGetProp(elem, "Status", out statusElem))
@@ -477,7 +504,23 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         }
 
         // Package Code
+        // Package Code & Validity Dates
         vm.PackageCode = GetString(elem, "packageCode", "PackageCode") ?? "Standard";
+        if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&
+            startElem.TryGetDateTimeOffset(out var startDate))
+        {
+            vm.StartDate = startDate;
+        }
+        if ((TryGetProp(elem, "endDate", out var endElem) || TryGetProp(elem, "EndDate", out endElem)) &&
+            endElem.TryGetDateTimeOffset(out var endDate))
+        {
+            vm.EndDate = endDate;
+        }
+        if ((TryGetProp(elem, "packageEndDate", out var pkgEndElem) || TryGetProp(elem, "PackageEndDate", out pkgEndElem)) &&
+            pkgEndElem.TryGetDateTimeOffset(out var packageEndDate))
+        {
+            vm.PackageEndDate = packageEndDate;
+        }
 
         // Owner Info
         vm.SellerId = GetString(elem, "ownerUserId", "sellerId", "OwnerUserId", "SellerId") ?? string.Empty;
@@ -529,6 +572,20 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         return false;
     }
 
+    private static string? GetDeltaStringValue(JsonElement item, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (TryGetProp(item, name, out var val))
+            {
+                if (val.ValueKind == JsonValueKind.Null || val.ValueKind == JsonValueKind.Undefined) return null;
+                if (val.ValueKind == JsonValueKind.String) return val.GetString();
+                return val.ToString();
+            }
+        }
+        return null;
+    }
+
     private static string? GetString(JsonElement elem, params string[] names)
     {
         foreach (var name in names)
@@ -577,9 +634,15 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             "description" => "Mô tả chi tiết",
             "area" => "Diện tích",
             "address" => "Địa chỉ",
+            "floors" => "Số tầng",
+            "bedrooms" => "Số phòng ngủ",
+            "bathrooms" => "Số toilet / WC",
+            "balconydirection" => "Hướng ban công",
+            "administrativemode" => "Chuẩn địa giới hành chính",
             "city" => "Tỉnh / Thành phố",
             "district" => "Quận / Huyện",
             "ward" => "Phường / Xã",
+            "legacyaddress" => "Địa chỉ trước sáp nhập",
             "propertytype" => "Loại bất động sản",
             "listingtype" => "Hình thức giao dịch",
             _ => fieldName
