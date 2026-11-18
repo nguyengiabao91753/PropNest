@@ -13,9 +13,18 @@ public sealed record CreateListingCommand(
     decimal Price,
     decimal Area,
     string City,
-    string District,
+    string? District,
     string? Ward,
-    string Address);
+    string Address,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null,
+    string? BalconyDirection = null,
+    string AdministrativeMode = "PostMerger",
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    string? LegacyAddress = null);
 
 public sealed record UpdateListingCommand(
     long ListingId,
@@ -27,10 +36,19 @@ public sealed record UpdateListingCommand(
     decimal Price,
     decimal Area,
     string City,
-    string District,
+    string? District,
     string? Ward,
     string Address,
-    byte[] RowVersion);
+    byte[] RowVersion,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null,
+    string? BalconyDirection = null,
+    string AdministrativeMode = "PostMerger",
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    string? LegacyAddress = null);
 
 public sealed record ListingDto(
     long ListingId,
@@ -55,8 +73,17 @@ public sealed record ListingDto(
     string? OwnerEmail = null,
     string? OwnerPhoneNumber = null,
     DateTimeOffset? CreatedAt = null,
-    IReadOnlyList<string>? Images = null
-    );
+    IReadOnlyList<string>? Images = null,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null,
+    string? BalconyDirection = null,
+    string AdministrativeMode = "PostMerger",
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    string? LegacyAddress = null,
+    DateTimeOffset? PackageEndDate = null);
 
 public sealed record ListingOwnerContactDto(
     long UserId,
@@ -78,11 +105,25 @@ public sealed record ListingSummaryDto(
     string Address,
     ListingStatus Status,
     DateTimeOffset CreatedDate,
-    ModerationDecision ModerationDecision);
+    ModerationDecision ModerationDecision,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null,
+    string? BalconyDirection = null,
+    string AdministrativeMode = "PostMerger",
+    string? LegacyAddress = null);
 
 public sealed record ListingCollectionDto(
     int Total,
     IReadOnlyList<ListingDto> Items);
+
+public sealed record PackageDto(
+    string PackageCode,
+    string Name,
+    decimal Price,
+    int DurationDays,
+    string Kind,
+    bool IsActive);
 
 public interface IListingRepository
 {
@@ -97,6 +138,8 @@ public interface IListingRepository
 
     Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
+
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
 
     void AddHistory(ListingHistory history);
@@ -108,6 +151,8 @@ public interface IListingRepository
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default);
 
     Task<PropNest.Domain.Packages.PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PropNest.Domain.Packages.PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default);
 
     void AddModerationReview(ListingModerationReview review);
 
@@ -143,11 +188,17 @@ public interface IListingService
 
     Task HideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
 
+    Task<ListingDto> UnhideAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default);
+
     Task<ListingDto> ApproveAsync(long listingId, long moderatorUserId, CancellationToken cancellationToken = default);
 
     Task<ListingDto> RejectAsync(long listingId, long moderatorUserId, string reasonsJson, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<PackageDto?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PackageDto>> GetActivePackagesAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed record GetPublicListingsQuery(
@@ -160,10 +211,9 @@ public sealed record GetPublicListingsQuery(
     string? Q = null,
     decimal? MinPrice = null,
     decimal? MaxPrice = null,
-    [FromQuery(Name ="page")] int? Page = null,
+    [FromQuery(Name = "page")] int? Page = null,
     int PageNumber = 1,
-    int PageSize = 20
-    );
+    int PageSize = 20);
 
 //Listing History DTO
 public sealed record ListingHistoryDto(
@@ -174,5 +224,4 @@ public sealed record ListingHistoryDto(
     string? ActorRole,
     string? SnapshotJson,
     string? DeltasJson,
-    string? Note
-    );
+    string? Note);

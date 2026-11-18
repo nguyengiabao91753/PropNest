@@ -8,8 +8,7 @@
 
 <div class="mx-auto max-w-7xl px-4 py-6 md:px-8 space-y-8 pb-20">
 
-    <!-- ================= BREADCRUMB NAVIGATION & BACK BUTTON ================= -->
-    <!-- Mobile Header Bar: Nút Quay lại + Nút Lưu tin & Chia sẻ -->
+    <!-- Mobile Header Bar -->
     <div class="flex items-center justify-between gap-3 sm:hidden">
         <a href="javascript:void(0)" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/listings'"
            class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-primary hover:text-primary shadow-2xs transition-colors">
@@ -32,7 +31,7 @@
         </div>
     </div>
 
-    <!-- Desktop / Tablet Header: Breadcrumb đầy đủ + Nút Quay lại -->
+    <!-- Desktop / Tablet Header -->
     <div class="hidden sm:flex items-center justify-between gap-4">
         <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             <a asp-controller="Home" asp-action="Index" class="hover:text-primary transition-colors">Trang chủ</a>
@@ -47,7 +46,6 @@
             <span class="text-neutral-900 font-semibold truncate max-w-xs md:max-w-md">@p.Title</span>
         </nav>
 
-        <!-- Nút Quay lại danh sách tin đăng -->
         <a href="javascript:void(0)" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/listings'"
            class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-neutral-700 hover:border-primary hover:text-primary shadow-2xs transition-colors shrink-0">
             <i data-lucide="arrow-left" class="size-3.5"></i>
@@ -58,7 +56,6 @@
     <!-- ================= HEADER SECTION: TITLE, BADGES & ACTION BUTTONS ================= -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-border">
         <div class="space-y-2.5 sm:space-y-3 max-w-3xl">
-            <!-- Badges -->
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold">
                     @(isRent ? "Cho thuê" : "Cần bán")
@@ -80,19 +77,23 @@
                 }
             </div>
 
-            <!-- Title: Font rõ ràng, không bị ngắt chữ hay in nghiêng lộn xộn -->
             <h1 class="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-neutral-900 leading-snug">
                 @p.Title
             </h1>
 
-            <!-- Address -->
             <p class="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
                 <i data-lucide="map-pin" class="size-3.5 sm:size-4 text-primary shrink-0"></i>
-                <span>@p.Address, @p.District, @p.City</span>
+                <span>@p.FullAddress</span>
             </p>
+            @if (!string.IsNullOrWhiteSpace(p.LegacyAddress))
+            {
+                <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5">
+                    <i data-lucide="history" class="size-3.5 shrink-0"></i>
+                    <span>Địa chỉ trước sáp nhập: <strong>@p.LegacyAddress</strong></span>
+                </p>
+            }
         </div>
 
-        <!-- Action Buttons (Lưu tin & Chia sẻ) - hiển thị trên sm:flex -->
         <div class="hidden sm:flex items-center gap-3 shrink-0">
             <button type="button"
                     data-fav-id="@p.Id"
@@ -109,14 +110,12 @@
         </div>
     </div>
 
-    <!-- ================= HERO SLIDESHOW GALLERY (TỰ ĐỘNG CHUYỂN MỖI 5 GIÂY) ================= -->
+    <!-- ================= HERO SLIDESHOW GALLERY ================= -->
     <section class="space-y-3 sm:space-y-4">
-        <!-- Main Big Image Container -->
         <div id="slideshowContainer" class="group relative aspect-[16/10] sm:aspect-[16/9] md:h-[480px] w-full overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-neutral-900 shadow-md">
-            <img id="mainHeroImg" src="@p.ImageUrls" alt="@p.Title"
+            <img id="mainHeroImg" src="@(p.ImageUrls.FirstOrDefault() ?? "")" alt="@p.Title"
                  class="size-full object-cover transition-opacity duration-500 ease-in-out opacity-100" />
 
-            <!-- Prev / Next Navigation Arrows -->
             <button type="button" onclick="prevHeroImage()"
                     class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 grid size-8 sm:size-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md opacity-90 sm:opacity-80 group-hover:opacity-100 hover:bg-black/70 hover:scale-105 transition-all shadow-md"
                     title="Ảnh trước">
@@ -128,14 +127,12 @@
                 <i data-lucide="chevron-right" class="size-4 sm:size-6"></i>
             </button>
 
-            <!-- Image Index Badge & Slideshow Indicator -->
             <div class="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 rounded-full bg-black/60 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-white backdrop-blur-md shadow-md">
                 <i data-lucide="image" class="size-3 sm:size-3.5 text-amber-400"></i>
                 <span id="imageCounter">1 / @(p.ImageUrls.Count > 0 ? p.ImageUrls.Count : 1)</span>
             </div>
         </div>
 
-        <!-- Thumbnail Selector Row -->
         @if (p.ImageUrls.Count > 1)
         {
             <div class="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-none" role="group" aria-label="Thư viện ảnh">
@@ -155,7 +152,6 @@
 
     <!-- ================= PRICE & QUICK ACTION BANNER ================= -->
     <div class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
-        <!-- Price & Area -->
         <div class="flex items-center justify-between sm:justify-start gap-4 sm:gap-8 divide-x divide-border/80">
             <div class="pr-3 sm:pr-0">
                 <span class="block text-[11px] sm:text-xs text-muted-foreground font-medium mb-0.5 sm:mb-1">
@@ -173,7 +169,6 @@
             </div>
         </div>
 
-        <!-- Call & Message Buttons -->
         <div class="grid grid-cols-2 gap-2 sm:gap-3 md:flex md:w-auto">
             @if (!string.IsNullOrWhiteSpace(p.OwnerPhone))
             {
@@ -194,10 +189,9 @@
 
     <!-- ================= BODY CONTENT: 2 COLUMNS ================= -->
     <div id="detailsSection" class="grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
-        
-        <!-- ================= CỘT TRÁI: SPECS, MÔ TẢ, BẢN ĐỒ ================= -->
+
         <div class="space-y-6 sm:space-y-10 min-w-0">
-            
+
             <!-- 1. Thông số tổng quan -->
             <section class="space-y-3 sm:space-y-4">
                 <h2 class="font-display text-lg sm:text-xl md:text-2xl font-bold text-neutral-900">
@@ -240,6 +234,55 @@
                             <p class="text-xs font-bold text-neutral-900 truncate">@p.CreatedAt.ToString("dd/MM/yyyy")</p>
                         </div>
                     </div>
+
+                    @if (p.Floors.HasValue)
+                    {
+                        <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                            <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                                <i data-lucide="building-2" class="size-4"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Số tầng</p>
+                                <p class="text-xs font-bold text-neutral-900 truncate">@p.Floors tầng</p>
+                            </div>
+                        </div>
+                    }
+                    @if (p.Bedrooms.HasValue)
+                    {
+                        <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                            <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                                <i data-lucide="bed-double" class="size-4"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Phòng ngủ</p>
+                                <p class="text-xs font-bold text-neutral-900 truncate">@p.Bedrooms phòng</p>
+                            </div>
+                        </div>
+                    }
+                    @if (p.Bathrooms.HasValue)
+                    {
+                        <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                            <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                                <i data-lucide="bath" class="size-4"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Toilet / WC</p>
+                                <p class="text-xs font-bold text-neutral-900 truncate">@p.Bathrooms phòng</p>
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.BalconyDirection))
+                    {
+                        <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-2xs">
+                            <span class="grid size-8 sm:size-9 place-items-center rounded-full bg-brand-soft text-primary shrink-0">
+                                <i data-lucide="compass" class="size-4"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] sm:text-[11px] text-muted-foreground truncate">Hướng ban công</p>
+                                <p class="text-xs font-bold text-neutral-900 truncate">@p.BalconyDirection</p>
+                            </div>
+                        </div>
+                    }
                 </div>
             </section>
 
@@ -248,10 +291,10 @@
                 <h2 class="font-display text-lg sm:text-xl md:text-2xl font-bold text-neutral-900">
                     Mô tả chi tiết
                 </h2>
-                <div class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 text-xs sm:text-sm text-neutral-800 leading-relaxed shadow-xs">
+                <div class="propnest-richtext rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 text-xs sm:text-sm text-neutral-800 leading-relaxed shadow-xs">
                     @if (!string.IsNullOrWhiteSpace(p.Description))
                     {
-                        <p class="whitespace-pre-line">@p.Description</p>
+                        @Html.Raw(RichTextHtmlHelper.FormatRichDescriptionHtml(p.Description))
                     }
                     else
                     {
@@ -273,7 +316,7 @@
                                 <i data-lucide="map-pin" class="size-5 sm:size-6"></i>
                             </div>
                             <span class="mt-2 rounded-full bg-neutral-900 text-white px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold shadow-md max-w-[90vw] truncate">
-                                @p.Address, @p.District, @p.City
+                                @p.FullAddress
                             </span>
                         </div>
                     </div>
@@ -281,10 +324,8 @@
             </section>
         </div>
 
-        <!-- ================= CỘT PHẢI: THÔNG TIN OWNER & FORM LIÊN HỆ ================= -->
+        <!-- CỘT PHẢI -->
         <aside class="space-y-6 lg:sticky lg:top-24">
-            
-            <!-- Card Người bán / Chủ nhà -->
             <div id="inquiryForm" class="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-md space-y-4 sm:space-y-5">
                 <div class="flex items-center gap-3 sm:gap-3.5 pb-3 sm:pb-4 border-b border-border/80">
                     <div class="grid size-10 sm:size-12 place-items-center rounded-full bg-primary/10 text-primary font-bold text-base sm:text-lg shrink-0">
@@ -296,7 +337,6 @@
                     </div>
                 </div>
 
-                <!-- Nút Gọi điện thoại trực tiếp -->
                 @if (!string.IsNullOrWhiteSpace(p.OwnerPhone))
                 {
                     <a href="tel:@p.OwnerPhone"
@@ -306,7 +346,6 @@
                     </a>
                 }
 
-                <!-- Form Gửi Lời Nhắn -->
                 <form asp-action="Inquiry" method="post" class="space-y-3 sm:space-y-3.5 text-xs">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="ListingId" value="@p.Id" />
@@ -336,7 +375,6 @@
                 </form>
             </div>
 
-            <!-- Cam kết an toàn PropNest -->
             <div class="rounded-xl border border-border bg-surface p-4 text-xs text-muted-foreground space-y-2">
                 <div class="flex items-center gap-2 font-semibold text-neutral-900">
                     <i data-lucide="shield-check" class="size-4 text-primary"></i>
@@ -355,7 +393,7 @@
         const heroImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(p.ImageUrls));
         let activeImgIdx = 0;
         let slideshowTimer = null;
-        const SLIDESHOW_INTERVAL = 5000; // 5 giây tự động đổi ảnh
+        const SLIDESHOW_INTERVAL = 5000;
 
         function updateGalleryUI(idx) {
             activeImgIdx = idx;
@@ -363,7 +401,6 @@
             const counter = document.getElementById('imageCounter');
 
             if (mainImg && heroImages.length > 0) {
-                // Hiệu ứng mờ chuyển tiếp êm ái
                 mainImg.classList.add('opacity-0');
                 setTimeout(() => {
                     mainImg.src = heroImages[idx];
@@ -375,7 +412,6 @@
                 counter.innerText = (idx + 1) + ' / ' + heroImages.length;
             }
 
-            // Highlight thumbnail tương ứng
             document.querySelectorAll('.hero-thumb').forEach((thumb) => {
                 const thumbIdx = parseInt(thumb.getAttribute('data-thumb-idx'), 10);
                 if (thumbIdx === idx) {
@@ -422,15 +458,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Render Lucide icons cho các nút mới
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
 
-            // Khởi động Slideshow tự động 5s
             startSlideshow();
 
-            // Tạm dừng khi rê chuột vào khung ảnh và chạy tiếp khi rê chuột ra ngoài
             const container = document.getElementById('slideshowContainer');
             if (container) {
                 container.addEventListener('mouseenter', pauseSlideshow);

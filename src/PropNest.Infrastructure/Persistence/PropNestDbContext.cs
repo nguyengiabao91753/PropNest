@@ -31,6 +31,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     public DbSet<PurchasePackageSagaState> PurchasePackageSagaStates => Set<PurchasePackageSagaState>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

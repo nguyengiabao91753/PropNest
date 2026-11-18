@@ -14,7 +14,12 @@ public sealed class ListingExpirationService(
     public async Task<int> ExpireListingsAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
-        var totalProcessed = 0;
+
+        // 1. Downgrade VIP -> Standard for listings whose VIP tier ended while base listing lifespan remains valid.
+        await DowngradeExpiredVipPackagesAsync(now, cancellationToken);
+
+        // 2. Expire published listings whose overall EndDate has elapsed.
+        var totalExpired = 0;
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -51,7 +56,7 @@ public sealed class ListingExpirationService(
             if (batchUpdated > 0)
             {
                 await unitOfWork.SaveChangesAsync(cancellationToken);
-                totalProcessed += batchUpdated;
+                totalExpired += batchUpdated;
             }
 
             if (candidates.Count < BatchSize)
@@ -60,6 +65,45 @@ public sealed class ListingExpirationService(
             }
         }
 
-        return totalProcessed;
+        return totalExpired;
+    }
+
+    private async Task DowngradeExpiredVipPackagesAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var candidates = await listingRepository.GetListingsWithExpiredPackageAsync(now, BatchSize, cancellationToken);
+            if (candidates.Count == 0)
+            {
+                break;
+            }
+
+            var batchUpdated = 0;
+            foreach (var listing in candidates)
+            {
+                var previousPackage = listing.PackageCode;
+                if (!listing.DowngradePackageIfExpired(now))
+                {
+                    continue;
+                }
+
+                listingRepository.AddHistory(ListingHistory.CreateEvent(
+                    listing.ListingId,
+                    null,
+                    "DowngradePackage",
+                    $"Hết hạn gói {previousPackage}, tự động chuyển về gói Standard (hiển thị đến {listing.EndDate?.ToOffset(ListingPackagePolicy.VietnamUtcOffset):dd/MM/yyyy HH:mm})"));
+                batchUpdated++;
+            }
+
+            if (batchUpdated > 0)
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            if (candidates.Count < BatchSize)
+            {
+                break;
+            }
+        }
     }
 }

@@ -20,7 +20,7 @@ public sealed class ListingImagesController(
     private const long MaxFileSizeInBytes = 10 * 1024 * 1024; // 10 MB
 
     [HttpPost]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<IReadOnlyList<ListingImageDto>>> UploadImages(
         long listingId,
@@ -99,7 +99,7 @@ public sealed class ListingImagesController(
     }
 
     [HttpPut("{imageId:long}")]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<ActionResult<ListingImageDto>> UpdateImage(
         long listingId,
         long imageId,
@@ -119,7 +119,7 @@ public sealed class ListingImagesController(
     }
 
     [HttpDelete("{imageId:long}")]
-    [Authorize(Roles = "Seller")]
+    [Authorize(Roles = "Seller, Admin")]
     public async Task<IActionResult> DeleteImage(
         long listingId,
         long imageId,

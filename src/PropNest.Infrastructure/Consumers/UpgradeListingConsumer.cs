@@ -1,4 +1,4 @@
-﻿using MassTransit;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PropNest.Application.Abstractions;
@@ -69,50 +69,52 @@ namespace PropNest.Infrastructure.Consumers
                 return;
             }
 
-            // check trạng thái listing
-            if (listing.Status == ListingStatus.Deleted)
+            if (!ListingPackagePolicy.CanPurchasePackage(listing.Status, listing.ModerationDecision))
             {
-                LogFailed(_logger, command.CorrelationId, "Không thể nâng cấp gói cho tin đăng đã bị xóa.");
+                const string reason = "Chỉ tin đăng đã được duyệt (Chờ thanh toán, Đang hiển thị hoặc Hết hạn) mới có thể mua hoặc gia hạn gói.";
+                LogFailed(_logger, command.CorrelationId, reason);
                 await context.Publish(new ListingUpgradeFailed(
                     command.CorrelationId,
                     command.ListingId,
-                    "Không thể nâng cấp gói cho tin đăng đã bị xóa."));
+                    reason));
                 return;
             }
 
             // lấy thông tin gói
-            var package = await _listingRepository.GetPackageByCodeAsync(command.PackageCode, context.CancellationToken);
-            if (package is null || !package.IsActive)
+            var packageCode = command.PackageCode?.Trim() ?? string.Empty;
+            var package = string.IsNullOrEmpty(packageCode)
+                ? null
+                : await _listingRepository.GetPackageByCodeAsync(packageCode, context.CancellationToken);
+            if (package is null || !ListingPackagePolicy.IsPurchasablePackage(package.Kind, package.Price, package.IsActive))
             {
-                LogFailed(_logger, command.CorrelationId, $"Gói dịch vụ '{command.PackageCode}' không tồn tại hoặc đã ngừng áp dụng.");
+                var invalidPackageReason = $"Gói dịch vụ '{command.PackageCode}' không tồn tại hoặc đã ngừng áp dụng.";
+                LogFailed(_logger, command.CorrelationId, invalidPackageReason);
                 await context.Publish(new ListingUpgradeFailed(
                     command.CorrelationId,
                     command.ListingId,
-                    $"Gói dịch vụ '{command.PackageCode}' không tồn tại hoặc đã ngừng áp dụng."));
+                    invalidPackageReason));
                 return;
             }
 
-            // tính start - end
+            // áp dụng gói theo lịch Việt Nam (23:59:59 +07:00) và ghi history
             var now = DateTimeOffset.UtcNow;
-            var isStillActive = listing.EndDate.HasValue && listing.EndDate.Value > now;
-
-            //neeys tin đăng còn hạn thì cộng dồn ngày nối tiếp, nếu hết hạn thì tính từ thời điểm hiện tại
-            var startDate = (isStillActive && listing.StartDate.HasValue) ? listing.StartDate.Value : now;
-            var baseDate = isStillActive ? listing.EndDate!.Value : now;
-            var endDate = baseDate.AddDays(package.DurationDays);
-
-            //nâng cấp tin và ghi history
             try
             {
-                listing.UpgradePackage(command.PackageCode, startDate, endDate);
+                listing.ApplyPackagePurchase(package.Kind, package.DurationDays, now);
+
+                var vnEnd = listing.EndDate?.ToOffset(ListingPackagePolicy.VietnamUtcOffset);
+                var noteDetail = listing.PackageEndDate.HasValue
+                    && !string.Equals(listing.PackageCode, ListingPackagePolicy.StandardPackageCode, StringComparison.OrdinalIgnoreCase)
+                    ? $"Mua gói {package.PackageCode} (+{package.DurationDays} ngày, {listing.PackageCode} đến: {listing.PackageEndDate.Value.ToOffset(ListingPackagePolicy.VietnamUtcOffset):yyyy-MM-dd HH:mm}, hiển thị đến: {vnEnd:yyyy-MM-dd HH:mm}) - CorrelationId: {command.CorrelationId}"
+                    : $"Mua gói {package.PackageCode} (+{package.DurationDays} ngày, hiển thị đến: {vnEnd:yyyy-MM-dd HH:mm}) - CorrelationId: {command.CorrelationId}";
 
                 var history = ListingHistory.CreateEvent(
                     listing.ListingId,
                     listing.OwnerUserId,
                     "UpgradePackage",
-                    $"Nâng cấp gói {command.PackageCode} (+{package.DurationDays} ngày, HSD đến: {endDate:yyyy-MM-dd HH:mm}) - CorrelationId: {command.CorrelationId}");
+                    noteDetail);
 
-                _listingRepository.AddHistory( history );
+                _listingRepository.AddHistory(history);
                 await _unitOfWork.SaveChangesAsync(context.CancellationToken);
             }
             catch (Exception ex)
@@ -126,12 +128,12 @@ namespace PropNest.Infrastructure.Consumers
             }
 
             //publish event thành công
-            LogSuccess(_logger, command.CorrelationId, command.ListingId, command.PackageCode);
+            LogSuccess(_logger, command.CorrelationId, command.ListingId, package.PackageCode);
 
             await context.Publish(new ListingUpgraded(
                 command.CorrelationId,
                 command.ListingId,
-                command.PackageCode
+                package.PackageCode
                 ));
         }
 

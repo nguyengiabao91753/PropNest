@@ -173,7 +173,7 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         switch (ameResponse.Decision)
         {
             case ModerationDecision.Approved:
-                await ApplyAutoApproveAsync(listing, reasonsJson, ameResponse.Summary, context.CancellationToken);
+                ApplyAutoApprove(listing, reasonsJson, ameResponse.Summary);
                 break;
 
             case ModerationDecision.Rejected:
@@ -210,19 +210,12 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         return 25m;
     }
 
-    private async Task ApplyAutoApproveAsync(
+    private void ApplyAutoApprove(
         Listing listing,
         string reasonsJson,
-        string summary,
-        CancellationToken cancellationToken)
+        string summary)
     {
-        var package = await _listingRepository.GetPackageByCodeAsync(listing.PackageCode, cancellationToken);
-        var durationDays = package is { IsActive: true, DurationDays: > 0 } ? package.DurationDays : 30;
-
-        var startDate = DateTimeOffset.UtcNow;
-        var endDate = startDate.AddDays(durationDays);
-
-        listing.Approve(startDate, endDate);
+        listing.Approve(DateTimeOffset.UtcNow);
 
         _listingRepository.AddModerationReview(new ListingModerationReview(
             listing.ListingId,
@@ -231,21 +224,33 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reasonsJson,
             reviewerUserId: null));
 
+        var historyNote = string.IsNullOrWhiteSpace(summary)
+            ? (listing.Status == ListingStatus.Published
+                ? "AME duyệt tự động nội dung cập nhật - tin tiếp tục hiển thị theo thời hạn gói đã thanh toán."
+                : "AME duyệt tự động thành công - chờ người bán thanh toán gói để hiển thị tin.")
+            : summary;
+
         _listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             actorUserId: null,
             "AutoApprove",
-            summary));
+            historyNote));
 
-        var publishedPayload = JsonSerializer.Serialize(new
+        var outboxType = listing.Status == ListingStatus.Published
+            ? "ListingPublished"
+            : "ListingApprovedPendingPayment";
+
+        var approvedPayload = JsonSerializer.Serialize(new
         {
             listing.ListingId,
             listing.OwnerUserId,
             listing.PackageCode,
+            Status = listing.Status.ToString(),
             listing.StartDate,
-            listing.EndDate
+            listing.EndDate,
+            listing.PackageEndDate
         });
-        _listingRepository.AddOutboxMessage(new OutboxMessage("ListingPublished", publishedPayload));
+        _listingRepository.AddOutboxMessage(new OutboxMessage(outboxType, approvedPayload));
     }
 
     private void ApplyAutoReject(Listing listing, string reasonsJson)

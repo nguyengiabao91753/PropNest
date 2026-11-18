@@ -1,3 +1,4 @@
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 
 namespace PropNest.Web.Admin.Models.ViewModels;
@@ -37,12 +38,18 @@ public sealed class PropertyItemViewModel
     public string ListingType { get; set; } = "sale"; // 'sale' | 'rent'
     public decimal Price { get; set; }
     public decimal Area { get; set; }
-    public int Beds { get; set; }
-    public int Baths { get; set; }
+    public int? Floors { get; set; }
+    public int? Bedrooms { get; set; }
+    public int? Bathrooms { get; set; }
+    public string? BalconyDirection { get; set; }
+    public int Beds => Bedrooms ?? 0;
+    public int Baths => Bathrooms ?? 0;
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public string? Ward { get; set; }
     public string Address { get; set; } = string.Empty;
+    public string AdministrativeMode { get; set; } = "PostMerger";
+    public string? LegacyAddress { get; set; }
     public ListingStatus Status { get; set; } = ListingStatus.Draft;
     public string PackageCode { get; set; } = "Standard"; // 'Standard' | 'VIP' | 'Boost'
     public string SellerId { get; set; } = string.Empty;
@@ -53,6 +60,9 @@ public sealed class PropertyItemViewModel
     public List<string> Images { get; set; } = new();
     public List<PropertyHistoryItemViewModel> Histories { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? StartDate { get; set; }
+    public DateTimeOffset? EndDate { get; set; }
+    public DateTimeOffset? PackageEndDate { get; set; }
     public string? RejectReason { get; set; }
     public string RowVersion { get; set; } = "AAAAAA==";
     public AmeRecommendationViewModel AmeRecommendation { get; set; } = new();
@@ -77,12 +87,16 @@ public sealed class PropertyItemViewModel
     public List<ListingDeltaViewModel> ResubmissionDeltas { get; set; } = new();
 
     public string FormattedLocation =>
-        string.Join(", ", new[] { District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        string.Join(", ", new[] { Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
     public string FullAddress =>
         string.Join(", ", new[] { Address, Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
     public string PrimaryImage =>
         Images.Count > 0 ? Images[0] : "/images/p1.png";
-}
 
+    public string SafeFormattedDescriptionHtml =>
+        RichTextHtmlHelper.FormatRichDescriptionHtml(
+            Description,
+            "<span class=\"text-muted-foreground italic\">Không có mô tả chi tiết.</span>");
+}

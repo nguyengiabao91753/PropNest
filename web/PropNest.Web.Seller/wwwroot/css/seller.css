@@ -91,3 +91,22 @@ a, button {
 ::-webkit-scrollbar-thumb:hover {
     background: #b5a995;
 }
+
+
+/* Rich-text listing description styling (restores list markers reset by Tailwind preflight) */
+.propnest-richtext p { margin: 0.35rem 0; }
+.propnest-richtext p:first-child { margin-top: 0; }
+.propnest-richtext p:last-child { margin-bottom: 0; }
+.propnest-richtext ul { list-style-type: disc; padding-left: 1.35rem; margin: 0.45rem 0; }
+.propnest-richtext ol { list-style-type: decimal; padding-left: 1.35rem; margin: 0.45rem 0; }
+.propnest-richtext li { margin: 0.2rem 0; display: list-item; }
+.propnest-richtext li .ql-ui { display: none; }
+.propnest-richtext h1, .propnest-richtext h2, .propnest-richtext h3, .propnest-richtext h4 {
+    font-weight: 700; color: #1c1917; margin: 0.65rem 0 0.35rem;
+}
+.propnest-richtext blockquote { border-left: 3px solid #d7730c; padding-left: 0.85rem; color: #57534e; margin: 0.5rem 0; }
+.propnest-richtext strong, .propnest-richtext b { font-weight: 700; color: #1c1917; }
+.propnest-richtext a { color: #d7730c; text-decoration: underline; }
+.propnest-richtext .ql-align-center { text-align: center; }
+.propnest-richtext .ql-align-right { text-align: right; }
+.propnest-richtext .ql-align-justify { text-align: justify; }

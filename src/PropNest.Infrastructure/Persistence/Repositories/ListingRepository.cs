@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
 using PropNest.Domain.Listings;
@@ -13,8 +12,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public async Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default)
     {
         return await dbContext.Listings
-        .Include(x => x.Images.OrderBy(img => img.SortOrder)) // Load kèm danh sách ảnh (sắp xếp theo thứ tự)
-        .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
+            .Include(x => x.Images.OrderBy(img => img.SortOrder))
+            .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
     }
 
     public async Task<ListingOwnerContactDto?> GetOwnerContactAsync(long ownerUserId, CancellationToken cancellationToken = default)
@@ -29,7 +28,6 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                 u.Email ?? string.Empty))
             .SingleOrDefaultAsync(cancellationToken);
     }
-
 
     public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
         await dbContext.Listings
@@ -77,7 +75,17 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList());
+                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
+                        l.Floors,
+                        l.Bedrooms,
+                        l.Bathrooms,
+                        l.BalconyDirection,
+                        l.AdministrativeMode,
+                        l.ProvinceCode,
+                        l.DistrictCode,
+                        l.WardCode,
+                        l.LegacyAddress,
+                        l.PackageEndDate);
 
         return await query.ToListAsync(cancellationToken);
     }
@@ -89,6 +97,17 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .Take(batchSize)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default) =>
+        await dbContext.Listings
+            .Where(x => x.Status == ListingStatus.Published
+                     && x.PackageCode != ListingPackagePolicy.StandardPackageCode
+                     && x.PackageEndDate != null
+                     && x.PackageEndDate <= now
+                     && x.EndDate > now)
+            .OrderBy(x => x.PackageEndDate)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+
     public Task AddAsync(Listing listing, CancellationToken cancellationToken = default) =>
         dbContext.Listings.AddAsync(listing, cancellationToken).AsTask();
 
@@ -96,6 +115,13 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default) =>
         dbContext.PackageDefinitions.SingleOrDefaultAsync(x => x.PackageCode == packageCode && x.IsActive, cancellationToken);
+
+    public async Task<IReadOnlyList<PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default) =>
+        await dbContext.PackageDefinitions
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.Price > 0m)
+            .OrderBy(x => x.DurationDays)
+            .ToListAsync(cancellationToken);
 
     public void AddModerationReview(ListingModerationReview review) => dbContext.ListingModerationReviews.Add(review);
 
@@ -125,21 +151,30 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
         }
 
         var queryable = dbContext.Listings.AsNoTracking()
-                           .Where(x => x.Status == ListingStatus.Published)
-                           .Where(x => string.IsNullOrWhiteSpace(query.Q) || x.Title.Contains(query.Q) || x.Address.Contains(query.Q))
-                           .Where(x => query.District == null || x.District == query.District)
-                           .Where(x => query.City == null || x.City == query.City)
-                           .Where(x => query.Ward == null || x.Ward == query.Ward)
-                           .Where(x => query.PropertyType == null || x.PropertyType == query.PropertyType)
-                           .Where(x => targetType == null || x.ListingType == targetType)
-                           .Where(x => query.MinPrice == null || x.Price >= query.MinPrice)
-                           .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice);
-
+            .Where(x => x.Status == ListingStatus.Published)
+            .Where(x => string.IsNullOrWhiteSpace(query.Q) ||
+                        x.Title.Contains(query.Q) ||
+                        x.Address.Contains(query.Q) ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.Q)))
+            .Where(x => query.District == null ||
+                        x.District == query.District ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.District)))
+            .Where(x => query.City == null ||
+                        x.City == query.City ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.City)))
+            .Where(x => query.Ward == null ||
+                        x.Ward == query.Ward ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.Ward)))
+            .Where(x => query.PropertyType == null || x.PropertyType == query.PropertyType)
+            .Where(x => targetType == null || x.ListingType == targetType)
+            .Where(x => query.MinPrice == null || x.Price >= query.MinPrice)
+            .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice);
 
         var totalCount = await queryable.CountAsync(cancellationToken);
 
         var items = await queryable
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderBy(x => x.PackageCode == ListingPackagePolicy.VipPackageCode ? 0 : 1)
+            .ThenByDescending(x => x.StartDate ?? x.CreatedAt)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(x => new ListingSummaryDto(
@@ -156,8 +191,13 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                 x.Address,
                 x.Status,
                 x.CreatedAt,
-                x.ModerationDecision
-                ))
+                x.ModerationDecision,
+                x.Floors,
+                x.Bedrooms,
+                x.Bathrooms,
+                x.BalconyDirection,
+                x.AdministrativeMode,
+                x.LegacyAddress))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);
@@ -178,8 +218,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         actor != null ? actor.Role : "System",
                         history.SnapshotJson,
                         history.DeltasJson,
-                        history.Note
-                    );
+                        history.Note);
         return await query.ToListAsync(cancellationToken);
     }
 
