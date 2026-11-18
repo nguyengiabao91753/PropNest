@@ -4,6 +4,12 @@ namespace PropNest.Domain.Listings;
 
 public sealed class Listing : AuditableEntity
 {
+    private static readonly HashSet<string> ValidAdministrativeModes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PostMerger",
+        "PreMerger"
+    };
+
     private Listing()
     {
     }
@@ -17,14 +23,42 @@ public sealed class Listing : AuditableEntity
         decimal price,
         decimal area,
         string city,
-        string district,
+        string? district,
         string? ward,
-        string address)
+        string address,
+        int? floors = null,
+        int? bedrooms = null,
+        int? bathrooms = null,
+        string? balconyDirection = null,
+        string administrativeMode = "PostMerger",
+        int? provinceCode = null,
+        int? districtCode = null,
+        int? wardCode = null,
+        string? legacyAddress = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ownerUserId);
 
         OwnerUserId = ownerUserId;
-        ApplyContent(title, description, propertyType, listingType, price, area, city, district, ward, address);
+        ApplyContent(
+            title,
+            description,
+            propertyType,
+            listingType,
+            price,
+            area,
+            city,
+            district,
+            ward,
+            address,
+            floors,
+            bedrooms,
+            bathrooms,
+            balconyDirection,
+            administrativeMode,
+            provinceCode,
+            districtCode,
+            wardCode,
+            legacyAddress);
         Status = ListingStatus.Draft;
         ModerationDecision = ModerationDecision.NotRequested;
     }
@@ -45,6 +79,14 @@ public sealed class Listing : AuditableEntity
 
     public decimal Area { get; private set; }
 
+    public int? Floors { get; private set; }
+
+    public int? Bedrooms { get; private set; }
+
+    public int? Bathrooms { get; private set; }
+
+    public string? BalconyDirection { get; private set; }
+
     public string City { get; private set; } = string.Empty;
 
     public string District { get; private set; } = string.Empty;
@@ -53,15 +95,27 @@ public sealed class Listing : AuditableEntity
 
     public string Address { get; private set; } = string.Empty;
 
+    public string AdministrativeMode { get; private set; } = "PostMerger";
+
+    public int? ProvinceCode { get; private set; }
+
+    public int? DistrictCode { get; private set; }
+
+    public int? WardCode { get; private set; }
+
+    public string? LegacyAddress { get; private set; }
+
     public ListingStatus Status { get; private set; }
 
     public ModerationDecision ModerationDecision { get; private set; }
 
-    public string PackageCode { get; private set; } = "Standard"; //gói dịch vụ
+    public string PackageCode { get; private set; } = ListingPackagePolicy.StandardPackageCode; // 'Standard' | 'VIP'
 
     public DateTimeOffset? StartDate { get; private set; }
 
     public DateTimeOffset? EndDate { get; private set; }
+
+    public DateTimeOffset? PackageEndDate { get; private set; }
 
     public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
@@ -76,14 +130,42 @@ public sealed class Listing : AuditableEntity
         decimal price,
         decimal area,
         string city,
-        string district,
+        string? district,
         string? ward,
-        string address)
+        string address,
+        int? floors = null,
+        int? bedrooms = null,
+        int? bathrooms = null,
+        string? balconyDirection = null,
+        string administrativeMode = "PostMerger",
+        int? provinceCode = null,
+        int? districtCode = null,
+        int? wardCode = null,
+        string? legacyAddress = null)
     {
         EnsureNotDeleted();
-        ApplyContent(title, description, propertyType, listingType, price, area, city, district, ward, address);
+        ApplyContent(
+            title,
+            description,
+            propertyType,
+            listingType,
+            price,
+            area,
+            city,
+            district,
+            ward,
+            address,
+            floors,
+            bedrooms,
+            bathrooms,
+            balconyDirection,
+            administrativeMode,
+            provinceCode,
+            districtCode,
+            wardCode,
+            legacyAddress);
 
-        if (Status is ListingStatus.Published or ListingStatus.Hidden)
+        if (Status is ListingStatus.Published or ListingStatus.Hidden or ListingStatus.PendingPayment or ListingStatus.Expired)
         {
             Status = ListingStatus.PendingModeration;
             ModerationDecision = ModerationDecision.Pending;
@@ -105,22 +187,38 @@ public sealed class Listing : AuditableEntity
         Touch();
     }
 
-    public void Approve(DateTimeOffset startDate, DateTimeOffset endDate)
+    public void Approve(DateTimeOffset? utcNow = null)
     {
         if (Status != ListingStatus.PendingModeration)
         {
             throw new InvalidOperationException("Only a listing pending moderation can be approved.");
         }
 
-        if (endDate <= startDate)
+        var now = utcNow ?? DateTimeOffset.UtcNow;
+        ModerationDecision = ModerationDecision.Approved;
+
+        // If edited while an already-paid window is still valid, restore Published without charging again.
+        if (EndDate.HasValue && EndDate.Value > now)
         {
-            throw new ArgumentException("The listing end date must be after the start date.", nameof(endDate));
+            if (!string.Equals(PackageCode, ListingPackagePolicy.StandardPackageCode, StringComparison.OrdinalIgnoreCase)
+                && PackageEndDate.HasValue
+                && PackageEndDate.Value <= now)
+            {
+                PackageCode = ListingPackagePolicy.StandardPackageCode;
+                PackageEndDate = null;
+            }
+
+            Status = ListingStatus.Published;
+        }
+        else
+        {
+            PackageCode = ListingPackagePolicy.StandardPackageCode;
+            StartDate = null;
+            EndDate = null;
+            PackageEndDate = null;
+            Status = ListingStatus.PendingPayment;
         }
 
-        Status = ListingStatus.Published;
-        ModerationDecision = ModerationDecision.Approved;
-        StartDate = startDate;
-        EndDate = endDate;
         Touch();
     }
 
@@ -136,6 +234,17 @@ public sealed class Listing : AuditableEntity
         Touch();
     }
 
+    public void MarkForManualReview()
+    {
+        if (Status != ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Only a listing pending moderation can be marked for manual review.");
+        }
+
+        ModerationDecision = ModerationDecision.ManualReview;
+        Touch();
+    }
+
     public void Hide()
     {
         if (Status != ListingStatus.Published)
@@ -144,6 +253,51 @@ public sealed class Listing : AuditableEntity
         }
 
         Status = ListingStatus.Hidden;
+        Touch();
+    }
+
+    public void Unhide(ListingStatus targetStatus, DateTimeOffset? now = null)
+    {
+        EnsureNotDeleted();
+        if (Status != ListingStatus.Hidden)
+        {
+            throw new InvalidOperationException("Only a hidden listing can be restored.");
+        }
+
+        if (targetStatus is ListingStatus.Hidden or ListingStatus.Deleted)
+        {
+            throw new ArgumentException($"Cannot restore a hidden listing to {targetStatus}.", nameof(targetStatus));
+        }
+
+        var currentTime = now ?? DateTimeOffset.UtcNow;
+        if (targetStatus == ListingStatus.Published && EndDate.HasValue && EndDate.Value <= currentTime)
+        {
+            targetStatus = ListingStatus.Expired;
+        }
+
+        if (targetStatus == ListingStatus.Published
+            && !string.Equals(PackageCode, ListingPackagePolicy.StandardPackageCode, StringComparison.OrdinalIgnoreCase)
+            && PackageEndDate.HasValue
+            && PackageEndDate.Value <= currentTime)
+        {
+            PackageCode = ListingPackagePolicy.StandardPackageCode;
+            PackageEndDate = null;
+        }
+
+        if (targetStatus == ListingStatus.Expired)
+        {
+            PackageCode = ListingPackagePolicy.StandardPackageCode;
+            PackageEndDate = null;
+        }
+
+        Status = targetStatus;
+        ModerationDecision = targetStatus switch
+        {
+            ListingStatus.Published or ListingStatus.Expired => ModerationDecision.Approved,
+            ListingStatus.PendingModeration => ModerationDecision.Pending,
+            ListingStatus.Rejected => ModerationDecision.Rejected,
+            _ => ModerationDecision
+        };
         Touch();
     }
 
@@ -165,35 +319,78 @@ public sealed class Listing : AuditableEntity
         if (Status == ListingStatus.Published && EndDate <= now)
         {
             Status = ListingStatus.Expired;
+            PackageCode = ListingPackagePolicy.StandardPackageCode;
+            PackageEndDate = null;
             Touch();
         }
     }
 
-    public void UpgradePackage(string packageCode, DateTimeOffset startDate, DateTimeOffset endDate)
+    public bool DowngradePackageIfExpired(DateTimeOffset now)
     {
-        if (string.IsNullOrWhiteSpace(packageCode))
+        if (Status == ListingStatus.Published
+            && !string.Equals(PackageCode, ListingPackagePolicy.StandardPackageCode, StringComparison.OrdinalIgnoreCase)
+            && PackageEndDate.HasValue
+            && PackageEndDate.Value <= now
+            && EndDate.HasValue
+            && EndDate.Value > now)
         {
-            throw new ArgumentException("A package code is required.", nameof(packageCode));
+            PackageCode = ListingPackagePolicy.StandardPackageCode;
+            PackageEndDate = null;
+            Touch();
+            return true;
         }
 
-        if (endDate <= startDate)
+        return false;
+    }
+
+    public void ApplyPackagePurchase(string packageKind, int durationDays, DateTimeOffset? utcNow = null)
+    {
+        EnsureNotDeleted();
+        if (!ListingPackagePolicy.CanPurchasePackage(Status, ModerationDecision))
         {
-            throw new ArgumentException("The listing end date must be after the start date.", nameof(endDate));
+            throw new InvalidOperationException($"Cannot purchase a package for listing in status {Status} ({ModerationDecision}).");
         }
 
-        PackageCode = packageCode;
-        StartDate = startDate;
-        EndDate = endDate;
-
-        if (ModerationDecision == ModerationDecision.Approved)
+        if (!ListingPackagePolicy.IsSupportedTierKind(packageKind))
         {
-            Status = ListingStatus.Published;
+            throw new ArgumentException($"Unsupported package tier '{packageKind}'.", nameof(packageKind));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(durationDays);
+
+        var now = utcNow ?? DateTimeOffset.UtcNow;
+        var hasActiveLifespan = Status == ListingStatus.Published && EndDate.HasValue && EndDate.Value > now;
+        var isVipTier = string.Equals(packageKind.Trim(), ListingPackagePolicy.VipPackageCode, StringComparison.OrdinalIgnoreCase);
+
+        if (isVipTier)
+        {
+            var newVipEnd = ListingPackagePolicy.HasActiveVipPackage(PackageCode, PackageEndDate, now)
+                ? ListingPackagePolicy.ExtendEndDate(PackageEndDate!.Value, durationDays)
+                : ListingPackagePolicy.ComputeNewEndDate(now, durationDays);
+
+            PackageCode = ListingPackagePolicy.VipPackageCode;
+            PackageEndDate = newVipEnd;
+            StartDate ??= now;
+            EndDate = hasActiveLifespan && EndDate!.Value > newVipEnd ? EndDate.Value : newVipEnd;
         }
         else
         {
-            Status = ListingStatus.PendingModeration;
-            ModerationDecision = ModerationDecision.Pending;
+            if (hasActiveLifespan)
+            {
+                EndDate = ListingPackagePolicy.ExtendEndDate(EndDate!.Value, durationDays);
+                StartDate ??= now;
+                // Preserve active VIP tier/PackageEndDate if seller extends base lifespan while VIP is active.
+            }
+            else
+            {
+                PackageCode = ListingPackagePolicy.StandardPackageCode;
+                PackageEndDate = null;
+                StartDate = now;
+                EndDate = ListingPackagePolicy.ComputeNewEndDate(now, durationDays);
+            }
         }
+
+        Status = ListingStatus.Published;
         Touch();
     }
 
@@ -205,20 +402,62 @@ public sealed class Listing : AuditableEntity
         decimal price,
         decimal area,
         string city,
-        string district,
+        string? district,
         string? ward,
-        string address)
+        string address,
+        int? floors,
+        int? bedrooms,
+        int? bathrooms,
+        string? balconyDirection,
+        string administrativeMode,
+        int? provinceCode,
+        int? districtCode,
+        int? wardCode,
+        string? legacyAddress)
     {
+        var normalizedMode = string.IsNullOrWhiteSpace(administrativeMode)
+            ? "PostMerger"
+            : administrativeMode.Trim();
+
+        if (!ValidAdministrativeModes.Contains(normalizedMode))
+        {
+            throw new ArgumentException("AdministrativeMode must be 'PostMerger' or 'PreMerger'.", nameof(administrativeMode));
+        }
+
+        normalizedMode = string.Equals(normalizedMode, "PreMerger", StringComparison.OrdinalIgnoreCase)
+            ? "PreMerger"
+            : "PostMerger";
+
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(propertyType) ||
             string.IsNullOrWhiteSpace(listingType) || string.IsNullOrWhiteSpace(city) ||
-            string.IsNullOrWhiteSpace(district) || string.IsNullOrWhiteSpace(address))
+            string.IsNullOrWhiteSpace(address))
         {
             throw new ArgumentException("Required listing content is missing.");
+        }
+
+        if (normalizedMode == "PreMerger" && string.IsNullOrWhiteSpace(district))
+        {
+            throw new ArgumentException("District is required for pre-merger addresses.", nameof(district));
         }
 
         if (price < 0 || area <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(price), "Price must be non-negative and area must be positive.");
+        }
+
+        if (floors is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(floors), "Floors must be at least 1 when specified.");
+        }
+
+        if (bedrooms is < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bedrooms), "Bedrooms cannot be negative.");
+        }
+
+        if (bathrooms is < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bathrooms), "Bathrooms cannot be negative.");
         }
 
         Title = title.Trim();
@@ -227,10 +466,19 @@ public sealed class Listing : AuditableEntity
         ListingType = listingType.Trim();
         Price = price;
         Area = area;
+        Floors = floors;
+        Bedrooms = bedrooms;
+        Bathrooms = bathrooms;
+        BalconyDirection = string.IsNullOrWhiteSpace(balconyDirection) ? null : balconyDirection.Trim();
         City = city.Trim();
-        District = district.Trim();
-        Ward = ward?.Trim();
+        District = district?.Trim() ?? string.Empty;
+        Ward = string.IsNullOrWhiteSpace(ward) ? null : ward.Trim();
         Address = address.Trim();
+        AdministrativeMode = normalizedMode;
+        ProvinceCode = provinceCode;
+        DistrictCode = districtCode;
+        WardCode = wardCode;
+        LegacyAddress = string.IsNullOrWhiteSpace(legacyAddress) ? null : legacyAddress.Trim();
     }
 
     private void EnsureNotDeleted()

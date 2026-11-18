@@ -168,9 +168,26 @@ namespace PropNest.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("AdministrativeMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("PostMerger");
+
                     b.Property<decimal>("Area")
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("BalconyDirection")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("Bathrooms")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Bedrooms")
+                        .HasColumnType("int");
 
                     b.Property<string>("City")
                         .IsRequired()
@@ -188,8 +205,18 @@ namespace PropNest.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("DistrictCode")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset?>("EndDate")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("Floors")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LegacyAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("ListingType")
                         .IsRequired()
@@ -209,6 +236,9 @@ namespace PropNest.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTimeOffset?>("PackageEndDate")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -217,6 +247,9 @@ namespace PropNest.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ProvinceCode")
+                        .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -244,6 +277,9 @@ namespace PropNest.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("WardCode")
+                        .HasColumnType("int");
+
                     b.HasKey("ListingId");
 
                     b.HasIndex("OwnerUserId", "Status");
@@ -251,6 +287,8 @@ namespace PropNest.Infrastructure.Migrations
                     b.HasIndex("Status", "EndDate");
 
                     b.HasIndex("City", "District", "PropertyType");
+
+                    b.HasIndex("Status", "PackageCode", "PackageEndDate");
 
                     b.ToTable("Listings", (string)null);
                 });
@@ -425,10 +463,10 @@ namespace PropNest.Infrastructure.Migrations
                         new
                         {
                             PackageId = 1L,
-                            DurationDays = 30,
-                            IsActive = true,
+                            DurationDays = 15,
+                            IsActive = false,
                             Kind = "Standard",
-                            Name = "Gói Tiêu Chuẩn (Miễn phí)",
+                            Name = "Gói Tiêu Chuẩn (Cũ)",
                             PackageCode = "Standard",
                             Price = 0m
                         },
@@ -436,9 +474,9 @@ namespace PropNest.Infrastructure.Migrations
                         {
                             PackageId = 2L,
                             DurationDays = 30,
-                            IsActive = true,
+                            IsActive = false,
                             Kind = "VIP",
-                            Name = "Gói VIP",
+                            Name = "Gói VIP (Cũ)",
                             PackageCode = "VIP",
                             Price = 150000m
                         },
@@ -446,11 +484,71 @@ namespace PropNest.Infrastructure.Migrations
                         {
                             PackageId = 3L,
                             DurationDays = 7,
-                            IsActive = true,
+                            IsActive = false,
                             Kind = "Boost",
-                            Name = "Gói Đẩy Tin",
+                            Name = "Gói Đẩy Tin (Ẩn)",
                             PackageCode = "Boost",
                             Price = 30000m
+                        },
+                        new
+                        {
+                            PackageId = 4L,
+                            DurationDays = 7,
+                            IsActive = true,
+                            Kind = "Standard",
+                            Name = "Gói Tiêu Chuẩn - 7 ngày",
+                            PackageCode = "STANDARD_7",
+                            Price = 30000m
+                        },
+                        new
+                        {
+                            PackageId = 5L,
+                            DurationDays = 15,
+                            IsActive = true,
+                            Kind = "Standard",
+                            Name = "Gói Tiêu Chuẩn - 15 ngày",
+                            PackageCode = "STANDARD_15",
+                            Price = 55000m
+                        },
+                        new
+                        {
+                            PackageId = 6L,
+                            DurationDays = 30,
+                            IsActive = true,
+                            Kind = "Standard",
+                            Name = "Gói Tiêu Chuẩn - 30 ngày",
+                            PackageCode = "STANDARD_30",
+                            Price = 99000m
+                        },
+                        new
+                        {
+                            PackageId = 7L,
+                            DurationDays = 7,
+                            IsActive = true,
+                            Kind = "VIP",
+                            Name = "Gói VIP Nổi Bật - 7 ngày",
+                            PackageCode = "VIP_7",
+                            Price = 90000m
+                        },
+                        new
+                        {
+                            PackageId = 8L,
+                            DurationDays = 15,
+                            IsActive = true,
+                            Kind = "VIP",
+                            Name = "Gói VIP Nổi Bật - 15 ngày",
+                            PackageCode = "VIP_15",
+                            Price = 170000m
+                        },
+                        new
+                        {
+                            PackageId = 9L,
+                            DurationDays = 30,
+                            IsActive = true,
+                            Kind = "VIP",
+                            Name = "Gói VIP Nổi Bật - 30 ngày",
+                            PackageCode = "VIP_30",
+                            Price = 299000m
                         });
                 });
 
