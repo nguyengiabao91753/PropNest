@@ -127,6 +127,26 @@ public sealed class ListingTests
     }
 
     [Fact]
+    public void MarkForManualReviewFromPendingModerationShouldKeepPendingAndSetManualReviewDecision()
+    {
+        var listing = CreatePendingListing();
+
+        listing.MarkForManualReview();
+
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+        Assert.Equal(ModerationDecision.ManualReview, listing.ModerationDecision);
+    }
+
+    [Fact]
+    public void MarkForManualReviewFromDraftShouldThrowInvalidOperationException()
+    {
+        var listing = CreateListing();
+
+        Assert.Throws<InvalidOperationException>(() => listing.MarkForManualReview());
+    }
+
+    //Ẩn tin đăng đang hiển thị-> Hidden
+    [Fact]
     public void HideFromPublishedShouldMoveToHidden()
     {
         var listing = CreatePublishedListing();

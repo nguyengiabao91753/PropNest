@@ -1,5 +1,6 @@
 ﻿using MassTransit;
 using Microsoft.Extensions.Logging;
+using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
 using PropNest.Domain.Workflows;
 using System;
@@ -41,6 +42,13 @@ namespace PropNest.Infrastructure.Services
 
                     // bắn event
                     await _publishEndpoint.Publish(purchaseRequested, cancellationToken);
+                    break;
+
+                case "ListingSubmitted":
+                    var listingSubmitted = JsonSerializer.Deserialize<ListingSubmitted>(message.PayloadJson, JsonOptions) 
+                        ?? throw new InvalidOperationException($"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
+                    await _publishEndpoint.Publish(listingSubmitted, cancellationToken);
+
                     break;
                 default:
                     LogUnknownMessageType(_logger, message.Type, message.OutboxId);

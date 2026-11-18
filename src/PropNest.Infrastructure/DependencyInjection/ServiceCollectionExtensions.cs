@@ -54,6 +54,13 @@ public static class ServiceCollectionExtensions
             var ollamaOptions = configuration.GetSection(OllamaOptions.SectionName).Get<OllamaOptions>() ?? new OllamaOptions();
             client.BaseAddress = new Uri(ollamaOptions.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(ollamaOptions.TimeoutSeconds > 0 ? ollamaOptions.TimeoutSeconds : 25);
+        // Cấu hình AME Options & Typed HttpClient gọi sang Python FastAPI
+        services.Configure<AmeOptions>(configuration.GetSection(AmeOptions.SectionName));
+        services.AddHttpClient<IAmeModerationClient, AmeModerationClient>((serviceProvider, client) =>
+        {
+            var ameOptions = configuration.GetSection(AmeOptions.SectionName).Get<AmeOptions>() ?? new AmeOptions();
+            client.BaseAddress = new Uri(ameOptions.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(ameOptions.TimeoutSeconds > 0 ? ameOptions.TimeoutSeconds : 15);
         });
 
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
@@ -74,6 +81,7 @@ public static class ServiceCollectionExtensions
             busConfig.AddConsumer<DeductWalletConsumer>();
             busConfig.AddConsumer<UpgradeListingConsumer>();
             busConfig.AddConsumer<RefundWalletConsumer>();
+            busConfig.AddConsumer<AmeModerationConsumer>();
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";

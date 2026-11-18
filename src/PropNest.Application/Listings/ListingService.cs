@@ -40,6 +40,12 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             command.OwnerUserId,
             "Create",
             JsonSerializer.Serialize(ToDto(listing))));
+
+        if (listing.Status == ListingStatus.PendingModeration)
+        {
+            EnqueueListingSubmittedOutbox(listing);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToDto(listing);
@@ -103,6 +109,12 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             command.OwnerUserId,
             "UpdateContent",
             JsonSerializer.Serialize(deltas)));
+
+        if (listing.Status == ListingStatus.PendingModeration)
+        {
+            EnqueueListingSubmittedOutbox(listing);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return after;
@@ -113,6 +125,7 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var listing = await GetOwnedListingAsync(listingId, ownerUserId, cancellationToken);
         listing.SubmitForModeration();
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Submit"));
+        EnqueueListingSubmittedOutbox(listing);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -129,6 +142,29 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         return listing;
     }
 
+    private void EnqueueListingSubmittedOutbox(Listing listing)
+    {
+        var correlationId = Guid.NewGuid();
+        var submittedEvent = new ListingSubmitted(
+            CorrelationId: correlationId,
+            ListingId: listing.ListingId,
+            OwnerUserId: listing.OwnerUserId,
+            Title: listing.Title,
+            Description: listing.Description,
+            PropertyType: listing.PropertyType,
+            ListingType: listing.ListingType,
+            Price: listing.Price,
+            Area: listing.Area,
+            City: listing.City,
+            District: listing.District,
+            Ward: listing.Ward,
+            Address: listing.Address,
+            SubmittedAt: DateTimeOffset.UtcNow);
+
+        var payloadJson = JsonSerializer.Serialize(submittedEvent);
+        listingRepository.AddOutboxMessage(
+            new OutboxMessage("ListingSubmitted", payloadJson, correlationId));
+    }
     private static ListingDto ToDto(Listing listing) => new(
         listing.ListingId,
         listing.OwnerUserId,
