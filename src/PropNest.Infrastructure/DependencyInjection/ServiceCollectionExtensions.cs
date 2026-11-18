@@ -54,6 +54,8 @@ public static class ServiceCollectionExtensions
             var ollamaOptions = configuration.GetSection(OllamaOptions.SectionName).Get<OllamaOptions>() ?? new OllamaOptions();
             client.BaseAddress = new Uri(ollamaOptions.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(ollamaOptions.TimeoutSeconds > 0 ? ollamaOptions.TimeoutSeconds : 25);
+        });
+
         // Cấu hình AME Options & Typed HttpClient gọi sang Python FastAPI
         services.Configure<AmeOptions>(configuration.GetSection(AmeOptions.SectionName));
         services.AddHttpClient<IAmeModerationClient, AmeModerationClient>((serviceProvider, client) =>

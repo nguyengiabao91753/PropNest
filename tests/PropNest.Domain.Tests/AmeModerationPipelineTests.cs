@@ -168,10 +168,10 @@ public sealed class AmeModerationPipelineTests
         await consumer.Consume(consumeContextMock.Object);
 
         var updatedListing = await dbContext.Listings.SingleAsync(x => x.ListingId == listing.ListingId);
-        Assert.Equal(ListingStatus.Published, updatedListing.Status);
+        Assert.Equal(ListingStatus.PendingPayment, updatedListing.Status);
         Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
-        Assert.NotNull(updatedListing.StartDate);
-        Assert.NotNull(updatedListing.EndDate);
+        Assert.Null(updatedListing.StartDate);
+        Assert.Null(updatedListing.EndDate);
 
         var ameResult = await dbContext.AmeModerationResults.SingleAsync(x => x.CorrelationId == correlationId);
         Assert.Equal(ModerationDecision.Approved, ameResult.Decision);
@@ -182,6 +182,66 @@ public sealed class AmeModerationPipelineTests
         Assert.Null(review.ReviewerUserId);
 
         Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoApprove"));
+        Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingApprovedPendingPayment"));
+    }
+
+    [Fact]
+    public async Task AmeModerationConsumerShouldAutoApproveEditedPaidListingToPublished()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        await using var dbContext = await CreateSqliteContextAsync(connection);
+
+        var listing = await SeedPendingListingAsync(dbContext);
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now);
+        listing.ApplyPackagePurchase("Standard", 15, now);
+        var expectedEndDate = listing.EndDate;
+        listing.UpdateContent(
+            "Căn hộ cao cấp Quận 7 (cập nhật)",
+            "Cập nhật nội thất mới hoàn toàn, dọn vào ở ngay.",
+            "Apartment",
+            "Sale",
+            4_900_000_000m,
+            75m,
+            "TP. Hồ Chí Minh",
+            "Quận 7",
+            "Tân Phú",
+            "1 Nguyễn Văn Linh");
+        await dbContext.SaveChangesAsync();
+
+        var correlationId = Guid.NewGuid();
+        var ameClientMock = new Mock<IAmeModerationClient>();
+        ameClientMock
+            .Setup(x => x.ModerateAsync(It.IsAny<AmeModerationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AmeModerationResponse(
+                Decision: ModerationDecision.Approved,
+                TotalRiskScore: 8m,
+                KeywordRiskScore: 0m,
+                PriceAnomalyScore: 3m,
+                CompletenessScore: 95m,
+                DuplicateScore: 0m,
+                AiSemanticScore: 5m,
+                Summary: "Nội dung cập nhật hợp lệ.",
+                ProcessingTimeMs: 95,
+                ReasonCodes: ["PASS_ALL_RULES"],
+                RawResponseJson: "{\"decision\":\"Approved\"}"));
+
+        var repository = new ListingRepository(dbContext);
+        var consumer = new AmeModerationConsumer(
+            dbContext,
+            repository,
+            ameClientMock.Object,
+            dbContext,
+            NullLogger<AmeModerationConsumer>.Instance);
+
+        var consumeContextMock = CreateConsumeContext(listing, correlationId);
+        await consumer.Consume(consumeContextMock.Object);
+
+        var updatedListing = await dbContext.Listings.SingleAsync(x => x.ListingId == listing.ListingId);
+        Assert.Equal(ListingStatus.Published, updatedListing.Status);
+        Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
+        Assert.Equal(expectedEndDate, updatedListing.EndDate);
         Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingPublished"));
     }
 
