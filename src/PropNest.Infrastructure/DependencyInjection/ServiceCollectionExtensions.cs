@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,13 +6,12 @@ using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
 using PropNest.Application.Wallets;
 using PropNest.Application.Workflows;
+using PropNest.Infrastructure.Consumers;
+using PropNest.Infrastructure.Filters;
 using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
-using MassTransit;
 using PropNest.Infrastructure.Workflows;
-using PropNest.Infrastructure.Consumers;
-using PropNest.Infrastructure.Filters;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("PropNest")
             ?? throw new InvalidOperationException("Connection string 'PropNest' is required.");
 
+        services.AddMemoryCache();
         services.AddDbContext<PropNestDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<PropNestDbContext>());
         services.AddScoped<IListingRepository, ListingRepository>();
@@ -37,12 +38,27 @@ public static class ServiceCollectionExtensions
 
         //tai
 
+        // Cấu hình Vietnam Address API (provinces.open-api.vn v1/v2)
+        services.Configure<VietnamAddressOptions>(configuration.GetSection(VietnamAddressOptions.SectionName));
+        services.AddHttpClient<IVietnamAddressService, VietnamAddressService>((_, client) =>
+        {
+            var vnOptions = configuration.GetSection(VietnamAddressOptions.SectionName).Get<VietnamAddressOptions>() ?? new VietnamAddressOptions();
+            client.BaseAddress = new Uri(vnOptions.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(vnOptions.TimeoutSeconds > 0 ? vnOptions.TimeoutSeconds : 15);
+        });
 
+        // Cấu hình Ollama Local AI gợi ý mô tả tin đăng
+        services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
+        services.AddHttpClient<IListingDescriptionGenerator, OllamaListingDescriptionGenerator>((_, client) =>
+        {
+            var ollamaOptions = configuration.GetSection(OllamaOptions.SectionName).Get<OllamaOptions>() ?? new OllamaOptions();
+            client.BaseAddress = new Uri(ollamaOptions.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(ollamaOptions.TimeoutSeconds > 0 ? ollamaOptions.TimeoutSeconds : 25);
+        });
 
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
         services.AddMassTransit(busConfig =>
         {
-
             busConfig.SetKebabCaseEndpointNameFormatter();
 
             // đăng ký saga
@@ -73,10 +89,8 @@ public static class ServiceCollectionExtensions
                 cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
-
-           
         });
-       
+
         services.AddHealthChecks()
             .AddDbContextCheck<PropNestDbContext>("sqlserver");
         return services;
