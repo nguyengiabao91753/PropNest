@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="700" viewBox="0 0 1360 700" role="img" aria-label="Kiến trúc chuẩn hóa chỉ mục và hàm xếp hạng Meilisearch">
+  <defs>
+    <style>
+      .sans { font-family: Segoe UI, Arial, Helvetica, sans-serif; }
+      .math { font-family: Cambria Math, Georgia, Times New Roman, serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-open" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#DC5656"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#54B56C"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#4AA3D8"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#F27D32"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1360" height="700" fill="#FFFFFF"/>
+  <rect x="28.0" y="36.0" width="376.0" height="628.0" rx="10" fill="#FAFCFF" stroke="#CBD5E1" stroke-width="1.6"/>
+  <rect x="44.0" y="24.0" width="251.7" height="24" rx="4" fill="#FFFFFF" stroke="#4AA3D8" stroke-width="1.6"/>
+  <text x="169.8" y="40.5" text-anchor="middle" fill="#4AA3D8" font-size="12" font-weight="700" class="sans">1. Chuẩn hóa Document (Ingestion)</text>
+  <polygon points="89.0,82.0 371.0,82.0 343.0,134.0 61.0,134.0" fill="#EFF8FD" stroke="#111827" stroke-width="1.9" stroke-linejoin="round"/>
+  <text x="216.0" y="104.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">SQL Entity (Listing + Images)</text>
+  <text x="216.0" y="120.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">Published ∧ Approved ∧ Còn hạn</text>
+  <rect x="58.0" y="180.0" width="316.0" height="68.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="59.0" y="181.0" width="6" height="66.0" rx="3" fill="#4AA3D8"/>
+  <text x="218.0" y="204.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Bóc tách HTML (Plain Text)</text>
+  <text x="218.0" y="227.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">d<tspan baseline-shift="sub" font-size="74%">txt</tspan> = stripHTML(description)</text>
+  <rect x="58.0" y="289.0" width="316.0" height="74.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="59.0" y="290.0" width="6" height="72.0" rx="3" fill="#54B56C"/>
+  <text x="218.0" y="316.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Chuẩn hóa tiếng Việt (đ/Đ &amp; NFD)</text>
+  <text x="218.0" y="339.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">N(s) = stripDiacritics(đ/Đ → d/D)</text>
+  <rect x="58.0" y="406.0" width="316.0" height="76.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="59.0" y="407.0" width="6" height="74.0" rx="3" fill="#F27D32"/>
+  <text x="218.0" y="434.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Gộp địa giới Trước &amp; Sau sáp nhập</text>
+  <text x="218.0" y="457.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">GeoTokens = OldGeo ∪ NewGeo</text>
+  <rect x="58.0" y="529.0" width="316.0" height="74.0" rx="7" fill="#EFF8FD" stroke="#4AA3D8" stroke-width="1.9"/>
+  <text x="216.0" y="556.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tính trường Unix &amp; Trọng số gói</text>
+  <text x="216.0" y="579.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">w<tspan baseline-shift="sub" font-size="74%">tier</tspan> ∈ {200, 100}  ·  t<tspan baseline-shift="sub" font-size="74%">end</tspan> (Unix s)</text>
+  <polyline points="216.0,134.0 216.0,180.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="216.0,248.0 216.0,289.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="216.0,363.0 216.0,406.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="216.0,482.0 216.0,529.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="440.0" y="36.0" width="412.0" height="628.0" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.6"/>
+  <rect x="456.0" y="24.0" width="251.7" height="24" rx="4" fill="#FFFFFF" stroke="#F27D32" stroke-width="1.6"/>
+  <text x="581.8" y="40.5" text-anchor="middle" fill="#F27D32" font-size="12" font-weight="700" class="sans">2. Bộ lọc truy vấn &amp; Lưới an toàn</text>
+  <polygon points="513.0,82.0 807.0,82.0 779.0,134.0 485.0,134.0" fill="#F8FAFC" stroke="#111827" stroke-width="1.9" stroke-linejoin="round"/>
+  <text x="646.0" y="104.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">Truy vấn q + Bộ lọc đa chiều</text>
+  <text x="646.0" y="120.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">(Giá, DT, Khu vực, Loại BĐS)</text>
+  <rect x="474.0" y="178.0" width="344.0" height="72.0" rx="7" fill="#FEFBE8" stroke="#F27D32" stroke-width="1.9"/>
+  <rect x="475.0" y="179.0" width="6" height="70.0" rx="3" fill="#F27D32"/>
+  <text x="648.0" y="204.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Hard Filter bắt buộc thời gian thực</text>
+  <text x="648.0" y="227.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">status = &#x27;Published&#x27;  ∧  t<tspan baseline-shift="sub" font-size="74%">end</tspan> &gt; t<tspan baseline-shift="sub" font-size="74%">now</tspan></text>
+  <rect x="474.0" y="292.0" width="344.0" height="72.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="475.0" y="293.0" width="6" height="70.0" rx="3" fill="#54B56C"/>
+  <text x="648.0" y="318.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Từ điển đồng nghĩa &amp; Chịu lỗi gõ</text>
+  <text x="648.0" y="341.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">Typo k=1 (len ≥ 4),  k=2 (len ≥ 8)</text>
+  <polygon points="646.0,414.0 771.0,466.0 646.0,518.0 521.0,466.0" fill="#FEFBE8" stroke="#111827" stroke-width="2.0" stroke-linejoin="round"/>
+  <text x="646.0" y="462.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">Meilisearch</text>
+  <text x="646.0" y="478.0" text-anchor="middle" fill="#111827" font-size="12.2" font-weight="700" class="sans">phản hồi ≤ 2s?</text>
+  <rect x="472.0" y="576.0" width="168.0" height="52.0" rx="26.0" fill="#FEF2F2" stroke="#DC5656" stroke-width="2.0"/>
+  <text x="556.0" y="598.0" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">SQL Fallback</text>
+  <text x="556.0" y="614.0" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">(Không lỗi 500)</text>
+  <rect x="662.0" y="576.0" width="168.0" height="52.0" rx="26.0" fill="#EFFAF2" stroke="#54B56C" stroke-width="2.0"/>
+  <text x="746.0" y="598.0" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Trả kết quả</text>
+  <text x="746.0" y="614.0" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">(&lt; 30 ms)</text>
+  <polyline points="646.0,134.0 646.0,178.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="646.0,250.0 646.0,292.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="646.0,364.0 646.0,414.0" fill="none" stroke="#111827" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="576.0,496.0 556.0,496.0 556.0,576.0" fill="none" stroke="#DC5656" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-red)"/>
+  <rect x="501.3" y="525.8" width="45.3" height="18.5" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+  <text x="524.0" y="539.9" text-anchor="middle" fill="#DC5656" font-size="11.5" font-weight="700" class="sans">Không</text>
+  <polyline points="716.0,496.0 746.0,496.0 746.0,576.0" fill="none" stroke="#54B56C" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-green)"/>
+  <rect x="761.3" y="525.8" width="25.3" height="18.5" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+  <text x="774.0" y="539.9" text-anchor="middle" fill="#54B56C" font-size="11.5" font-weight="700" class="sans">Có</text>
+  <polyline points="374.0,566.0 422.0,566.0 422.0,214.0 474.0,214.0" fill="none" stroke="#4AA3D8" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-blue)"/>
+  <rect x="888.0" y="36.0" width="444.0" height="628.0" rx="10" fill="#FAFFFB" stroke="#CBD5E1" stroke-width="1.6"/>
+  <rect x="904.0" y="24.0" width="286.5" height="24" rx="4" fill="#FFFFFF" stroke="#54B56C" stroke-width="1.6"/>
+  <text x="1047.2" y="40.5" text-anchor="middle" fill="#54B56C" font-size="12" font-weight="700" class="sans">3. Hàm xếp hạng 6 tầng (Ranking Rules)</text>
+  <rect x="918.0" y="76.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="77.0" width="6" height="54.0" rx="3" fill="#4AA3D8"/>
+  <text x="1112.0" y="94.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 1: words</text>
+  <text x="1112.0" y="117.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">Số từ khóa khớp tối đa</text>
+  <polyline points="1110.0,132.0 1110.0,150.0" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="918.0" y="150.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="151.0" width="6" height="54.0" rx="3" fill="#4AA3D8"/>
+  <text x="1112.0" y="168.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 2: typo</text>
+  <text x="1112.0" y="191.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">Số lỗi chính tả tối thiểu</text>
+  <polyline points="1110.0,206.0 1110.0,224.0" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="918.0" y="224.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="225.0" width="6" height="54.0" rx="3" fill="#4AA3D8"/>
+  <text x="1112.0" y="242.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 3: proximity</text>
+  <text x="1112.0" y="265.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">Khoảng cách giữa các từ gần nhất</text>
+  <polyline points="1110.0,280.0 1110.0,298.0" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="918.0" y="298.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="299.0" width="6" height="54.0" rx="3" fill="#F27D32"/>
+  <text x="1112.0" y="316.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 4: attribute</text>
+  <text x="1112.0" y="339.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">title &gt; address &gt; geo &gt; normalized &gt; desc</text>
+  <polyline points="1110.0,354.0 1110.0,372.0" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="918.0" y="372.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="373.0" width="6" height="54.0" rx="3" fill="#54B56C"/>
+  <text x="1112.0" y="390.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 5: sort (VIP &amp; Bump)</text>
+  <text x="1112.0" y="413.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">R(d) = (w<tspan baseline-shift="sub" font-size="74%">tier</tspan> DESC,  t<tspan baseline-shift="sub" font-size="74%">rank</tspan> DESC)</text>
+  <polyline points="1110.0,428.0 1110.0,446.0" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="918.0" y="446.0" width="384.0" height="56.0" rx="7" fill="#FFFFFF" stroke="#111827" stroke-width="1.9"/>
+  <rect x="919.0" y="447.0" width="6" height="54.0" rx="3" fill="#64748B"/>
+  <text x="1112.0" y="464.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Tầng 6: exactness</text>
+  <text x="1112.0" y="487.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">Độ khớp chính xác cụm từ gốc</text>
+  <rect x="918.0" y="555.0" width="384.0" height="78.0" rx="7" fill="#EFFAF2" stroke="#54B56C" stroke-width="1.9"/>
+  <text x="1110.0" y="573.5" text-anchor="middle" fill="#111827" font-size="12.5" font-weight="700" class="sans">Công thức thời gian xếp hạng (Sẵn sàng Đẩy tin)</text>
+  <text x="1110.0" y="600.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">t<tspan baseline-shift="sub" font-size="74%">rank</tspan> = COALESCE(t<tspan baseline-shift="sub" font-size="74%">bump</tspan>, t<tspan baseline-shift="sub" font-size="74%">start</tspan>, t<tspan baseline-shift="sub" font-size="74%">created</tspan>)</text>
+  <text x="1110.0" y="618.5" text-anchor="middle" fill="#1F2937" font-size="12.8" font-weight="500" class="math">w<tspan baseline-shift="sub" font-size="74%">tier</tspan>(VIP) = 200  &gt;  w<tspan baseline-shift="sub" font-size="74%">tier</tspan>(Standard) = 100</text>
+  <polyline points="818.0,328.0 888.0,328.0" fill="none" stroke="#54B56C" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-green)"/>
+</svg>
