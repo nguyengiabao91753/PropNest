@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PropNest.Application.Common;
 using PropNest.Application.Listings;
@@ -37,21 +38,25 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default) =>
-        await dbContext.Listings
+    public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await dbContext.Listings
             .Include(x => x.Images.OrderBy(img => img.SortOrder))
             .AsNoTracking()
-            .Where(x => x.Status == ListingStatus.PendingModeration)
-            .OrderBy(x => x.CreatedAt)
+            .Where(x => x.Status == ListingStatus.PendingModeration
+                     && x.ModerationDecision == ModerationDecision.ManualReview)
             .ToListAsync(cancellationToken);
+
+        return items.OrderBy(x => x.CreatedAt).ThenBy(x => x.ListingId).ToList();
+    }
 
     public async Task<IReadOnlyList<ListingDto>> GetPendingModerationWithOwnersAsync(CancellationToken cancellationToken = default)
     {
         var query = from l in dbContext.Listings.AsNoTracking()
                     where l.Status == ListingStatus.PendingModeration
+                       && l.ModerationDecision == ModerationDecision.ManualReview
                     join u in dbContext.Users.AsNoTracking() on l.OwnerUserId equals u.Id into userGroup
                     from user in userGroup.DefaultIfEmpty()
-                    orderby l.CreatedAt ascending
                     select new ListingDto(
                         l.ListingId,
                         l.OwnerUserId,
@@ -86,9 +91,11 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         l.WardCode,
                         l.LegacyAddress,
                         l.PackageEndDate,
+                        null,
                         null);
 
-        return await query.ToListAsync(cancellationToken);
+        var items = await query.ToListAsync(cancellationToken);
+        return items.OrderBy(x => x.CreatedAt).ThenBy(x => x.ListingId).ToList();
     }
 
     public async Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default) =>
@@ -210,7 +217,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                     where history.ListingId == listingId
                     join user in dbContext.Users.AsNoTracking() on history.ActorUserId equals user.Id into userGroup
                     from actor in userGroup.DefaultIfEmpty()
-                    orderby history.ActionDate ascending, history.HistoryId ascending
+                    orderby history.HistoryId ascending
                     select new ListingHistoryDto(
                         history.ActionType,
                         history.ActionDate,
@@ -220,7 +227,8 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         history.SnapshotJson,
                         history.DeltasJson,
                         history.Note);
-        return await query.ToListAsync(cancellationToken);
+        var items = await query.ToListAsync(cancellationToken);
+        return items.OrderBy(x => x.ActionDate).ToList();
     }
 
     public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default) =>
@@ -244,35 +252,97 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public void RemoveImage(ListingImage image) => dbContext.ListingImages.Remove(image);
 
     public async Task<AmeModerationResult?> GetLatestAmeResultAsync(
-    long listingId, CancellationToken cancellationToken = default)
+        long listingId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.AmeModerationResults
+        var results = await dbContext.AmeModerationResults
             .AsNoTracking()
             .Where(r => r.ListingId == listingId)
+            .ToListAsync(cancellationToken);
+
+        return results
             .OrderByDescending(r => r.CheckedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ThenByDescending(r => r.ResultId)
+            .FirstOrDefault();
     }
 
     public async Task<string?> GetLatestRejectReasonAsync(
         long listingId, CancellationToken cancellationToken = default)
     {
-        var review = await dbContext.Set<ListingModerationReview>()
+        var reviews = await dbContext.Set<ListingModerationReview>()
             .AsNoTracking()
             .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .ToListAsync(cancellationToken);
+
+        var review = reviews
             .OrderByDescending(r => r.ReviewedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ThenByDescending(r => r.ReviewId)
+            .FirstOrDefault();
 
         if (review != null && !string.IsNullOrWhiteSpace(review.ReasonsJson))
         {
             return review.ReasonsJson;
         }
 
-        var ameResult = await dbContext.AmeModerationResults
+        var ameResults = await dbContext.AmeModerationResults
             .AsNoTracking()
             .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
-            .OrderByDescending(r => r.CheckedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        return ameResult?.ReasonsJson;
+        return ameResults
+            .OrderByDescending(r => r.CheckedAt)
+            .ThenByDescending(r => r.ResultId)
+            .FirstOrDefault()?.ReasonsJson;
+    }
+
+    public async Task<string?> GetLatestModerationWarningAsync(
+        long listingId, CancellationToken cancellationToken = default)
+    {
+        var ameResult = await GetLatestAmeResultAsync(listingId, cancellationToken);
+
+        if (ameResult is null || ameResult.Decision != ModerationDecision.Approved)
+        {
+            return null;
+        }
+
+        var hasPriceWarning =
+            (!string.IsNullOrWhiteSpace(ameResult.WarningsJson) &&
+             ameResult.WarningsJson.Contains("PRICE_", StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrWhiteSpace(ameResult.ReasonsJson) &&
+             ameResult.ReasonsJson.Contains("PRICE_", StringComparison.OrdinalIgnoreCase));
+
+        if (!hasPriceWarning)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ameResult.ReasonsJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(ameResult.ReasonsJson);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("PriceWarningMessage", out var msgElem) &&
+                        msgElem.ValueKind == JsonValueKind.String &&
+                        !string.IsNullOrWhiteSpace(msgElem.GetString()))
+                    {
+                        return msgElem.GetString();
+                    }
+
+                    if (doc.RootElement.TryGetProperty("Summary", out var summaryElem) &&
+                        summaryElem.ValueKind == JsonValueKind.String &&
+                        !string.IsNullOrWhiteSpace(summaryElem.GetString()))
+                    {
+                        return summaryElem.GetString();
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall back to canonical price warning message below.
+            }
+        }
+
+        return "Giá đăng chênh lệch lớn so với giá bình quân (m²) khu vực — tin vẫn được duyệt nhưng có thể là giá ảo.";
     }
 }
