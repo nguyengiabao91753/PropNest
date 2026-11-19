@@ -114,7 +114,8 @@ public sealed record ListingSummaryDto(
     int? Bathrooms = null,
     string? BalconyDirection = null,
     string AdministrativeMode = "PostMerger",
-    string? LegacyAddress = null);
+    string? LegacyAddress = null,
+    string? ThumbnailUrl = null);
 
 public sealed record ListingCollectionDto(
     int Total,
@@ -152,6 +153,9 @@ public interface IListingRepository
 
     Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Listing>> GetStalePendingModerationListingsAsync(DateTimeOffset cutoffUtc, int batchSize, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Listing>>(Array.Empty<Listing>());
+
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
 
     void AddHistory(ListingHistory history);
@@ -174,6 +178,9 @@ public interface IListingRepository
 
     Task<IReadOnlyList<ListingImage>> GetImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ListingImage>> GetTrackedImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) =>
+        GetImagesByListingIdAsync(listingId, cancellationToken);
+
     Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default);
 
     void AddImage(ListingImage image);
@@ -185,6 +192,38 @@ public interface IListingRepository
     Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default);
 
     Task<string?> GetLatestModerationWarningAsync(long listingId, CancellationToken cancellationToken = default);
+
+    async Task<IReadOnlyDictionary<long, string>> GetLatestRejectReasonsAsync(
+        IReadOnlyCollection<long> listingIds,
+        CancellationToken cancellationToken = default)
+    {
+        var map = new Dictionary<long, string>();
+        foreach (var id in listingIds)
+        {
+            var reason = await GetLatestRejectReasonAsync(id, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                map[id] = reason;
+            }
+        }
+        return map;
+    }
+
+    async Task<IReadOnlyDictionary<long, string>> GetLatestModerationWarningsAsync(
+        IReadOnlyCollection<long> listingIds,
+        CancellationToken cancellationToken = default)
+    {
+        var map = new Dictionary<long, string>();
+        foreach (var id in listingIds)
+        {
+            var warning = await GetLatestModerationWarningAsync(id, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(warning))
+            {
+                map[id] = warning;
+            }
+        }
+        return map;
+    }
 }
 
 public interface IListingService

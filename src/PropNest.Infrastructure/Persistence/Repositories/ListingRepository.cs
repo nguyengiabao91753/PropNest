@@ -116,6 +116,21 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .Take(batchSize)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Listing>> GetStalePendingModerationListingsAsync(DateTimeOffset cutoffUtc, int batchSize, CancellationToken cancellationToken = default)
+    {
+        var pending = await dbContext.Listings
+            .Where(x => x.Status == ListingStatus.PendingModeration
+                     && x.ModerationDecision == ModerationDecision.Pending)
+            .OrderBy(x => x.ListingId)
+            .Take(batchSize * 3)
+            .ToListAsync(cancellationToken);
+
+        return pending
+            .Where(x => x.UpdatedAt <= cutoffUtc)
+            .Take(batchSize)
+            .ToList();
+    }
+
     public Task AddAsync(Listing listing, CancellationToken cancellationToken = default) =>
         dbContext.Listings.AddAsync(listing, cancellationToken).AsTask();
 
@@ -158,8 +173,9 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             };
         }
 
+        var now = DateTimeOffset.UtcNow;
         var queryable = dbContext.Listings.AsNoTracking()
-            .Where(x => x.Status == ListingStatus.Published)
+            .Where(x => x.Status == ListingStatus.Published && (x.EndDate == null || x.EndDate > now))
             .Where(x => string.IsNullOrWhiteSpace(query.Q) ||
                         x.Title.Contains(query.Q) ||
                         x.Address.Contains(query.Q) ||
@@ -205,7 +221,12 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                 x.Bathrooms,
                 x.BalconyDirection,
                 x.AdministrativeMode,
-                x.LegacyAddress))
+                x.LegacyAddress,
+                x.Images
+                    .OrderBy(i => i.IsCover ? 0 : 1)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.Url)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);
@@ -243,6 +264,12 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             .OrderBy(x => x.SortOrder)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ListingImage>> GetTrackedImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) =>
+        await dbContext.ListingImages
+            .Where(x => x.ListingId == listingId)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken);
+
     public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) =>
         dbContext.ListingImages
             .SingleOrDefaultAsync(x => x.ImageId == imageId, cancellationToken);
@@ -254,51 +281,118 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public async Task<AmeModerationResult?> GetLatestAmeResultAsync(
         long listingId, CancellationToken cancellationToken = default)
     {
-        var results = await dbContext.AmeModerationResults
+        return await dbContext.AmeModerationResults
             .AsNoTracking()
             .Where(r => r.ListingId == listingId)
-            .ToListAsync(cancellationToken);
-
-        return results
-            .OrderByDescending(r => r.CheckedAt)
-            .ThenByDescending(r => r.ResultId)
-            .FirstOrDefault();
+            .OrderByDescending(r => r.ResultId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<string?> GetLatestRejectReasonAsync(
         long listingId, CancellationToken cancellationToken = default)
     {
-        var reviews = await dbContext.Set<ListingModerationReview>()
+        var reviewReason = await dbContext.Set<ListingModerationReview>()
             .AsNoTracking()
             .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
-            .ToListAsync(cancellationToken);
+            .OrderByDescending(r => r.ReviewId)
+            .Select(r => r.ReasonsJson)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var review = reviews
-            .OrderByDescending(r => r.ReviewedAt)
-            .ThenByDescending(r => r.ReviewId)
-            .FirstOrDefault();
-
-        if (review != null && !string.IsNullOrWhiteSpace(review.ReasonsJson))
+        if (!string.IsNullOrWhiteSpace(reviewReason))
         {
-            return review.ReasonsJson;
+            return reviewReason;
         }
 
-        var ameResults = await dbContext.AmeModerationResults
+        return await dbContext.AmeModerationResults
             .AsNoTracking()
             .Where(r => r.ListingId == listingId && r.Decision == ModerationDecision.Rejected)
+            .OrderByDescending(r => r.ResultId)
+            .Select(r => r.ReasonsJson)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<long, string>> GetLatestRejectReasonsAsync(
+        IReadOnlyCollection<long> listingIds, CancellationToken cancellationToken = default)
+    {
+        var result = new Dictionary<long, string>();
+        if (listingIds.Count == 0)
+        {
+            return result;
+        }
+
+        var reviews = await dbContext.Set<ListingModerationReview>()
+            .AsNoTracking()
+            .Where(r => listingIds.Contains(r.ListingId) && r.Decision == ModerationDecision.Rejected)
+            .Select(r => new { r.ListingId, r.ReviewId, r.ReasonsJson })
             .ToListAsync(cancellationToken);
 
-        return ameResults
-            .OrderByDescending(r => r.CheckedAt)
-            .ThenByDescending(r => r.ResultId)
-            .FirstOrDefault()?.ReasonsJson;
+        foreach (var group in reviews.GroupBy(r => r.ListingId))
+        {
+            var latest = group.OrderByDescending(x => x.ReviewId).FirstOrDefault();
+            if (latest is not null && !string.IsNullOrWhiteSpace(latest.ReasonsJson))
+            {
+                result[group.Key] = latest.ReasonsJson;
+            }
+        }
+
+        var missingIds = listingIds.Where(id => !result.ContainsKey(id)).ToArray();
+        if (missingIds.Length > 0)
+        {
+            var ameResults = await dbContext.AmeModerationResults
+                .AsNoTracking()
+                .Where(r => missingIds.Contains(r.ListingId) && r.Decision == ModerationDecision.Rejected)
+                .Select(r => new { r.ListingId, r.ResultId, r.ReasonsJson })
+                .ToListAsync(cancellationToken);
+
+            foreach (var group in ameResults.GroupBy(r => r.ListingId))
+            {
+                var latest = group.OrderByDescending(x => x.ResultId).FirstOrDefault();
+                if (latest is not null && !string.IsNullOrWhiteSpace(latest.ReasonsJson))
+                {
+                    result[group.Key] = latest.ReasonsJson;
+                }
+            }
+        }
+
+        return result;
     }
 
     public async Task<string?> GetLatestModerationWarningAsync(
         long listingId, CancellationToken cancellationToken = default)
     {
         var ameResult = await GetLatestAmeResultAsync(listingId, cancellationToken);
+        return ExtractPriceWarningMessage(ameResult);
+    }
 
+    public async Task<IReadOnlyDictionary<long, string>> GetLatestModerationWarningsAsync(
+        IReadOnlyCollection<long> listingIds, CancellationToken cancellationToken = default)
+    {
+        var result = new Dictionary<long, string>();
+        if (listingIds.Count == 0)
+        {
+            return result;
+        }
+
+        var ameRows = await dbContext.AmeModerationResults
+            .AsNoTracking()
+            .Where(r => listingIds.Contains(r.ListingId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var group in ameRows.GroupBy(r => r.ListingId))
+        {
+            var latest = group.OrderByDescending(r => r.ResultId).FirstOrDefault();
+            var warning = ExtractPriceWarningMessage(latest);
+            if (!string.IsNullOrWhiteSpace(warning))
+            {
+                result[group.Key] = warning;
+            }
+        }
+
+        return result;
+    }
+
+    private static string? ExtractPriceWarningMessage(AmeModerationResult? ameResult)
+    {
         if (ameResult is null || ameResult.Decision != ModerationDecision.Approved)
         {
             return null;

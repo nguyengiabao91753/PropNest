@@ -75,21 +75,38 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
     {
         var listings = await listingRepository.GetByOwnerUserIdAsync(ownerUserId, cancellationToken);
-        var items = new List<ListingDto>(listings.Count);
-        foreach (var l in listings)
+        if (listings.Count == 0)
         {
-            string? rejectReason = null;
-            string? moderationWarning = null;
-            if (l.Status == ListingStatus.Rejected)
-            {
-                rejectReason = await listingRepository.GetLatestRejectReasonAsync(l.ListingId, cancellationToken);
-            }
-            else if (l.ModerationDecision == ModerationDecision.Approved)
-            {
-                moderationWarning = await listingRepository.GetLatestModerationWarningAsync(l.ListingId, cancellationToken);
-            }
-            items.Add(ToDto(l, null, rejectReason, moderationWarning));
+            return new ListingCollectionDto(0, Array.Empty<ListingDto>());
         }
+
+        var rejectedIds = listings
+            .Where(l => l.Status == ListingStatus.Rejected)
+            .Select(l => l.ListingId)
+            .ToArray();
+
+        var approvedIds = listings
+            .Where(l => l.Status != ListingStatus.Rejected && l.ModerationDecision == ModerationDecision.Approved)
+            .Select(l => l.ListingId)
+            .ToArray();
+
+        var rejectReasons = rejectedIds.Length > 0
+            ? await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken)
+            : new Dictionary<long, string>();
+
+        var moderationWarnings = approvedIds.Length > 0
+            ? await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken)
+            : new Dictionary<long, string>();
+
+        var items = listings
+            .Select(l =>
+            {
+                rejectReasons.TryGetValue(l.ListingId, out var rejectReason);
+                moderationWarnings.TryGetValue(l.ListingId, out var moderationWarning);
+                return ToDto(l, null, rejectReason, moderationWarning);
+            })
+            .ToList();
+
         return new ListingCollectionDto(items.Count, items);
     }
 
@@ -126,7 +143,6 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             command.WardCode,
             command.LegacyAddress);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
         var after = ToDto(listing);
         var deltas = DeltaEngine.CreateDeltas(before, after);
         listingRepository.AddHistory(ListingHistory.CreateDelta(
@@ -140,9 +156,10 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             EnqueueListingSubmittedOutbox(listing);
         }
 
+        // Lưu toàn bộ thay đổi tin đăng + lịch sử Delta + Outbox AME trong 1 lần SaveChanges nguyên tử
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return after;
+        return ToDto(listing);
     }
 
     public async Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default)

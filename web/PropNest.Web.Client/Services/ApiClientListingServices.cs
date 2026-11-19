@@ -160,7 +160,10 @@ namespace PropNest.Web.Client.Services
                         PackageCode = x.PackageCode,
                         ListingType = x.ListingType,
                         PropertyType = x.PropertyType,
-                        CreatedAt = x.CreatedDate
+                        CreatedAt = x.CreatedDate,
+                        ImageUrls = !string.IsNullOrWhiteSpace(x.ThumbnailUrl)
+                            ? new List<string> { x.ThumbnailUrl }
+                            : new List<string>()
                     }).ToList();
                 }
             }
@@ -206,7 +209,8 @@ namespace PropNest.Web.Client.Services
             int? Bathrooms = null,
             string? BalconyDirection = null,
             string? AdministrativeMode = null,
-            string? LegacyAddress = null
+            string? LegacyAddress = null,
+            string? ThumbnailUrl = null
             );
 
         private sealed record ApiListingDetailDto(
