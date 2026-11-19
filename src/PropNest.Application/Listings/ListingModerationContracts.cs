@@ -30,6 +30,37 @@ public sealed record ListingSubmitted(
     int? Bedrooms = null,
     int? Bathrooms = null);
 
+public sealed record ListingPublishedEvent(
+    long ListingId,
+    long OwnerUserId,
+    string PackageCode,
+    string Status,
+    DateTimeOffset? StartDate,
+    DateTimeOffset? EndDate,
+    DateTimeOffset? PackageEndDate,
+    string? PriceWarningMessage = null);
+
+public sealed record ListingApprovedPendingPaymentEvent(
+    long ListingId,
+    long OwnerUserId,
+    string PackageCode,
+    string Status,
+    DateTimeOffset? StartDate,
+    DateTimeOffset? EndDate,
+    DateTimeOffset? PackageEndDate,
+    string? PriceWarningMessage = null);
+
+public sealed record ListingRejectedEvent(
+    long ListingId,
+    long OwnerUserId,
+    string ReasonsJson);
+
+public sealed record ListingExpiredEvent(
+    long ListingId,
+    long OwnerUserId,
+    string PackageCode,
+    DateTimeOffset? EndDate);
+
 public sealed record AmeContentRuleDto(
     string RuleCode,
     string Category,
