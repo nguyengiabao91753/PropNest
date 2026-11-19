@@ -21,7 +21,14 @@ public sealed record ListingSubmitted(
     string District,
     string? Ward,
     string Address,
-    DateTimeOffset SubmittedAt);
+    DateTimeOffset SubmittedAt,
+    IReadOnlyList<string>? Images = null,
+    string? LegacyAddress = null,
+    string AdministrativeMode = "PostMerger",
+    int? ProvinceCode = null,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null);
 
 public sealed record AmeContentRuleDto(
     string RuleCode,
@@ -30,6 +37,7 @@ public sealed record AmeContentRuleDto(
     bool IsRegex,
     string Severity,
     decimal ScoreWeight);
+
 public sealed record AmePriceBenchmarkDto(
     string PropertyType,
     string ListingType,
@@ -38,6 +46,12 @@ public sealed record AmePriceBenchmarkDto(
     decimal MinPricePerSqm,
     decimal AvgPricePerSqm,
     decimal MaxPricePerSqm);
+
+public sealed record AmeRuleViolationDto(
+    string Rule,
+    string Severity,
+    string Message);
+
 public sealed record AmeModerationRequest(
     long ListingId,
     Guid CorrelationId,
@@ -52,7 +66,18 @@ public sealed record AmeModerationRequest(
     string? Ward,
     string Address,
     IReadOnlyList<AmeContentRuleDto> ActiveRules,
-    AmePriceBenchmarkDto? PriceBenchmark);
+    AmePriceBenchmarkDto? PriceBenchmark,
+    string? LegacyAddress = null,
+    string AdministrativeMode = "PostMerger",
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    int? Floors = null,
+    int? Bedrooms = null,
+    int? Bathrooms = null,
+    string? BalconyDirection = null,
+    IReadOnlyList<string>? Images = null);
+
 public sealed record AmeModerationResponse(
     ModerationDecision Decision,
     decimal TotalRiskScore,
@@ -64,7 +89,9 @@ public sealed record AmeModerationResponse(
     string Summary,
     int ProcessingTimeMs,
     IReadOnlyList<string> ReasonCodes,
-    string RawResponseJson)
+    string RawResponseJson,
+    IReadOnlyList<AmeRuleViolationDto>? Violations = null,
+    string? PriceWarningMessage = null)
 {
     public static AmeModerationResponse FallbackManualReview(string reasonCode, string? detail = null)
     {
@@ -82,7 +109,9 @@ public sealed record AmeModerationResponse(
             Summary: summary,
             ProcessingTimeMs: 0,
             ReasonCodes: [reasonCode],
-            RawResponseJson: "{}");
+            RawResponseJson: "{}",
+            Violations: null,
+            PriceWarningMessage: null);
     }
 }
 public interface IAmeModerationClient

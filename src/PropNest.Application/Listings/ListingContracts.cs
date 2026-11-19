@@ -84,7 +84,8 @@ public sealed record ListingDto(
     int? WardCode = null,
     string? LegacyAddress = null,
     DateTimeOffset? PackageEndDate = null,
-    string? LatestRejectReason = null
+    string? LatestRejectReason = null,
+    string? LatestModerationWarning = null
     );
 
 public sealed record ListingOwnerContactDto(
@@ -182,6 +183,8 @@ public interface IListingRepository
     Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default);
 
     Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default);
+
+    Task<string?> GetLatestModerationWarningAsync(long listingId, CancellationToken cancellationToken = default);
 }
 
 public interface IListingService

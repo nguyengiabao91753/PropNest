@@ -59,12 +59,17 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var owner = await listingRepository.GetOwnerContactAsync(listing.OwnerUserId, cancellationToken);
 
         string? rejectReason = null;
+        string? moderationWarning = null;
         if (listing.Status == ListingStatus.Rejected)
         {
             rejectReason = await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken);
         }
+        else if (listing.ModerationDecision == ModerationDecision.Approved)
+        {
+            moderationWarning = await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken);
+        }
 
-        return ToDto(listing, owner, rejectReason);
+        return ToDto(listing, owner, rejectReason, moderationWarning);
     }
 
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
@@ -74,11 +79,16 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         foreach (var l in listings)
         {
             string? rejectReason = null;
+            string? moderationWarning = null;
             if (l.Status == ListingStatus.Rejected)
             {
                 rejectReason = await listingRepository.GetLatestRejectReasonAsync(l.ListingId, cancellationToken);
             }
-            items.Add(ToDto(l, null, rejectReason));
+            else if (l.ModerationDecision == ModerationDecision.Approved)
+            {
+                moderationWarning = await listingRepository.GetLatestModerationWarningAsync(l.ListingId, cancellationToken);
+            }
+            items.Add(ToDto(l, null, rejectReason, moderationWarning));
         }
         return new ListingCollectionDto(items.Count, items);
     }
@@ -160,6 +170,13 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     private void EnqueueListingSubmittedOutbox(Listing listing)
     {
         var correlationId = Guid.NewGuid();
+        var imageUrls = listing.Images?
+            .OrderBy(img => img.IsCover ? 0 : 1)
+            .ThenBy(img => img.SortOrder)
+            .Select(img => img.Url)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToList() ?? [];
+
         var submittedEvent = new ListingSubmitted(
             CorrelationId: correlationId,
             ListingId: listing.ListingId,
@@ -174,7 +191,14 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             District: listing.District,
             Ward: listing.Ward,
             Address: listing.Address,
-            SubmittedAt: DateTimeOffset.UtcNow);
+            SubmittedAt: DateTimeOffset.UtcNow,
+            Images: imageUrls,
+            LegacyAddress: listing.LegacyAddress,
+            AdministrativeMode: listing.AdministrativeMode,
+            ProvinceCode: listing.ProvinceCode,
+            Floors: listing.Floors,
+            Bedrooms: listing.Bedrooms,
+            Bathrooms: listing.Bathrooms);
 
         var payloadJson = JsonSerializer.Serialize(submittedEvent);
         listingRepository.AddOutboxMessage(
@@ -215,7 +239,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.LegacyAddress,
         listing.PackageEndDate);
 
-    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null, string? rejectReason = null) => new(
+    private static ListingDto ToDto(
+        Listing listing,
+        ListingOwnerContactDto? owner = null,
+        string? rejectReason = null,
+        string? moderationWarning = null) => new(
         listing.ListingId,
         listing.OwnerUserId,
         listing.Title,
@@ -249,7 +277,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         listing.WardCode,
         listing.LegacyAddress,
         listing.PackageEndDate,
-        rejectReason);
+        rejectReason,
+        moderationWarning);
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
