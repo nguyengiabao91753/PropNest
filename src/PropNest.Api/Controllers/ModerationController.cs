@@ -32,7 +32,13 @@ public sealed class ModerationController(
         var statusDict = statusGroups.ToDictionary(g => g.Status.ToString(), g => g.Count);
 
         var publishedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Published), 0);
-        var pendingCount = statusDict.GetValueOrDefault(nameof(ListingStatus.PendingModeration), 0);
+        // Hàng chờ Admin chỉ bao gồm các tin AME từ chối tự động duyệt / cần duyệt thủ công (ManualReview)
+        var pendingCount = await dbContext.Listings.AsNoTracking()
+            .CountAsync(l => l.Status == ListingStatus.PendingModeration
+                          && l.ModerationDecision == ModerationDecision.ManualReview, cancellationToken);
+        var ameProcessingCount = await dbContext.Listings.AsNoTracking()
+            .CountAsync(l => l.Status == ListingStatus.PendingModeration
+                          && l.ModerationDecision != ModerationDecision.ManualReview, cancellationToken);
         var pendingPaymentCount = statusDict.GetValueOrDefault(nameof(ListingStatus.PendingPayment), 0);
         var rejectedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Rejected), 0);
         var draftCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Draft), 0);
@@ -132,6 +138,7 @@ public sealed class ModerationController(
         {
             publishedCount,
             pendingCount,
+            ameProcessingCount,
             pendingPaymentCount,
             rejectedCount,
             draftCount,
@@ -206,6 +213,7 @@ public sealed class ModerationController(
                         l.WardCode,
                         l.LegacyAddress,
                         l.PackageEndDate,
+                        null,
                         null);
 
         var items = await query.ToListAsync(cancellationToken);

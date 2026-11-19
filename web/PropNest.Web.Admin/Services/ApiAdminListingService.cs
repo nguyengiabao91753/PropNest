@@ -614,8 +614,14 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             {
                 using var reasonsDoc = JsonDocument.Parse(reasonsJsonStr);
                 var r = reasonsDoc.RootElement;
-                result.Summary = GetString(r, "Summary");
-                if (r.TryGetProperty("ReasonCodes", out var codesElem) &&
+                result.Summary = GetString(r, "Summary", "summary");
+                var priceWarning = GetString(r, "PriceWarningMessage", "priceWarningMessage");
+                if (!string.IsNullOrWhiteSpace(priceWarning))
+                {
+                    result.PriceBenchmarkText = priceWarning;
+                }
+
+                if (TryGetProp(r, "ReasonCodes", out var codesElem) &&
                     codesElem.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var code in codesElem.EnumerateArray())
@@ -623,6 +629,26 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                         var codeStr = code.GetString();
                         if (!string.IsNullOrEmpty(codeStr))
                             result.ReasonCodes.Add(codeStr);
+                    }
+                }
+
+                if (TryGetProp(r, "Violations", out var violationsElem) &&
+                    violationsElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var v in violationsElem.EnumerateArray())
+                    {
+                        var rule = GetString(v, "Rule", "rule") ?? string.Empty;
+                        var severity = GetString(v, "Severity", "severity") ?? "info";
+                        var message = GetString(v, "Message", "message") ?? MapWarningMessage(rule);
+                        if (!string.IsNullOrWhiteSpace(rule))
+                        {
+                            result.Violations.Add(new AmeViolationViewModel
+                            {
+                                Rule = rule,
+                                Severity = severity,
+                                Message = message
+                            });
+                        }
                     }
                 }
             }
@@ -634,33 +660,47 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 {
                     result.BadwordsPassed = false;
                 }
-                if (code.Contains("PRICE", StringComparison.OrdinalIgnoreCase))
+                if (code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase))
                 {
-                    result.PriceBenchmarkText = "Giá bất thường so với khu vực";
+                    result.ImageQualityPassed = false;
+                }
+                if (code.Contains("PRICE", StringComparison.OrdinalIgnoreCase) &&
+                    result.PriceBenchmarkText == "Chưa có dữ liệu")
+                {
+                    result.PriceBenchmarkText = "Có dấu hiệu giá ảo (chênh lệch khu vực)";
                 }
             }
 
+            if (result.Violations.Any(v => v.Rule.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)))
+            {
+                result.ImageQualityPassed = false;
+            }
+
             if (result.BadwordsPassed &&
-            !result.ReasonCodes.Any(c => c.Contains("PRICE", StringComparison.OrdinalIgnoreCase)))
+                !result.ReasonCodes.Any(c => c.Contains("PRICE", StringComparison.OrdinalIgnoreCase)))
             {
                 result.PriceBenchmarkText = "Chuẩn khu vực";
             }
 
-            var warningsJsonStr = GetString(root, "warningsJson");
-            if (!string.IsNullOrWhiteSpace(warningsJsonStr))
+            if (result.Violations.Count == 0)
             {
-                using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
-                if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                var warningsJsonStr = GetString(root, "warningsJson");
+                if (!string.IsNullOrWhiteSpace(warningsJsonStr))
                 {
-                    foreach (var w in warningsDoc.RootElement.EnumerateArray())
+                    using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
+                    if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        var warnCode = w.GetString() ?? "";
-                        result.Violations.Add(new AmeViolationViewModel
+                        foreach (var w in warningsDoc.RootElement.EnumerateArray())
                         {
-                            Rule = warnCode,
-                            Severity = ClassifyWarningSeverity(warnCode),
-                            Message = MapWarningMessage(warnCode)
-                        });
+                            var warnCode = w.GetString() ?? "";
+                            if (string.IsNullOrWhiteSpace(warnCode)) continue;
+                            result.Violations.Add(new AmeViolationViewModel
+                            {
+                                Rule = warnCode,
+                                Severity = ClassifyWarningSeverity(warnCode),
+                                Message = MapWarningMessage(warnCode)
+                            });
+                        }
                     }
                 }
             }
@@ -759,9 +799,21 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         _ when code.Contains("PHONE", StringComparison.OrdinalIgnoreCase)
             => "Phát hiện số điện thoại trong nội dung",
         _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase)
-            => "Giá bất thường so với khung giá khu vực",
-        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase)
-            => "Định dạng nội dung không đạt chuẩn",
+            => "Giá bất thường so với khung giá khu vực (có thể là giá ảo)",
+        _ when code.Contains("IMAGE_BLURRY", StringComparison.OrdinalIgnoreCase)
+            => "Ảnh bị mờ hoặc mất nét — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE_LOW_RESOLUTION", StringComparison.OrdinalIgnoreCase)
+            => "Ảnh có độ phân giải quá thấp — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE_MISSING", StringComparison.OrdinalIgnoreCase)
+            => "Tin đăng chưa có ảnh để AI đánh giá — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)
+            => "Không đánh giá được chất lượng ảnh — cần Admin duyệt tay",
+        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("CAPS", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("SHORT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("REPETITION", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("SPECS", StringComparison.OrdinalIgnoreCase)
+            => "Định dạng nội dung hoặc thông số chưa đạt chuẩn",
         _ when code.Contains("FALLBACK", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase)
             => "Chuyển sang kiểm duyệt thủ công",
