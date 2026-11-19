@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PropNest AME — Theo dõi tiến trình kiểm duyệt thời gian thực</title>
+  <title>PropNest — Theo dõi tiến trình kiểm duyệt tự động</title>
   <style>
     :root {
       --bg: #0b1120;
@@ -229,16 +229,16 @@
   <div class="container">
     <header>
       <div class="brand">
-        <div class="brand-icon">AI</div>
+        <div class="brand-icon">PN</div>
         <div>
-          <h1>PropNest AME — Giám sát luồng kiểm duyệt trực tiếp</h1>
-          <p>Theo dõi chi tiết từng bước xử lý: Khung giá khu vực → Luật &amp; Giá ảo → Kiểm ảnh → AI Ollama → Kết luận</p>
+          <h1>PropNest — Giám sát tiến trình kiểm duyệt tự động</h1>
+          <p>Theo dõi từng bước xử lý tin đăng: Khung giá khu vực → Nội dung &amp; Giá → Chất lượng ảnh → Đánh giá ngữ nghĩa → Kết quả duyệt</p>
         </div>
       </div>
       <div class="header-actions">
-        <span id="connStatus" class="live-pill"><span class="dot"></span> Đang kết nối SSE...</span>
+        <span id="connStatus" class="live-pill"><span class="dot"></span> Đang kết nối...</span>
         <button class="btn btn-primary" onclick="openTestModal()">▶ Chạy thử tin mẫu</button>
-        <a class="btn" href="/docs" target="_blank">Swagger API (/docs)</a>
+        <a class="btn" href="/docs" target="_blank">Tài liệu hệ thống</a>
         <button class="btn btn-danger" onclick="clearHistory()">Xóa lịch sử</button>
       </div>
     </header>
@@ -250,29 +250,29 @@
         <span class="kpi-sub">Lưu tối đa 150 tin gần nhất</span>
       </div>
       <div class="kpi">
-        <span class="kpi-label">Đang xử lý (Live)</span>
+        <span class="kpi-label">Đang xử lý</span>
         <span id="statRunning" class="kpi-value c-blue">0</span>
         <span class="kpi-sub">Cập nhật theo từng bước</span>
       </div>
       <div class="kpi">
-        <span class="kpi-label">Tự động duyệt (Sạch)</span>
+        <span class="kpi-label">Tự động duyệt (Đạt chuẩn)</span>
         <span id="statApprovedClean" class="kpi-value c-green">0</span>
         <span class="kpi-sub">Đạt nội dung, ảnh &amp; giá</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">Duyệt + Cảnh báo giá ảo</span>
         <span id="statPriceWarn" class="kpi-value c-amber">0</span>
-        <span class="kpi-sub">Vẫn duyệt kèm cảnh báo Seller</span>
+        <span class="kpi-sub">Vẫn duyệt kèm cảnh báo người bán</span>
       </div>
       <div class="kpi">
-        <span class="kpi-label">Chuyển Admin duyệt</span>
+        <span class="kpi-label">Chuyển quản trị viên duyệt</span>
         <span id="statManual" class="kpi-value c-purple">0</span>
-        <span class="kpi-sub">Ảnh mờ/thiếu hoặc AI cần xác minh</span>
+        <span class="kpi-sub">Ảnh mờ/thiếu hoặc cần xác minh thêm</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">Tự động từ chối</span>
         <span id="statRejected" class="kpi-value c-red">0</span>
-        <span class="kpi-sub">Từ cấm / Lộ SĐT (dừng sớm)</span>
+        <span class="kpi-sub">Từ cấm / Lộ số điện thoại</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">Thời gian xử lý TB</span>
@@ -287,10 +287,10 @@
         <button class="filter-btn" data-filter="running">Đang chạy</button>
         <button class="filter-btn" data-filter="approved">Đã duyệt</button>
         <button class="filter-btn" data-filter="price_warning">Cảnh báo giá ảo</button>
-        <button class="filter-btn" data-filter="manualreview">Chuyển Admin</button>
+        <button class="filter-btn" data-filter="manualreview">Chờ quản trị viên</button>
         <button class="filter-btn" data-filter="rejected">Từ chối</button>
       </div>
-      <input id="searchInput" class="search-box" type="search" placeholder="Tìm mã tin, tiêu đề, khu vực, CorrelationId..." />
+      <input id="searchInput" class="search-box" type="search" placeholder="Tìm mã tin, tiêu đề, khu vực..." />
     </section>
 
     <main id="jobsList" class="jobs-list"></main>
@@ -299,20 +299,20 @@
   <!-- Modal chạy thử tin mẫu -->
   <div id="testModal" class="modal-backdrop" onclick="if(event.target===this) closeTestModal()">
     <div class="modal">
-      <h2>Chạy thử kiểm duyệt trực tiếp qua AME</h2>
-      <p>Chọn 1 kịch bản mẫu bên dưới để gửi request vào <code>POST /api/v1/moderate</code> và xem từng bước sáng lên theo thời gian thực.</p>
+      <h2>Chạy thử kiểm duyệt trực tiếp</h2>
+      <p>Chọn một kịch bản mẫu bên dưới để gửi tin thử vào hệ thống kiểm duyệt tự động và theo dõi từng bước xử lý theo thời gian thực.</p>
       <div class="preset-grid">
         <button class="preset-btn" onclick="runPreset('price_low')">
           <strong>1. Tin giá ảo quá thấp (Quận 7)</strong>
-          <span>300 triệu / 75m² + ảnh mẫu → Kiểm tra khung giá Live API &amp; cảnh báo giá ảo</span>
+          <span>300 triệu / 75m² + ảnh mẫu → Kiểm tra khung giá thị trường &amp; cảnh báo giá ảo</span>
         </button>
         <button class="preset-btn" onclick="runPreset('phone_reject')">
           <strong>2. Tin lộ số điện thoại (Từ chối ngay)</strong>
-          <span>Chứa SĐT trong mô tả → Short-circuit Rejected ở bước 2, bỏ qua bước 3-4</span>
+          <span>Chứa SĐT trong mô tả → Tự động từ chối ngay ở bước 2, bỏ qua bước 3-4</span>
         </button>
         <button class="preset-btn" onclick="runPreset('missing_img')">
-          <strong>3. Tin thiếu hình ảnh (Đẩy Admin)</strong>
-          <span>Nội dung &amp; giá hợp lệ nhưng không có ảnh → ManualReview ở bước 3</span>
+          <strong>3. Tin thiếu hình ảnh (Đẩy quản trị viên)</strong>
+          <span>Nội dung &amp; giá hợp lệ nhưng chưa có ảnh → Chuyển quản trị viên duyệt ở bước 3</span>
         </button>
         <button class="preset-btn" onclick="runPreset('normal')">
           <strong>4. Tin chuẩn khu vực TP.HCM</strong>
@@ -436,9 +436,19 @@
         listEl.innerHTML = `
           <div class="empty-state">
             <h3>Chưa có phiên kiểm duyệt nào khớp bộ lọc</h3>
-            <p>Khi người bán gửi duyệt tin từ hệ thống PropNest (hoặc bạn bấm <strong>"Chạy thử tin mẫu"</strong>), từng bước xử lý của AME sẽ xuất hiện trực tiếp tại đây.</p>
+            <p>Khi người bán gửi duyệt tin từ hệ thống PropNest (hoặc bạn bấm <strong>"Chạy thử tin mẫu"</strong>), từng bước xử lý sẽ xuất hiện trực tiếp tại đây.</p>
           </div>`;
         return;
+      }
+
+      function severityLabel(sev) {
+        switch ((sev || '').toLowerCase()) {
+          case 'critical': return 'Nghiêm trọng';
+          case 'manual_review': return 'Cần duyệt tay';
+          case 'price_warning': return 'Cảnh báo giá';
+          case 'warning': return 'Cảnh báo';
+          default: return 'Thông tin';
+        }
       }
 
       listEl.innerHTML = items.map(job => {
@@ -461,13 +471,13 @@
         const detailsHtml = isOpen ? `
           <div class="details-panel">
             <div><strong>Tóm tắt kết quả:</strong> ${esc(job.summary || 'Đang tổng hợp...')}</div>
-            <div><strong>CorrelationId:</strong> <code>${esc(job.correlationId || 'N/A')}</code> · <strong>Risk Score:</strong> ${job.totalRiskScore ?? '—'} · <strong>Ảnh gửi lên:</strong> ${job.imageCount}</div>
+            <div><strong>Mã phiên:</strong> <code>${esc(job.correlationId || 'N/A')}</code> · <strong>Mức rủi ro:</strong> ${job.totalRiskScore ?? '—'}/100 · <strong>Ảnh gửi lên:</strong> ${job.imageCount}</div>
             ${(job.violations && job.violations.length) ? `
-              <div><strong>Chi tiết vi phạm / cảnh báo (${job.violations.length}):</strong></div>
+              <div><strong>Chi tiết ghi nhận (${job.violations.length}):</strong></div>
               ${job.violations.map(v => `
                 <div class="violation-item">
-                  <span class="v-rule">${esc(v.rule)}</span>
-                  <span>[${esc(v.severity)}] ${esc(v.message)}</span>
+                  <span class="v-rule">${esc(severityLabel(v.severity))}</span>
+                  <span>${esc(v.message)}</span>
                 </div>`).join('')}
             ` : '<div style="color:var(--green)">✓ Không phát hiện vi phạm nào.</div>'}
           </div>` : '';
@@ -535,7 +545,7 @@
       const es = new EventSource('/api/v1/monitor/stream');
       es.onopen = () => {
         pill.classList.remove('offline');
-        pill.innerHTML = '<span class="dot"></span> Trực tuyến • SSE Realtime';
+        pill.innerHTML = '<span class="dot"></span> Trực tuyến • Tự động cập nhật';
       };
       es.addEventListener('job_updated', (ev) => {
         try { upsertJob(JSON.parse(ev.data)); } catch {}
@@ -543,7 +553,7 @@
       es.addEventListener('cleared', () => { fetchInitial(); });
       es.onerror = () => {
         pill.classList.add('offline');
-        pill.innerHTML = '<span class="dot"></span> Đang kết nối lại SSE...';
+        pill.innerHTML = '<span class="dot"></span> Đang kết nối lại...';
       };
     }
 

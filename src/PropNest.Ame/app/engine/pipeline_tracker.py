@@ -9,11 +9,11 @@ from uuid import uuid4
 
 
 PIPELINE_STEPS: list[tuple[str, str]] = [
-    ("price_benchmark", "1. Lấy khung giá khu vực"),
-    ("rule_engine", "2. Luật nội dung & So giá"),
+    ("price_benchmark", "1. Kiểm tra khung giá khu vực"),
+    ("rule_engine", "2. Kiểm tra nội dung & So giá"),
     ("image_filter", "3. Kiểm tra chất lượng ảnh"),
-    ("ollama_analyzer", "4. Phân tích AI (Ollama)"),
-    ("decision_aggregator", "5. Tổng hợp quyết định"),
+    ("ollama_analyzer", "4. Đánh giá ngữ nghĩa nội dung"),
+    ("decision_aggregator", "5. Tổng hợp kết quả duyệt"),
 ]
 
 

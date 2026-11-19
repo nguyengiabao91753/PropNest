@@ -19,7 +19,8 @@ class PipelineMonitorTests(unittest.TestCase):
             resp = self.client.get(route)
             self.assertEqual(resp.status_code, 200)
             self.assertIn("text/html", resp.headers["content-type"])
-            self.assertIn("PropNest AME", resp.text)
+            self.assertIn("PropNest", resp.text)
+            self.assertNotIn("Ollama", resp.text)
             self.assertIn("/api/v1/monitor/stream", resp.text)
 
     def test_tracker_records_all_steps_for_approved_with_price_warning(self):

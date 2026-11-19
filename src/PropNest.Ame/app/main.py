@@ -129,12 +129,17 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
         )
         if ext_benchmark is not None:
             avg_m = ext_benchmark["avg"] / 1_000_000
+            source_label = (
+                "Dữ liệu thị trường trực tuyến"
+                if "chotot" in str(ext_benchmark.get("source", "")).lower()
+                else "Dữ liệu định giá khu vực"
+            )
             pipeline_tracker.finish_step(
                 job.job_id,
                 "price_benchmark",
                 status="passed",
                 detail=(
-                    f"{ext_benchmark['source']}: TB {avg_m:.1f} tr/m² "
+                    f"{source_label}: TB {avg_m:.1f} tr/m² "
                     f"({ext_benchmark.get('sampleCount', 0)} mẫu · {ext_benchmark['scope']})"
                 ),
                 meta=ext_benchmark,
@@ -145,21 +150,21 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
                 job.job_id,
                 "price_benchmark",
                 status="passed",
-                detail=f"DB Benchmark: TB {avg_m:.1f} tr/m² ({request.price_benchmark.district_code})",
+                detail=f"Bảng giá khu vực hệ thống: TB {avg_m:.1f} tr/m² ({request.price_benchmark.district_code})",
             )
         else:
             pipeline_tracker.finish_step(
                 job.job_id,
                 "price_benchmark",
                 status="warning",
-                detail="Không có dữ liệu Live API, dùng bảng khung giá dự phòng nội bộ.",
+                detail="Đang sử dụng khung giá tham chiếu nội bộ theo khu vực.",
             )
 
         # Bước 2: Rule Engine (bao gồm Check Giá khu vực dưới dạng price_warning)
         pipeline_tracker.start_step(
             job.job_id,
             "rule_engine",
-            "Đang quét từ cấm, SĐT, định dạng và so lệch giá khu vực...",
+            "Đang quét từ cấm, số điện thoại, định dạng và so lệch giá khu vực...",
         )
         rule_result = rule_engine.evaluate(request, external_benchmark=ext_benchmark)
         if rule_result.decision == Decision.REJECTED:
@@ -167,17 +172,17 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
                 job.job_id,
                 "rule_engine",
                 status="failed",
-                detail=rule_result.summary or "Phát hiện vi phạm luật cứng (từ cấm / SĐT).",
+                detail=rule_result.summary or "Phát hiện vi phạm quy định nội dung (từ cấm / số điện thoại).",
             )
-            pipeline_tracker.skip_step(job.job_id, "image_filter", "Dừng sớm do vi phạm luật cứng.")
-            pipeline_tracker.skip_step(job.job_id, "ollama_analyzer", "Dừng sớm do vi phạm luật cứng.")
-            pipeline_tracker.start_step(job.job_id, "decision_aggregator", "Chốt quyết định Rejected.")
+            pipeline_tracker.skip_step(job.job_id, "image_filter", "Dừng sớm do tin đã vi phạm quy định nội dung.")
+            pipeline_tracker.skip_step(job.job_id, "ollama_analyzer", "Dừng sớm do tin đã vi phạm quy định nội dung.")
+            pipeline_tracker.start_step(job.job_id, "decision_aggregator", "Đang chốt kết quả kiểm duyệt...")
             rule_result.processing_time_ms = int((time.perf_counter() - started) * 1000)
             pipeline_tracker.finish_step(
                 job.job_id,
                 "decision_aggregator",
                 status="failed",
-                detail="Tự động từ chối (Rejected).",
+                detail="Kết quả: Tự động từ chối.",
             )
             pipeline_tracker.complete_job(
                 job.job_id,
@@ -242,7 +247,7 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
             pipeline_tracker.start_step(
                 job.job_id,
                 "ollama_analyzer",
-                f"Đang phân tích ngữ nghĩa qua {ollama_analyzer.model}...",
+                "Đang đánh giá độ tin cậy và chất lượng mô tả...",
             )
             res = await ollama_analyzer.analyze(request)
             if not res.is_available:
@@ -250,21 +255,21 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
                     job.job_id,
                     "ollama_analyzer",
                     status="warning",
-                    detail=f"Ollama không phản hồi ({res.explanation}) → chuyển Admin duyệt.",
+                    detail="Bộ đánh giá ngữ nghĩa tạm gián đoạn → chuyển quản trị viên duyệt.",
                 )
             elif res.is_fraudulent:
                 pipeline_tracker.finish_step(
                     job.job_id,
                     "ollama_analyzer",
                     status="failed",
-                    detail=f"Cảnh báo nghi vấn lừa đảo: {res.explanation}",
+                    detail=f"Cảnh báo nghi vấn bất thường: {res.explanation}",
                 )
             elif res.quality_score < 0.5:
                 pipeline_tracker.finish_step(
                     job.job_id,
                     "ollama_analyzer",
                     status="warning",
-                    detail=f"Điểm mô tả thấp ({res.quality_score:.2f}): {res.explanation}",
+                    detail=f"Điểm mô tả thấp ({res.quality_score:.2f}/1.0): {res.explanation}",
                 )
             else:
                 pipeline_tracker.finish_step(
@@ -284,7 +289,7 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
         pipeline_tracker.start_step(
             job.job_id,
             "decision_aggregator",
-            "Đang tổng hợp điểm rủi ro và quyết định cuối cùng...",
+            "Đang tổng hợp kết quả kiểm duyệt cuối cùng...",
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         final_response = decision_aggregator.aggregate(
@@ -294,6 +299,12 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
             image_violations=image_violations,
             processing_time_ms=elapsed_ms,
         )
+
+        decision_label = {
+            Decision.APPROVED: "Tự động duyệt",
+            Decision.MANUAL_REVIEW: "Chuyển quản trị viên duyệt",
+            Decision.REJECTED: "Tự động từ chối",
+        }.get(final_response.decision, final_response.decision.value)
 
         agg_status = (
             "passed"
@@ -306,7 +317,7 @@ async def moderate_listing(request: ModerationRequest) -> ModerationResponse:
             job.job_id,
             "decision_aggregator",
             status=agg_status,
-            detail=f"Kết luận: {final_response.decision.value} • {final_response.summary}",
+            detail=f"Kết quả: {decision_label} • {final_response.summary}",
         )
         pipeline_tracker.complete_job(
             job.job_id,
