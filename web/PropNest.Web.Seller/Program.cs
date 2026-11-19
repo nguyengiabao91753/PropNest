@@ -1,7 +1,9 @@
 using PropNest.Web.Seller.Extensions;
+using PropNest.Web.Seller.Helpers;
 using PropNest.Web.Seller.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+JwtUserHelper.Configure(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

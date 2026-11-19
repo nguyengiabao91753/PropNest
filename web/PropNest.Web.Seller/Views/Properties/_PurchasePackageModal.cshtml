@@ -1,10 +1,15 @@
-@* Partial View: Modal Chọn Gói Dịch Vụ & Luồng Nâng Cấp Tin Chạy Ngầm *@
+@* Partial View: Modal Chọn Gói Dịch Vụ & Thanh Toán Chạy Ngầm *@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var purchaseCsrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+<input type="hidden" id="purchaseCsrfToken" value="@purchaseCsrfToken" />
 
 <div id="purchasePackageModal"
      class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-200"
      aria-modal="true" role="dialog" aria-labelledby="modalTitle">
 
-    <div class="relative w-full max-w-xl rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col transition-transform transform duration-200 scale-95 opacity-0"
+    <div class="relative w-full max-w-2xl rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col transition-transform transform duration-200 scale-95 opacity-0"
          id="modalContent">
 
         <!-- ================= 1. VIEW CHỌN GÓI & XÁC NHẬN THANH TOÁN ================= -->
@@ -16,7 +21,7 @@
                         <i data-lucide="sparkles" class="size-5"></i>
                     </div>
                     <div>
-                        <h3 id="modalTitle" class="text-base font-bold text-neutral-900">Nâng cấp gói dịch vụ</h3>
+                        <h3 id="modalTitle" class="text-base font-bold text-neutral-900">Chọn gói đăng tin & thanh toán</h3>
                         <p class="text-xs text-muted-foreground mt-0.5">
                             Áp dụng cho tin: <span id="modalListingTitle" class="font-semibold text-neutral-800"></span>
                             <span class="font-mono text-muted-foreground font-normal">(#<span id="modalListingId"></span>)</span>
@@ -31,103 +36,44 @@
                 </button>
             </div>
 
-            <!-- Modal Body: Lựa chọn 3 gói -->
-            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                <div class="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Chọn gói phù hợp với nhu cầu của bạn:</span>
-                    <span>Gói hiện tại: <strong id="modalCurrentPackage" class="text-neutral-900">Standard</strong></span>
+            <!-- Modal Body: Danh sách gói nạp động từ API -->
+            <div class="p-6 space-y-4 max-h-[72vh] overflow-y-auto">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>Chọn gói theo số ngày lịch (tính tới <strong>23:59:59 giờ VN</strong>):</span>
+                    <span>Hiện tại: <strong id="modalCurrentPackage" class="text-neutral-900">Standard</strong></span>
                 </div>
 
-                <div class="space-y-3" id="packageOptionsContainer">
-                    <!-- Gói 1: Standard -->
-                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/40 cursor-pointer transition-all shadow-2xs">
-                        <div class="flex items-start gap-3">
-                            <input type="radio" name="selectedPackageCode" value="Standard"
-                                   data-name="Gói Tiêu Chuẩn (Standard)" data-price="0" data-days="30"
-                                   class="mt-1 size-4 text-primary border-border focus:ring-primary"
-                                   onchange="onPackageSelected(this)">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-bold text-neutral-900">Gói Tiêu Chuẩn (Standard)</h4>
-                                    <span class="rounded-md bg-surface text-muted-foreground text-[10px] font-semibold px-2 py-0.5 border border-border">30 ngày</span>
-                                </div>
-                                <p class="text-xs text-muted-foreground mt-1">Đăng tin tiêu chuẩn, đầy đủ hình ảnh và thông số kỹ thuật.</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-sm font-bold text-neutral-900">Miễn phí (0 ₫)</span>
-                            <span class="block text-[11px] text-muted-foreground">/ 30 ngày</span>
-                        </div>
-                    </label>
-
-                    <!-- Gói 2: VIP (Khuyên dùng) -->
-                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-amber-500/80 bg-amber-50/20 hover:border-amber-500 cursor-pointer transition-all shadow-xs ring-1 ring-amber-500/20">
-                        <div class="absolute -top-2.5 right-4 rounded-full bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-xs uppercase tracking-wide">
-                            Khuyên dùng • Tăng tương tác
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <input type="radio" name="selectedPackageCode" value="VIP" checked
-                                   data-name="Gói VIP Đẳng Cấp" data-price="150000" data-days="30"
-                                   class="mt-1 size-4 text-amber-600 border-amber-400 focus:ring-amber-500"
-                                   onchange="onPackageSelected(this)">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-bold text-amber-950 flex items-center gap-1.5">
-                                        <i data-lucide="crown" class="size-4 text-amber-500"></i>
-                                        Gói VIP Đẳng Cấp
-                                    </h4>
-                                    <span class="rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-200">30 ngày</span>
-                                </div>
-                                <p class="text-xs text-amber-900/80 mt-1">Gắn huy hiệu VIP, hiển thị ưu tiên đầu trang chủ & danh mục tìm kiếm.</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-base font-black text-amber-700">150.000 ₫</span>
-                            <span class="block text-[11px] text-amber-900/70">/ 30 ngày</span>
-                        </div>
-                    </label>
-
-                    <!-- Gói 3: Boost -->
-                    <label class="package-option-card relative flex items-start justify-between gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/40 cursor-pointer transition-all shadow-2xs">
-                        <div class="flex items-start gap-3">
-                            <input type="radio" name="selectedPackageCode" value="Boost"
-                                   data-name="Gói Đẩy Tin (Boost)" data-price="30000" data-days="7"
-                                   class="mt-1 size-4 text-primary border-border focus:ring-primary"
-                                   onchange="onPackageSelected(this)">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                                        <i data-lucide="zap" class="size-4 text-primary"></i>
-                                        Gói Đẩy Tin (Boost)
-                                    </h4>
-                                    <span class="rounded-md bg-surface text-muted-foreground text-[10px] font-semibold px-2 py-0.5 border border-border">7 ngày</span>
-                                </div>
-                                <p class="text-xs text-muted-foreground mt-1">Đưa tin đăng lên vị trí top đầu danh mục tìm kiếm trong 7 ngày.</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-sm font-bold text-neutral-900">30.000 ₫</span>
-                            <span class="block text-[11px] text-muted-foreground">/ 7 ngày</span>
-                        </div>
-                    </label>
+                <div id="packageOptionsContainer" class="space-y-4">
+                    <div class="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                        Đang tải bảng giá gói dịch vụ...
+                    </div>
                 </div>
 
-                <!-- Tóm tắt thanh toán & Số dư ví -->
+                <!-- Tóm tắt thanh toán, Hạn sử dụng dự kiến & Số dư ví -->
                 <div class="rounded-2xl border border-border bg-surface/60 p-4 space-y-2.5">
                     <div class="flex items-center justify-between text-xs">
                         <span class="text-muted-foreground">Gói dịch vụ đã chọn:</span>
-                        <span id="summaryPackageName" class="font-bold text-neutral-900">Gói VIP Đẳng Cấp</span>
+                        <span id="summaryPackageName" class="font-bold text-neutral-900">--</span>
                     </div>
                     <div class="flex items-center justify-between text-xs">
-                        <span class="text-muted-foreground">Thời hạn áp dụng:</span>
-                        <span id="summaryDuration" class="font-semibold text-neutral-800">30 ngày</span>
+                        <span class="text-muted-foreground">Thời hạn gói mua thêm:</span>
+                        <span id="summaryDuration" class="font-semibold text-neutral-800">--</span>
                     </div>
+                    <div id="summaryVipExpiryRow" class="hidden flex items-center justify-between text-xs">
+                        <span class="text-amber-800 font-medium">Hạn VIP dự kiến:</span>
+                        <span id="summaryVipExpiry" class="font-bold text-amber-700">--</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground">Hạn hiển thị tin dự kiến:</span>
+                        <span id="summaryListingExpiry" class="font-bold text-emerald-700">--</span>
+                    </div>
+                    <p id="summaryDowngradeNote" class="hidden text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 leading-relaxed"></p>
+
                     <div class="border-t border-border/80 pt-2 flex items-center justify-between text-xs">
                         <span class="font-semibold text-neutral-900">Tổng thanh toán:</span>
-                        <span id="summaryPrice" class="text-base font-black text-primary">150.000 ₫</span>
+                        <span id="summaryPrice" class="text-base font-black text-primary">0 ₫</span>
                     </div>
 
-                    <!-- Hiển thị Tổng số dư của seller & Số dư sau khi thanh toán -->
                     <div class="border-t border-border/60 pt-2 space-y-1.5">
                         <div class="flex items-center justify-between text-xs">
                             <span class="text-muted-foreground flex items-center gap-1.5">
@@ -145,7 +91,6 @@
                         </div>
                     </div>
 
-                    <!-- Cảnh báo số dư không đủ -->
                     <div id="insufficientBalanceAlert" class="hidden rounded-xl border border-rose-200 bg-rose-50/90 p-3 text-xs text-rose-800 space-y-1.5">
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-1.5 font-semibold text-rose-700">
@@ -158,13 +103,13 @@
                             </a>
                         </div>
                         <p class="text-[11px] text-rose-600 leading-relaxed">
-                            Vui lòng nạp thêm tiền vào ví để hoàn tất giao dịch nâng cấp gói này.
+                            Vui lòng nạp thêm tiền vào ví để hoàn tất giao dịch thanh toán gói tin đăng này.
                         </p>
                     </div>
 
                     <p class="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
                         <i data-lucide="info" class="size-3.5 text-muted-foreground/80 shrink-0"></i>
-                        <span>Số tiền sẽ được trừ trực tiếp từ số dư ví PropNest của bạn.</span>
+                        <span>Số tiền sẽ được trừ trực tiếp từ số dư ví PropNest và cộng dồn thời hạn tự động.</span>
                     </p>
                 </div>
             </div>
@@ -181,33 +126,33 @@
                         onclick="startPurchasePackageWorkflow()"
                         class="h-10 px-5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <i data-lucide="credit-card" class="size-4"></i>
-                    <span>Xác nhận mua gói</span>
+                    <span id="btnConfirmPurchaseLabel">Xác nhận thanh toán</span>
                 </button>
             </div>
         </div>
 
-        <!-- ================= 2. VIEW KẾT QUẢ THÀNH CÔNG (HIỂN THỊ NỔI BẬT) ================= -->
+        <!-- ================= 2. VIEW KẾT QUẢ THÀNH CÔNG ================= -->
         <div id="packageResultSuccessView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
             <div class="size-16 rounded-3xl bg-emerald-500/10 text-emerald-600 mx-auto flex items-center justify-center border border-emerald-500/20 shadow-xs">
                 <i data-lucide="check-circle-2" class="size-10"></i>
             </div>
 
             <div class="space-y-1.5">
-                <h3 class="text-xl font-bold text-neutral-900 font-display">Nâng cấp gói thành công!</h3>
+                <h3 class="text-xl font-bold text-neutral-900 font-display">Thanh toán & kích hoạt thành công!</h3>
                 <p class="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                    Tin đăng <span id="resSuccessListingTitle" class="font-bold text-neutral-800"></span> đã được nâng cấp lên <span id="resSuccessPackageName" class="font-bold text-emerald-700"></span> thành công.
+                    Tin đăng <span id="resSuccessListingTitle" class="font-bold text-neutral-800"></span> đã áp dụng <span id="resSuccessPackageName" class="font-bold text-emerald-700"></span> thành công.
                 </p>
             </div>
 
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-xs text-emerald-900 text-left space-y-2">
                 <div class="flex items-center gap-2 font-bold text-emerald-800">
                     <i data-lucide="sparkles" class="size-4 text-emerald-600"></i>
-                    <span>Quyền lợi đã được kích hoạt:</span>
+                    <span>Trạng thái & quyền lợi đã cập nhật:</span>
                 </div>
                 <ul class="text-muted-foreground text-xs space-y-1 list-disc list-inside leading-relaxed">
-                    <li>Gắn huy hiệu gói trên danh sách tin đăng và trang chi tiết.</li>
-                    <li>Tự động gia hạn thời gian hiển thị tin theo quyền lợi của gói.</li>
-                    <li>Ưu tiên hiển thị tiếp cận khách hàng tiềm năng.</li>
+                    <li>Tin đăng đã chuyển/duy trì trạng thái <strong>Đang hiển thị (Published)</strong>.</li>
+                    <li>Thời hạn hiển thị và quyền lợi VIP (nếu có) được tính trọn ngày tới 23:59:59 giờ Việt Nam.</li>
+                    <li>Hết hạn gói VIP sẽ tự quay về gói Tiêu chuẩn nếu thời hạn sống vẫn còn.</li>
                 </ul>
             </div>
 
@@ -221,7 +166,7 @@
             </div>
         </div>
 
-        <!-- ================= 3. VIEW KẾT QUẢ THẤT BẠI (HIỂN THỊ NỔI BẬT) ================= -->
+        <!-- ================= 3. VIEW KẾT QUẢ THẤT BẠI ================= -->
         <div id="packageResultFailedView" class="hidden flex-col p-6 sm:p-8 space-y-6 text-center">
             <div class="size-16 rounded-3xl bg-rose-500/10 text-rose-600 mx-auto flex items-center justify-center border border-rose-500/20 shadow-xs">
                 <i data-lucide="alert-triangle" class="size-10"></i>
@@ -230,7 +175,7 @@
             <div class="space-y-2">
                 <h3 class="text-xl font-bold text-neutral-900 font-display">Giao dịch không thành công</h3>
                 <div id="resErrorMessage" class="p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium max-w-md mx-auto text-left leading-relaxed">
-                    Không thể thực hiện giao dịch nâng cấp gói.
+                    Không thể thực hiện giao dịch thanh toán gói tin.
                 </div>
             </div>
 
@@ -261,20 +206,172 @@
     </div>
 </div>
 
-<!-- ================= JAVASCRIPT LOGIC CHẠY NGẦM & SHOW KẾT QUẢ NỔI BẬT ================= -->
+<!-- ================= JAVASCRIPT CHẠY NGẦM & PREVIEW HẠN LỊCH VN ================= -->
 <script>
+    const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
     let currentListingId = 0;
     let currentListingTitle = '';
-    let selectedPackageCode = 'VIP';
-    let selectedPackagePrice = 150000;
-    let selectedPackageName = 'Gói VIP Đẳng Cấp';
-    let selectedPackageDays = 30;
+    let currentListingPackageTier = 'Standard';
+    let currentListingStatus = 'PendingPayment';
+    let currentListingEndDateIso = '';
+    let currentListingPackageEndDateIso = '';
+    let cachedPackages = null;
+    let selectedPackageCode = '';
+    let selectedPackageKind = 'Standard';
+    let selectedPackagePrice = 0;
+    let selectedPackageName = '';
+    let selectedPackageDays = 7;
     let currentWalletBalance = 0;
     let isFetchingWallet = false;
     let activeBackgroundTimer = null;
 
     function formatVndCurrency(amount) {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    }
+
+    function escapeModalHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getVnCalendarParts(dateInput) {
+        const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        const shifted = new Date(d.getTime() + VN_OFFSET_MS);
+        return {
+            year: shifted.getUTCFullYear(),
+            month: shifted.getUTCMonth(),
+            day: shifted.getUTCDate()
+        };
+    }
+
+    function computeNewVnEndDate(durationDays) {
+        const vnToday = getVnCalendarParts(new Date());
+        return new Date(Date.UTC(vnToday.year, vnToday.month, vnToday.day + (durationDays - 1), 23 - 7, 59, 59));
+    }
+
+    function extendVnEndDate(existingIso, durationDays) {
+        const vnOld = getVnCalendarParts(new Date(existingIso));
+        return new Date(Date.UTC(vnOld.year, vnOld.month, vnOld.day + durationDays, 23 - 7, 59, 59));
+    }
+
+    function formatVnDateTime(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return '--';
+        const parts = getVnCalendarParts(dateObj);
+        const dd = String(parts.day).padStart(2, '0');
+        const mm = String(parts.month + 1).padStart(2, '0');
+        return `${dd}/${mm}/${parts.year} 23:59`;
+    }
+
+    async function fetchPackagesCatalog() {
+        if (Array.isArray(cachedPackages) && cachedPackages.length > 0) {
+            return cachedPackages;
+        }
+        try {
+            const res = await fetch('/Properties/GetPackages');
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    cachedPackages = data;
+                    return cachedPackages;
+                }
+            }
+        } catch (e) {
+            console.error('Không thể tải danh sách gói:', e);
+        }
+        return [];
+    }
+
+    function renderPackageOptions(packages) {
+        const container = document.getElementById('packageOptionsContainer');
+        if (!container) return;
+
+        if (!packages || packages.length === 0) {
+            container.innerHTML = '<div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700 text-center">Hiện chưa tải được bảng giá gói dịch vụ. Vui lòng thử lại sau.</div>';
+            return;
+        }
+
+        const standardPkgs = packages.filter(p => String(p.kind || p.Kind).toLowerCase() === 'standard');
+        const vipPkgs = packages.filter(p => String(p.kind || p.Kind).toLowerCase() === 'vip');
+
+        const renderCard = (pkg, isVip, checked) => {
+            const code = pkg.packageCode || pkg.PackageCode;
+            const name = pkg.name || pkg.Name;
+            const price = Number(pkg.price !== undefined ? pkg.price : pkg.Price) || 0;
+            const days = Number(pkg.durationDays !== undefined ? pkg.durationDays : pkg.DurationDays) || 7;
+            const kind = pkg.kind || pkg.Kind || 'Standard';
+
+            return `
+                <label class="package-card-option relative flex flex-col justify-between gap-2 p-3.5 rounded-2xl border-2 cursor-pointer transition-all shadow-2xs ${isVip ? 'border-amber-300/80 bg-amber-50/30 hover:border-amber-500' : 'border-border bg-card hover:border-primary/50'}">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <input type="radio" name="selectedPackageCode" value="${escapeModalHtml(code)}"
+                                   ${checked ? 'checked' : ''}
+                                   data-name="${escapeModalHtml(name)}"
+                                   data-price="${price}"
+                                   data-days="${days}"
+                                   data-kind="${escapeModalHtml(kind)}"
+                                   class="size-4 ${isVip ? 'text-amber-600 focus:ring-amber-500' : 'text-primary focus:ring-primary'}"
+                                   onchange="onPackageSelected(this)">
+                            <span class="text-xs font-bold ${isVip ? 'text-amber-950' : 'text-neutral-900'}">${days} ngày</span>
+                        </div>
+                        <span class="rounded-md px-1.5 py-0.5 text-[10px] font-bold ${isVip ? 'bg-amber-100 text-amber-800' : 'bg-surface text-muted-foreground border border-border'}">
+                            ${escapeModalHtml(kind)}
+                        </span>
+                    </div>
+                    <div class="pl-6">
+                        <div class="text-sm font-black ${isVip ? 'text-amber-700' : 'text-primary'}">${formatVndCurrency(price)}</div>
+                        <div class="text-[10px] text-muted-foreground">~${formatVndCurrency(Math.round(price / days))}/ngày</div>
+                    </div>
+                </label>`;
+        };
+
+        const defaultCode = (vipPkgs[0]?.packageCode || vipPkgs[0]?.PackageCode) || (standardPkgs[0]?.packageCode || standardPkgs[0]?.PackageCode);
+        let html = '';
+
+        if (standardPkgs.length > 0) {
+            html += `
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+                            <i data-lucide="layers" class="size-3.5 text-primary"></i>
+                            Gói Tiêu Chuẩn (Standard)
+                        </h4>
+                        <span class="text-[11px] text-muted-foreground">Hiển thị chuẩn & gia hạn thời gian sống tin</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        ${standardPkgs.map(p => renderCard(p, false, (p.packageCode || p.PackageCode) === defaultCode)).join('')}
+                    </div>
+                </div>`;
+        }
+
+        if (vipPkgs.length > 0) {
+            html += `
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                            <i data-lucide="crown" class="size-3.5 text-amber-500"></i>
+                            Gói VIP Nổi Bật
+                        </h4>
+                        <span class="text-[11px] text-amber-700 font-medium">Huy hiệu VIP • Ưu tiên đầu tìm kiếm</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        ${vipPkgs.map(p => renderCard(p, true, (p.packageCode || p.PackageCode) === defaultCode)).join('')}
+                    </div>
+                </div>`;
+        }
+
+        container.innerHTML = html;
+        const checkedRadio = container.querySelector('input[name="selectedPackageCode"]:checked') || container.querySelector('input[name="selectedPackageCode"]');
+        if (checkedRadio) {
+            checkedRadio.checked = true;
+            onPackageSelected(checkedRadio);
+        }
+        if (window.lucide) window.lucide.createIcons();
     }
 
     async function fetchWalletBalance() {
@@ -294,33 +391,51 @@
         }
     }
 
-    function openPurchasePackageModal(listingId, listingTitle, currentPackage) {
+    function openPurchasePackageModalFromElement(btn) {
+        if (!btn) return;
+        const listingId = parseInt(btn.dataset.listingId || '0', 10);
+        const listingTitle = btn.dataset.listingTitle || ('Tin đăng #' + listingId);
+        const currentPackage = btn.dataset.packageCode || 'Standard';
+        const listingStatus = btn.dataset.listingStatus || 'PendingPayment';
+        const endDateIso = btn.dataset.endDate || '';
+        const packageEndDateIso = btn.dataset.packageEndDate || '';
+        openPurchasePackageModal(listingId, listingTitle, currentPackage, listingStatus, endDateIso, packageEndDateIso);
+    }
+
+    async function openPurchasePackageModal(listingId, listingTitle, currentPackage, listingStatus, endDateIso, packageEndDateIso) {
         currentListingId = listingId;
         currentListingTitle = listingTitle || ('Tin đăng #' + listingId);
+        currentListingPackageTier = currentPackage || 'Standard';
+        currentListingStatus = listingStatus || 'PendingPayment';
+        currentListingEndDateIso = endDateIso || '';
+        currentListingPackageEndDateIso = packageEndDateIso || '';
+
         document.getElementById('modalListingId').innerText = listingId;
         document.getElementById('modalListingTitle').innerText = currentListingTitle;
-        document.getElementById('modalCurrentPackage').innerText = currentPackage || 'Standard';
+        document.getElementById('modalCurrentPackage').innerText = currentListingPackageTier;
 
-        // Đảm bảo reset view về view chọn gói
+        const titleEl = document.getElementById('modalTitle');
+        const btnLabelEl = document.getElementById('btnConfirmPurchaseLabel');
+        if (currentListingStatus === 'PendingPayment') {
+            if (titleEl) titleEl.innerText = 'Thanh toán gói để đăng tin';
+            if (btnLabelEl) btnLabelEl.innerText = 'Thanh toán & Đăng tin';
+        } else if (currentListingStatus === 'Expired') {
+            if (titleEl) titleEl.innerText = 'Gia hạn & bật hiển thị lại tin';
+            if (btnLabelEl) btnLabelEl.innerText = 'Thanh toán & Gia hạn';
+        } else {
+            if (titleEl) titleEl.innerText = 'Mua thêm / Nâng cấp gói dịch vụ';
+            if (btnLabelEl) btnLabelEl.innerText = 'Xác nhận thanh toán';
+        }
+
         document.getElementById('packageSelectView').classList.remove('hidden');
         document.getElementById('packageResultSuccessView').classList.add('hidden');
         document.getElementById('packageResultFailedView').classList.add('hidden');
 
-        // Mặc định chọn gói VIP
-        const vipRadio = document.querySelector('input[name="selectedPackageCode"][value="VIP"]');
-        if (vipRadio) {
-            vipRadio.checked = true;
-            selectedPackageCode = 'VIP';
-            selectedPackagePrice = 150000;
-            selectedPackageName = 'Gói VIP Đẳng Cấp';
-            selectedPackageDays = 30;
-        }
-
-        // Lấy số dư ví mới nhất từ server
-        fetchWalletBalance();
-
-        // Hiển thị modal kèm animation
         openModalDialog();
+
+        const packages = await fetchPackagesCatalog();
+        renderPackageOptions(packages);
+        fetchWalletBalance();
     }
 
     function openModalDialog() {
@@ -350,35 +465,87 @@
     }
 
     function onPackageSelected(radio) {
+        if (!radio) return;
         selectedPackageCode = radio.value;
         selectedPackagePrice = parseFloat(radio.dataset.price) || 0;
-        selectedPackageName = radio.dataset.name;
-        selectedPackageDays = parseInt(radio.dataset.days, 10) || 30;
+        selectedPackageName = radio.dataset.name || radio.value;
+        selectedPackageDays = parseInt(radio.dataset.days, 10) || 7;
+        selectedPackageKind = radio.dataset.kind || 'Standard';
 
         updateSummaryUI();
+    }
+
+    function computeProjectedDates() {
+        const now = new Date();
+        const existingEnd = currentListingEndDateIso ? new Date(currentListingEndDateIso) : null;
+        const hasActiveLifespan = currentListingStatus === 'Published' && existingEnd && !isNaN(existingEnd.getTime()) && existingEnd > now;
+
+        const existingVipEnd = currentListingPackageEndDateIso ? new Date(currentListingPackageEndDateIso) : null;
+        const hasActiveVip = hasActiveLifespan && currentListingPackageTier === 'VIP' && existingVipEnd && !isNaN(existingVipEnd.getTime()) && existingVipEnd > now;
+
+        if (String(selectedPackageKind).toLowerCase() === 'vip') {
+            const vipEnd = hasActiveVip
+                ? extendVnEndDate(existingVipEnd.toISOString(), selectedPackageDays)
+                : computeNewVnEndDate(selectedPackageDays);
+            const listingEnd = (hasActiveLifespan && existingEnd > vipEnd) ? existingEnd : vipEnd;
+            return { vipEnd, listingEnd, isVipActive: true, hasRemainingStandardAfterVip: hasActiveLifespan && existingEnd > vipEnd };
+        }
+
+        const listingEnd = hasActiveLifespan
+            ? extendVnEndDate(existingEnd.toISOString(), selectedPackageDays)
+            : computeNewVnEndDate(selectedPackageDays);
+
+        return {
+            vipEnd: hasActiveVip ? existingVipEnd : null,
+            listingEnd,
+            isVipActive: hasActiveVip,
+            hasRemainingStandardAfterVip: hasActiveVip && listingEnd > existingVipEnd
+        };
     }
 
     function updateSummaryUI() {
         const summaryPackageEl = document.getElementById('summaryPackageName');
         const summaryDurationEl = document.getElementById('summaryDuration');
         const summaryPriceEl = document.getElementById('summaryPrice');
+        const summaryVipRow = document.getElementById('summaryVipExpiryRow');
+        const summaryVipEl = document.getElementById('summaryVipExpiry');
+        const summaryListingEl = document.getElementById('summaryListingExpiry');
+        const downgradeNoteEl = document.getElementById('summaryDowngradeNote');
         const currentBalanceEl = document.getElementById('summaryCurrentBalance');
         const remainingBalanceEl = document.getElementById('summaryRemainingBalance');
         const alertEl = document.getElementById('insufficientBalanceAlert');
         const confirmBtn = document.getElementById('btnConfirmPurchase');
 
-        if (summaryPackageEl) summaryPackageEl.innerText = selectedPackageName;
-        if (summaryDurationEl) summaryDurationEl.innerText = `${selectedPackageDays} ngày`;
+        if (summaryPackageEl) summaryPackageEl.innerText = selectedPackageName || '--';
+        if (summaryDurationEl) summaryDurationEl.innerText = selectedPackageCode ? `${selectedPackageDays} ngày (cộng dồn)` : '--';
         if (summaryPriceEl) summaryPriceEl.innerText = formatVndCurrency(selectedPackagePrice);
 
-        // Hiển thị số dư ví hiện tại
+        if (selectedPackageCode) {
+            const proj = computeProjectedDates();
+            if (summaryListingEl) summaryListingEl.innerText = formatVnDateTime(proj.listingEnd);
+            if (summaryVipRow && summaryVipEl) {
+                if (proj.isVipActive && proj.vipEnd) {
+                    summaryVipRow.classList.remove('hidden');
+                    summaryVipEl.innerText = formatVnDateTime(proj.vipEnd);
+                } else {
+                    summaryVipRow.classList.add('hidden');
+                }
+            }
+            if (downgradeNoteEl) {
+                if (proj.isVipActive && proj.hasRemainingStandardAfterVip && proj.vipEnd) {
+                    downgradeNoteEl.classList.remove('hidden');
+                    downgradeNoteEl.innerText = `Sau khi hết VIP (${formatVnDateTime(proj.vipEnd)}), tin tự chuyển về gói Standard và tiếp tục hiển thị đến ${formatVnDateTime(proj.listingEnd)}.`;
+                } else {
+                    downgradeNoteEl.classList.add('hidden');
+                }
+            }
+        }
+
         if (currentBalanceEl) {
             currentBalanceEl.innerText = formatVndCurrency(currentWalletBalance);
         }
 
-        // Tính số dư sau thanh toán
         const remaining = currentWalletBalance - selectedPackagePrice;
-
         if (remainingBalanceEl) {
             if (remaining >= 0) {
                 remainingBalanceEl.innerText = formatVndCurrency(remaining);
@@ -389,18 +556,17 @@
             }
         }
 
-        // Kiểm tra số dư
-        if (selectedPackagePrice > 0 && remaining < 0) {
-            if (alertEl) alertEl.classList.remove('hidden');
+        if (!selectedPackageCode || (selectedPackagePrice > 0 && remaining < 0)) {
+            if (selectedPackageCode && alertEl) alertEl.classList.remove('hidden');
             if (confirmBtn) {
                 confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                confirmBtn.title = 'Số dư ví không đủ để thanh toán gói này';
+                confirmBtn.title = selectedPackageCode ? 'Số dư ví không đủ để thanh toán gói này' : 'Vui lòng chọn gói dịch vụ';
             }
         } else {
             if (alertEl) alertEl.classList.add('hidden');
             if (confirmBtn) {
                 confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                confirmBtn.title = 'Bấm để thanh toán và nâng cấp gói';
+                confirmBtn.title = 'Bấm để thanh toán và kích hoạt gói';
             }
         }
 
@@ -409,14 +575,9 @@
         }
     }
 
-    // ==========================================
-    // KHỞI CHẠY GIAO DỊCH NGẦM & SHOW KẾT QUẢ RÕ RÀNG
-    // ==========================================
-
     async function startPurchasePackageWorkflow() {
         if (!currentListingId || !selectedPackageCode) return;
 
-        // 1. Kiểm tra số dư ví trước khi gửi
         if (selectedPackagePrice > 0 && currentWalletBalance < selectedPackagePrice) {
             if (typeof showSellerToast === 'function') {
                 showSellerToast(`Số dư ví (${formatVndCurrency(currentWalletBalance)}) không đủ để thanh toán ${formatVndCurrency(selectedPackagePrice)}. Vui lòng nạp thêm tiền!`, 'error', 5000);
@@ -431,24 +592,23 @@
         const targetListingTitle = currentListingTitle;
         const targetPackageName = selectedPackageName;
 
-        // Sinh Idempotency-Key chuẩn UUID
         const idempotencyKey = (window.crypto && crypto.randomUUID)
             ? crypto.randomUUID()
             : ('idemp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9));
 
-        // Đóng modal chọn gói để không bắt user ngồi chờ
         closePurchasePackageModal();
 
-        // Hiển thị toast thông báo tiến trình chạy ngầm
         if (typeof showSellerToast === 'function') {
-            showSellerToast(`Đang xử lý nâng cấp ${targetPackageName} cho tin #${targetListingId} chạy ngầm...`, 'loading', 0);
+            showSellerToast(`Đang xử lý thanh toán ${targetPackageName} cho tin #${targetListingId}...`, 'loading', 0);
         }
 
         try {
+            const csrfToken = document.getElementById('purchaseCsrfToken')?.value || '';
             const response = await fetch('/Properties/PurchasePackage', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': csrfToken
                 },
                 body: JSON.stringify({
                     listingId: targetListingId,
@@ -461,23 +621,17 @@
             const data = await response.json();
 
             if (!response.ok || !data.success || !data.correlationId) {
-                // Ẩn toast loading
                 const toast = document.getElementById('sellerToast');
                 if (toast) toast.classList.add('hidden');
-
-                // Bật Modal thông báo thất bại nổi bật lên màn hình
-                showFailedResultModal(data.message || 'Không thể bắt đầu tiến trình mua gói. Vui lòng thử lại sau.');
+                showFailedResultModal(data.message || 'Không thể bắt đầu tiến trình thanh toán gói. Vui lòng thử lại sau.');
                 return;
             }
 
-            // Bắt đầu Polling ngầm theo CorrelationId
             startBackgroundWorkflowPolling(data.correlationId, targetListingId, targetListingTitle, targetPackageName);
-
         } catch (err) {
             console.error('Lỗi khi gửi yêu cầu mua gói:', err);
             const toast = document.getElementById('sellerToast');
             if (toast) toast.classList.add('hidden');
-
             showFailedResultModal('Đã xảy ra lỗi kết nối khi gửi yêu cầu. Vui lòng kiểm tra lại mạng.');
         } finally {
             if (confirmBtn) confirmBtn.disabled = false;
@@ -490,17 +644,15 @@
         }
 
         let attempts = 0;
-        const maxAttempts = 60; // Timeout sau ~90 giây
+        const maxAttempts = 60;
 
         activeBackgroundTimer = setInterval(async () => {
             attempts++;
             if (attempts > maxAttempts) {
                 clearInterval(activeBackgroundTimer);
                 activeBackgroundTimer = null;
-
                 const toast = document.getElementById('sellerToast');
                 if (toast) toast.classList.add('hidden');
-
                 showFailedResultModal(`Giao dịch cho tin #${listingId} mất nhiều thời gian hơn dự kiến. Vui lòng kiểm tra lại ví hoặc làm mới trang sau.`);
                 return;
             }
@@ -508,70 +660,53 @@
             try {
                 const res = await fetch(`/Properties/WorkflowStatus/${correlationId}`);
                 if (!res.ok) {
-                    if (res.status === 404) return; // Đang chờ worker ghi db
+                    if (res.status === 404) return;
                     clearInterval(activeBackgroundTimer);
                     activeBackgroundTimer = null;
-
                     const toast = document.getElementById('sellerToast');
                     if (toast) toast.classList.add('hidden');
-
                     showFailedResultModal('Không thể kiểm tra trạng thái tiến trình xử lý.');
                     return;
                 }
 
                 const workflow = await res.json();
 
-                // VẤN ĐỀ 2: KHI XONG THÌ MỞ MODAL THÔNG BÁO THÀNH CÔNG RÕ RÀNG
                 if (workflow.isCompleted || workflow.status === 5) {
                     clearInterval(activeBackgroundTimer);
                     activeBackgroundTimer = null;
-
                     const toast = document.getElementById('sellerToast');
                     if (toast) toast.classList.add('hidden');
-
                     showSuccessResultModal(packageName, listingTitle);
-                }
-                // NẾU THẤT BẠI THÌ MỞ MODAL THÔNG BÁO THẤT BẠI RÕ RÀNG
-                else if (workflow.isFailed || workflow.status === 7 || workflow.status === 8) {
+                } else if (workflow.isFailed || workflow.status === 7 || workflow.status === 8) {
                     clearInterval(activeBackgroundTimer);
                     activeBackgroundTimer = null;
-
                     const toast = document.getElementById('sellerToast');
                     if (toast) toast.classList.add('hidden');
-
                     const errMsg = workflow.errorMessage || (workflow.status === 7
-                        ? 'Giao dịch bồi hoàn: Số dư ví không đủ để thanh toán gói. Tiền đã được hoàn lại ví.'
+                        ? 'Giao dịch bồi hoàn: Số dư ví không đủ hoặc tin chưa đủ điều kiện. Tiền đã được hoàn lại ví.'
                         : 'Giao dịch thất bại. Tiền không bị trừ.');
-
                     showFailedResultModal(errMsg);
                 }
-
             } catch (error) {
                 console.error('Lỗi khi polling workflow ngầm:', error);
             }
         }, 1500);
     }
 
-    // Hiển thị Modal Kết quả Thành công nổi bật
     function showSuccessResultModal(packageName, listingTitle) {
         document.getElementById('packageSelectView').classList.add('hidden');
         document.getElementById('packageResultFailedView').classList.add('hidden');
         document.getElementById('packageResultSuccessView').classList.remove('hidden');
-
         document.getElementById('resSuccessPackageName').innerText = packageName;
         document.getElementById('resSuccessListingTitle').innerText = listingTitle || ('#' + currentListingId);
-
         openModalDialog();
     }
 
-    // Hiển thị Modal Kết quả Thất bại nổi bật
     function showFailedResultModal(errorMessage) {
         document.getElementById('packageSelectView').classList.add('hidden');
         document.getElementById('packageResultSuccessView').classList.add('hidden');
         document.getElementById('packageResultFailedView').classList.remove('hidden');
-
         document.getElementById('resErrorMessage').innerText = errorMessage || 'Giao dịch không thành công. Vui lòng thử lại sau.';
-
         openModalDialog();
     }
 </script>

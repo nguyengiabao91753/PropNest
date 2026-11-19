@@ -31,6 +31,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     public DbSet<PurchasePackageSagaState> PurchasePackageSagaStates => Set<PurchasePackageSagaState>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -38,6 +39,7 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
 
         if (string.Equals(Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal))
         {
+            var dateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.DateTimeOffsetToBinaryConverter();
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
                 foreach (var property in entityType.GetProperties())
@@ -50,6 +52,11 @@ public sealed class PropNestDbContext(DbContextOptions<PropNestDbContext> option
                     if (property.IsConcurrencyToken && property.ClrType == typeof(byte[]))
                     {
                         property.SetDefaultValueSql("randomblob(8)");
+                    }
+
+                    if (property.ClrType == typeof(DateTimeOffset) || property.ClrType == typeof(DateTimeOffset?))
+                    {
+                        property.SetValueConverter(dateTimeOffsetConverter);
                     }
                 }
             }

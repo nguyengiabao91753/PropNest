@@ -1,14 +1,9 @@
-﻿using MassTransit;
+﻿using System.Text.Json;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
 using PropNest.Domain.Workflows;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace PropNest.Infrastructure.Services
 {
@@ -20,6 +15,7 @@ namespace PropNest.Infrastructure.Services
         {
             PropertyNameCaseInsensitive = true
         };
+
         public MassTransitOutboxPublisher(
            IPublishEndpoint publishEndpoint,
            ILogger<MassTransitOutboxPublisher> logger)
@@ -27,6 +23,7 @@ namespace PropNest.Infrastructure.Services
             _publishEndpoint = publishEndpoint;
             _logger = logger;
         }
+
         public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken = default)
         {
             LogPublishing(_logger, message.Type, message.OutboxId, message.CorrelationId);
@@ -34,33 +31,53 @@ namespace PropNest.Infrastructure.Services
             switch (message.Type)
             {
                 case "PurchasePackageRequested":
-                    var purchaseRequested = JsonSerializer.Deserialize<PurchasePackageRequested>(message.PayloadJson, JsonOptions);
-                    if(purchaseRequested is null)
-                    {
-                        throw new InvalidOperationException($"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
-                    }
-
-                    // bắn event
-                    await _publishEndpoint.Publish(purchaseRequested, cancellationToken);
+                    await PublishDeserializedAsync<PurchasePackageRequested>(message, cancellationToken);
                     break;
 
                 case "ListingSubmitted":
-                    var listingSubmitted = JsonSerializer.Deserialize<ListingSubmitted>(message.PayloadJson, JsonOptions) 
-                        ?? throw new InvalidOperationException($"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
-                    await _publishEndpoint.Publish(listingSubmitted, cancellationToken);
-
+                    await PublishDeserializedAsync<ListingSubmitted>(message, cancellationToken);
                     break;
+
+                case "ListingPublished":
+                    await PublishDeserializedAsync<ListingPublishedEvent>(message, cancellationToken);
+                    break;
+
+                case "ListingApprovedPendingPayment":
+                    await PublishDeserializedAsync<ListingApprovedPendingPaymentEvent>(message, cancellationToken);
+                    break;
+
+                case "ListingRejected":
+                    await PublishDeserializedAsync<ListingRejectedEvent>(message, cancellationToken);
+                    break;
+
+                case "ListingExpired":
+                    await PublishDeserializedAsync<ListingExpiredEvent>(message, cancellationToken);
+                    break;
+
                 default:
                     LogUnknownMessageType(_logger, message.Type, message.OutboxId);
-                    break;
+                    return;
             }
+
             LogPublished(_logger, message.Type, message.OutboxId, message.CorrelationId);
+        }
+
+        private async Task PublishDeserializedAsync<TEvent>(OutboxMessage message, CancellationToken cancellationToken)
+            where TEvent : class
+        {
+            var payload = JsonSerializer.Deserialize<TEvent>(message.PayloadJson, JsonOptions)
+                ?? throw new InvalidOperationException(
+                    $"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
+
+            await _publishEndpoint.Publish(payload, cancellationToken);
         }
 
         [LoggerMessage(Level = LogLevel.Information, Message = "MassTransitOutboxPublisher: Dispatching outbox event '{EventType}' (OutboxId: {OutboxId}, CorrelationId: {CorrelationId}) to RabbitMQ.")]
         private static partial void LogPublishing(ILogger logger, string eventType, Guid outboxId, Guid? correlationId);
+
         [LoggerMessage(Level = LogLevel.Warning, Message = "MassTransitOutboxPublisher: Unknown outbox event type '{EventType}' for OutboxId: {OutboxId}. Skipped.")]
         private static partial void LogUnknownMessageType(ILogger logger, string eventType, Guid outboxId);
+
         [LoggerMessage(Level = LogLevel.Information, Message = "MassTransitOutboxPublisher: Successfully published '{EventType}' (OutboxId: {OutboxId}, CorrelationId: {CorrelationId}) to RabbitMQ.")]
         private static partial void LogPublished(ILogger logger, string eventType, Guid outboxId, Guid? correlationId);
     }

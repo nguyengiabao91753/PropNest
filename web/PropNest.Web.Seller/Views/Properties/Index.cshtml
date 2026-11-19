@@ -8,6 +8,7 @@
         ("all", "Tất cả", Model.Counts.All),
         ("Published", "Đang hiển thị", Model.Counts.Published),
         ("PendingModeration", "Chờ duyệt", Model.Counts.PendingModeration),
+        ("PendingPayment", "Chờ thanh toán", Model.Counts.PendingPayment),
         ("Draft", "Bản nháp", Model.Counts.Draft),
         ("Rejected", "Bị từ chối", Model.Counts.Rejected),
         ("Hidden", "Đã tạm ẩn", Model.Counts.Hidden),
@@ -149,6 +150,12 @@
                                             <strong>Lý do từ chối:</strong> @p.RejectReason
                                         </div>
                                     }
+                                    @if (!string.IsNullOrWhiteSpace(p.ModerationWarning) && (p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment || p.Status == PropNest.Domain.Listings.ListingStatus.Published))
+                                    {
+                                        <div class="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900">
+                                            <strong>Cảnh báo giá:</strong> @p.ModerationWarning
+                                        </div>
+                                    }
                                 </div>
                             </div>
 
@@ -157,15 +164,51 @@
                                     Chi tiết
                                 </a>
                                 <div class="flex items-center gap-1.5">
-                                    <!-- Mua gói (Grid View) -->
-                                    @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                    @if (p.CanPurchasePackage)
                                     {
-                                        <button type="button"
-                                                onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
-                                                class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
-                                                title="Nâng cấp gói dịch vụ">
-                                            <i data-lucide="sparkles" class="size-4"></i>
-                                        </button>
+                                        if (p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment || p.Status == PropNest.Domain.Listings.ListingStatus.Expired)
+                                        {
+                                            <button type="button"
+                                                    data-listing-id="@p.Id"
+                                                    data-listing-title="@p.Title"
+                                                    data-package-code="@p.PackageCode"
+                                                    data-listing-status="@p.Status"
+                                                    data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                    data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                    onclick="openPurchasePackageModalFromElement(this)"
+                                                    class="inline-flex items-center gap-1 rounded-lg @(p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-primary-hover") px-2.5 py-1 text-[11px] font-bold text-white transition-colors shadow-2xs"
+                                                    title="@(p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment ? "Thanh toán gói để đăng tin" : "Gia hạn để bật hiển thị lại")">
+                                                <i data-lucide="credit-card" class="size-3"></i>
+                                                <span>@(p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment ? "Thanh toán" : "Gia hạn")</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button"
+                                                    data-listing-id="@p.Id"
+                                                    data-listing-title="@p.Title"
+                                                    data-package-code="@p.PackageCode"
+                                                    data-listing-status="@p.Status"
+                                                    data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                    data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                    onclick="openPurchasePackageModalFromElement(this)"
+                                                    class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
+                                                    title="Mua thêm / Nâng cấp VIP">
+                                                <i data-lucide="sparkles" class="size-4"></i>
+                                            </button>
+                                        }
+                                    }
+                                    @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
+                                    {
+                                        <form asp-action="Submit" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition-colors shadow-2xs"
+                                                    title="Gửi tin đăng lên kiểm duyệt">
+                                                <i data-lucide="send" class="size-3"></i>
+                                                <span>Gửi duyệt</span>
+                                            </button>
+                                        </form>
                                     }
                                     <!-- Delete Button (Only for Draft) -->
                                     @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
@@ -233,6 +276,10 @@
                                                     {
                                                         <span class="text-[10px] text-rose-600 font-semibold block truncate">Lý do từ chối: @p.RejectReason</span>
                                                     }
+                                                    @if (!string.IsNullOrWhiteSpace(p.ModerationWarning) && (p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment || p.Status == PropNest.Domain.Listings.ListingStatus.Published))
+                                                    {
+                                                        <span class="text-[10px] text-amber-700 font-semibold block truncate" title="@p.ModerationWarning">⚠️ Cảnh báo giá ảo: @p.ModerationWarning</span>
+                                                    }
                                                 </div>
                                             </div>
                                         </td>
@@ -242,20 +289,46 @@
                                             <partial name="_StatusBadge" model="p.Status" />
                                         </td>
 
-                                        <!-- Column 3: Package -->
+                                        <!-- Column 3: Package & Expiry -->
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
-                                                    @p.PackageCode
-                                                </span>
-                                                @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                            <div class="space-y-0.5">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-semibold @(p.PackageCode == "VIP" ? "text-amber-600 font-bold" : "text-neutral-700")">
+                                                        @(p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment ? "Chưa kích hoạt" : p.PackageCode)
+                                                    </span>
+                                                    @if (p.CanPurchasePackage)
+                                                    {
+                                                        <button type="button"
+                                                                data-listing-id="@p.Id"
+                                                                data-listing-title="@p.Title"
+                                                                data-package-code="@p.PackageCode"
+                                                                data-listing-status="@p.Status"
+                                                                data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                                data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                                onclick="openPurchasePackageModalFromElement(this)"
+                                                                class="p-1 rounded-md text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                                                                title="@(p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment ? "Thanh toán gói đăng tin" : p.Status == PropNest.Domain.Listings.ListingStatus.Expired ? "Gia hạn tin" : "Mua thêm / Nâng cấp VIP")">
+                                                            <i data-lucide="sparkles" class="size-3.5"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                                @if (p.Status == PropNest.Domain.Listings.ListingStatus.Published && p.EndDate.HasValue)
                                                 {
-                                                    <button type="button"
-                                                            onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
-                                                            class="p-1 rounded-md text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-colors"
-                                                            title="Nâng cấp gói dịch vụ">
-                                                        <i data-lucide="sparkles" class="size-3.5"></i>
-                                                    </button>
+                                                    var endVn = p.EndDate.Value.ToOffset(PropNest.Domain.Listings.ListingPackagePolicy.VietnamUtcOffset);
+                                                    if (p.HasActiveVipPackage && p.PackageEndDate.HasValue)
+                                                    {
+                                                        var vipVn = p.PackageEndDate.Value.ToOffset(PropNest.Domain.Listings.ListingPackagePolicy.VietnamUtcOffset);
+                                                        <span class="block text-[10px] text-amber-700 font-medium">VIP đến @vipVn.ToString("dd/MM/yyyy")</span>
+                                                    }
+                                                    <span class="block text-[10px] text-muted-foreground">Hiển thị đến @endVn.ToString("dd/MM/yyyy")</span>
+                                                }
+                                                else if (p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment)
+                                                {
+                                                    <span class="block text-[10px] text-blue-700">Cần thanh toán để lên tin</span>
+                                                }
+                                                else if (p.Status == PropNest.Domain.Listings.ListingStatus.Expired)
+                                                {
+                                                    <span class="block text-[10px] text-rose-600">Đã hết hạn hiển thị</span>
                                                 }
                                             </div>
                                         </td>
@@ -275,9 +348,54 @@
                                             <span>@p.Views</span>
                                         </td>
 
-                                        <!-- Column 7: Actions (Delete outside + Context Menu for other actions) -->
+                                        <!-- Column 7: Actions (Draft Submit & Delete outside + Context Menu for other actions) -->
                                         <td class="px-4 py-3 whitespace-nowrap text-right">
                                             <div class="inline-flex items-center justify-end gap-1.5 relative">
+                                                <!-- Nút Gửi duyệt / Thanh toán / Gia hạn nổi bật trực tiếp trên bảng -->
+                                                @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
+                                                {
+                                                    <form asp-action="Submit" asp-route-id="@p.Id" asp-route-status="@Model.CurrentStatus" method="post" class="inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit"
+                                                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition-colors"
+                                                                title="Gửi tin đăng này lên hệ thống để duyệt hiển thị">
+                                                            <i data-lucide="send" class="size-3.5"></i>
+                                                            <span>Gửi duyệt</span>
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else if (p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment && p.CanPurchasePackage)
+                                                {
+                                                    <button type="button"
+                                                            data-listing-id="@p.Id"
+                                                            data-listing-title="@p.Title"
+                                                            data-package-code="@p.PackageCode"
+                                                            data-listing-status="@p.Status"
+                                                            data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                            data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                            onclick="openPurchasePackageModalFromElement(this)"
+                                                            class="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition-colors"
+                                                            title="Thanh toán gói để kích hoạt tin hiển thị">
+                                                        <i data-lucide="credit-card" class="size-3.5"></i>
+                                                        <span>Thanh toán</span>
+                                                    </button>
+                                                }
+                                                else if (p.Status == PropNest.Domain.Listings.ListingStatus.Expired && p.CanPurchasePackage)
+                                                {
+                                                    <button type="button"
+                                                            data-listing-id="@p.Id"
+                                                            data-listing-title="@p.Title"
+                                                            data-package-code="@p.PackageCode"
+                                                            data-listing-status="@p.Status"
+                                                            data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                            data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                            onclick="openPurchasePackageModalFromElement(this)"
+                                                            class="inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition-colors"
+                                                            title="Gia hạn thêm ngày để bật lại tin đăng">
+                                                        <i data-lucide="refresh-cw" class="size-3.5"></i>
+                                                        <span>Gia hạn</span>
+                                                    </button>
+                                                }
                                                 <!-- Delete button directly outside (Chỉ cho phép xóa khi là Draft) -->
                                                 @if (p.Status == PropNest.Domain.Listings.ListingStatus.Draft)
                                                 {
@@ -315,13 +433,24 @@
                                                             <i data-lucide="eye" class="size-3.5 text-primary"></i> Xem chi tiết
                                                         </a>
 
-                                                        <!-- Mua / Nâng cấp gói -->
-                                                        @if (p.Status != PropNest.Domain.Listings.ListingStatus.Deleted)
+                                                        <!-- Mua thêm / Thanh toán / Gia hạn gói (Tin PendingPayment, Published, Expired đã được duyệt) -->
+                                                        @if (p.CanPurchasePackage)
                                                         {
+                                                            var menuPkgLabel = p.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment
+                                                                ? "Thanh toán & Đăng tin"
+                                                                : p.Status == PropNest.Domain.Listings.ListingStatus.Expired
+                                                                    ? "Gia hạn tin đăng"
+                                                                    : "Mua thêm / Nâng cấp gói";
                                                             <button type="button"
-                                                                    onclick="openPurchasePackageModal(@p.Id, '@p.Title.Replace("'", "\\'")', '@p.PackageCode')"
+                                                                    data-listing-id="@p.Id"
+                                                                    data-listing-title="@p.Title"
+                                                                    data-package-code="@p.PackageCode"
+                                                                    data-listing-status="@p.Status"
+                                                                    data-end-date="@(p.EndDate?.ToString("O") ?? "")"
+                                                                    data-package-end-date="@(p.PackageEndDate?.ToString("O") ?? "")"
+                                                                    onclick="openPurchasePackageModalFromElement(this)"
                                                                     class="flex w-full items-center gap-2 px-3 py-1.5 text-xs rounded-lg text-amber-700 hover:bg-amber-50 transition-colors text-left font-medium">
-                                                                <i data-lucide="sparkles" class="size-3.5 text-amber-500"></i> Mua / Nâng cấp gói
+                                                                <i data-lucide="sparkles" class="size-3.5 text-amber-500"></i> @menuPkgLabel
                                                             </button>
                                                         }
 
@@ -482,7 +611,7 @@
             if (isHidden) {
                 // Tính tọa độ nút bấm để neo menu cố định trên màn hình
                 const rect = btn.getBoundingClientRect();
-                const menuWidth = 176; // w-44 = 11rem = 176px
+                const menuWidth = 192; // w-48 = 12rem = 192px
                 const menuHeight = 220; // xấp xỉ chiều cao menu
 
                 // Tọa độ ngang: Căn mép phải của menu trùng với mép phải nút bấm

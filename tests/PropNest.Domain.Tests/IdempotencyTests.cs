@@ -8,6 +8,7 @@ using PropNest.Api.Controllers;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
+using PropNest.Domain.Listings;
 using PropNest.Domain.Workflows;
 using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
@@ -364,6 +365,13 @@ public sealed class IdempotencyTests : IDisposable
         mockCurrentUser.Setup(u => u.UserId).Returns(100);
 
         var mockListingService = new Mock<IListingService>();
+        mockListingService
+            .Setup(s => s.GetByIdAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateApprovedListingDto(10, 100, ListingStatus.PendingPayment));
+        mockListingService
+            .Setup(s => s.GetPackageByCodeAsync("VIP_30", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PackageDto("VIP_30", "Goi VIP Noi Bat - 30 ngay", 299000m, 30, "VIP", true));
+
         var mockWorkflowService = new Mock<IWorkflowService>();
 
         var correlationId = Guid.NewGuid();
@@ -371,8 +379,8 @@ public sealed class IdempotencyTests : IDisposable
             correlationId,
             ListingId: 10,
             UserId: 100,
-            PackageCode: "VIP",
-            ChargeAmount: 150000m,
+            PackageCode: "VIP_30",
+            ChargeAmount: 299000m,
             Status: WorkflowStatus.Started,
             RetryCount: 0,
             ErrorMessage: null,
@@ -393,7 +401,8 @@ public sealed class IdempotencyTests : IDisposable
         };
         controller.ControllerContext.HttpContext.Request.Path = "/api/v1/listings/10/purchase-package";
 
-        var request = new PurchasePackageRequest { PackageCode = "VIP", ChargeAmount = 150000m };
+        // Client submits tampered amount 0; controller must resolve authoritative server price 299000
+        var request = new PurchasePackageRequest { PackageCode = "VIP_30", ChargeAmount = 0m };
 
         // Act
         var result = await controller.PurchasePackage(10, "VALID-KEY-123", request, CancellationToken.None);
@@ -409,9 +418,137 @@ public sealed class IdempotencyTests : IDisposable
             It.Is<PurchasePackageCommand>(c =>
                 c.ListingId == 10 &&
                 c.UserId == 100 &&
-                c.PackageCode == "VIP" &&
-                c.ChargeAmount == 150000m &&
+                c.PackageCode == "VIP_30" &&
+                c.ChargeAmount == 299000m &&
                 c.IdempotencyKey == "VALID-KEY-123"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Theory]
+    [InlineData("Boost")]
+    [InlineData("Standard")]
+    [InlineData("UNKNOWN")]
+    public async Task ListingsControllerPurchasePackageRejectsInactiveOrUnsupportedPackage(string packageCode)
+    {
+        var mockCurrentUser = new Mock<ICurrentUser>();
+        mockCurrentUser.Setup(u => u.UserId).Returns(100);
+
+        var mockListingService = new Mock<IListingService>();
+        mockListingService
+            .Setup(s => s.GetByIdAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateApprovedListingDto(10, 100, ListingStatus.PendingPayment));
+        mockListingService
+            .Setup(s => s.GetPackageByCodeAsync("Boost", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PackageDto("Boost", "Goi Day Tin", 30000m, 7, "Boost", false));
+        mockListingService
+            .Setup(s => s.GetPackageByCodeAsync("Standard", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PackageDto("Standard", "Goi Tieu Chuan", 0m, 15, "Standard", false));
+
+        var mockWorkflowService = new Mock<IWorkflowService>();
+        var controller = new ListingsController(mockCurrentUser.Object, mockListingService.Object, mockWorkflowService.Object);
+
+        var result = await controller.PurchasePackage(
+            10,
+            "KEY-INVALID-PKG",
+            new PurchasePackageRequest { PackageCode = packageCode, ChargeAmount = 30000m },
+            CancellationToken.None);
+
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, objectResult.StatusCode);
+        mockWorkflowService.Verify(s => s.StartPurchaseAsync(It.IsAny<PurchasePackageCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ListingStatus.Draft)]
+    [InlineData(ListingStatus.PendingModeration)]
+    [InlineData(ListingStatus.Rejected)]
+    [InlineData(ListingStatus.Hidden)]
+    public async Task ListingsControllerPurchasePackageRejectsNonEligibleStatuses(ListingStatus status)
+    {
+        var mockCurrentUser = new Mock<ICurrentUser>();
+        mockCurrentUser.Setup(u => u.UserId).Returns(100);
+
+        var mockListingService = new Mock<IListingService>();
+        mockListingService
+            .Setup(s => s.GetByIdAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateApprovedListingDto(10, 100, status));
+
+        var mockWorkflowService = new Mock<IWorkflowService>();
+        var controller = new ListingsController(mockCurrentUser.Object, mockListingService.Object, mockWorkflowService.Object);
+
+        var result = await controller.PurchasePackage(
+            10,
+            "KEY-BAD-STATUS",
+            new PurchasePackageRequest { PackageCode = "STANDARD_15", ChargeAmount = 55000m },
+            CancellationToken.None);
+
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, objectResult.StatusCode);
+        mockWorkflowService.Verify(s => s.StartPurchaseAsync(It.IsAny<PurchasePackageCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ListingStatus.PendingPayment)]
+    [InlineData(ListingStatus.Published)]
+    [InlineData(ListingStatus.Expired)]
+    public async Task ListingsControllerPurchasePackageAllowsPendingPaymentPublishedAndExpiredForStacking(ListingStatus status)
+    {
+        var mockCurrentUser = new Mock<ICurrentUser>();
+        mockCurrentUser.Setup(u => u.UserId).Returns(100);
+
+        var mockListingService = new Mock<IListingService>();
+        mockListingService
+            .Setup(s => s.GetByIdAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateApprovedListingDto(10, 100, status));
+        mockListingService
+            .Setup(s => s.GetPackageByCodeAsync("STANDARD_15", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PackageDto("STANDARD_15", "Goi Tieu Chuan - 15 ngay", 55000m, 15, "Standard", true));
+
+        var mockWorkflowService = new Mock<IWorkflowService>();
+        var correlationId = Guid.NewGuid();
+        mockWorkflowService
+            .Setup(s => s.StartPurchaseAsync(It.IsAny<PurchasePackageCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WorkflowDto(
+                correlationId, 10, 100, "STANDARD_15", 55000m,
+                WorkflowStatus.Started, 0, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []));
+
+        var controller = new ListingsController(mockCurrentUser.Object, mockListingService.Object, mockWorkflowService.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        controller.ControllerContext.HttpContext.Request.Path = "/api/v1/listings/10/purchase-package";
+
+        var result = await controller.PurchasePackage(
+            10,
+            $"KEY-{status}",
+            new PurchasePackageRequest { PackageCode = "STANDARD_15", ChargeAmount = 55000m },
+            CancellationToken.None);
+
+        var accepted = Assert.IsType<AcceptedAtActionResult>(result.Result);
+        Assert.NotNull(accepted.Value);
+    }
+
+    private static ListingDto CreateApprovedListingDto(long listingId, long ownerUserId, ListingStatus status) => new(
+        ListingId: listingId,
+        OwnerUserId: ownerUserId,
+        Title: "Can ho test",
+        Description: "Mo ta test",
+        PropertyType: "Apartment",
+        ListingType: "sale",
+        Price: 2_000_000_000m,
+        Area: 80m,
+        City: "Ho Chi Minh",
+        District: "Quan 1",
+        Ward: "Ben Nghe",
+        Address: "123 Le Loi",
+        Status: status,
+        ModerationDecision: status == ListingStatus.Rejected
+            ? ModerationDecision.Rejected
+            : status is ListingStatus.Draft or ListingStatus.PendingModeration
+                ? ModerationDecision.Pending
+                : ModerationDecision.Approved,
+        PackageCode: "Standard",
+        StartDate: DateTimeOffset.UtcNow.AddDays(-1),
+        EndDate: DateTimeOffset.UtcNow.AddDays(14),
+        RowVersion: [1, 2, 3, 4]);
 }

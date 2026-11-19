@@ -112,7 +112,7 @@ public class ModerationController : Controller
     {
         if (!ModelState.IsValid)
         {
-            TempData["ErrorMessage"] = "Vui lòng nhập lý do từ chối cụ thể theo yêu cầu F03.";
+            TempData["ErrorMessage"] = "Vui lòng nhập lý do từ chối cụ thể.";
             return RedirectToAction(nameof(Index), new { id = input.ListingId });
         }
 

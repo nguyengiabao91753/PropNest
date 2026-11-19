@@ -1,5 +1,6 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 using PropNest.Web.Seller.Models.InputModels;
 using PropNest.Web.Seller.Models.ViewModels;
@@ -14,7 +15,7 @@ namespace PropNest.Web.Seller.Services
         private static readonly JsonSerializerOptions s_jsonOptions = new() { PropertyNameCaseInsensitive = true };
         private readonly JsonSerializerOptions _jsonOptions = s_jsonOptions;
 
-        [LoggerMessage(Level = LogLevel.Warning, Message = "GetHistoryDelta tháº¥t báº¡i cho tin Ä‘Äƒng {ListingId}. Status: {StatusCode}, Chi tiáº¿t: {Details}")]
+        [LoggerMessage(Level = LogLevel.Warning, Message = "GetHistoryDelta thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogGetHistoryDeltaFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
 
         [LoggerMessage(Level = LogLevel.Error, Message = "Không thể kết nối tới Backend API tại {Url}")]
@@ -22,6 +23,7 @@ namespace PropNest.Web.Seller.Services
 
         [LoggerMessage(Level = LogLevel.Error, Message = "UploadPropertyImages thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogUploadImagesFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
+
         [LoggerMessage(Level = LogLevel.Error, Message = "PurchasePackage thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogPurchasePackageFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
 
@@ -66,12 +68,12 @@ namespace PropNest.Web.Seller.Services
                 var response = await _httpClient.GetFromJsonAsync<ApiListingCollectionDto>(url, _jsonOptions, cancellationToken);
                 if (response?.Items != null)
                 {
-                    // 1. Thống kê số lượng cho từng Tab Status
                     model.Counts = new StatusCountViewModel
                     {
                         All = response.Items.Count,
                         Published = response.Items.Count(x => x.Status == ListingStatus.Published),
                         PendingModeration = response.Items.Count(x => x.Status == ListingStatus.PendingModeration),
+                        PendingPayment = response.Items.Count(x => x.Status == ListingStatus.PendingPayment),
                         Draft = response.Items.Count(x => x.Status == ListingStatus.Draft),
                         Rejected = response.Items.Count(x => x.Status == ListingStatus.Rejected),
                         Hidden = response.Items.Count(x => x.Status == ListingStatus.Hidden),
@@ -79,28 +81,7 @@ namespace PropNest.Web.Seller.Services
                     };
 
                     // 2. Chuyển đổi dữ liệu sang SellerPropertyItemViewModel
-                    var allItems = response.Items.Select(x => new SellerPropertyItemViewModel
-                    {
-                        Id = x.ListingId,
-                        Title = x.Title,
-                        Description = x.Description ?? string.Empty,
-                        PropertyType = x.PropertyType,
-                        ListingType = x.ListingType,
-                        Price = x.Price,
-                        Area = x.Area,
-                        City = x.City,
-                        District = x.District,
-                        Ward = x.Ward,
-                        Address = x.Address,
-                        Status = x.Status,
-                        PackageCode = x.PackageCode ?? "Standard",
-                        SellerName = x.OwnerName ?? "Người bán",
-                        Images = (x.Images != null && x.Images.Count > 0)
-                            ? x.Images
-                            : new List<string>(),
-                        CreatedAt = x.StartDate ?? DateTimeOffset.UtcNow,
-                        RowVersion = x.RowVersion != null ? Convert.ToBase64String(x.RowVersion) : string.Empty
-                    }).ToList();
+                    var allItems = response.Items.Select(MapToViewModel).ToList();
 
                     // 3. Lọc theo Tab được chọn
                     var filtered = allItems.AsEnumerable();
@@ -109,21 +90,20 @@ namespace PropNest.Web.Seller.Services
                         filtered = filtered.Where(x => string.Equals(x.Status.ToString(), model.CurrentStatus, StringComparison.OrdinalIgnoreCase));
                     }
 
-                    // 4. Lọc theo từ khóa tìm kiếm
                     if (!string.IsNullOrWhiteSpace(model.SearchTerm))
                     {
                         var term = model.SearchTerm.Trim();
                         filtered = filtered.Where(x =>
                             x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             x.Address.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            x.District.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            x.City.Contains(term, StringComparison.OrdinalIgnoreCase));
+                            (!string.IsNullOrWhiteSpace(x.District) && x.District.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                            x.City.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrWhiteSpace(x.LegacyAddress) && x.LegacyAddress.Contains(term, StringComparison.OrdinalIgnoreCase)));
                     }
 
                     var filteredList = filtered.ToList();
                     model.TotalCount = filteredList.Count;
 
-                    // 5. Áp dụng Phân trang (Pagination)
                     model.Properties = filteredList
                         .Skip((validPage - 1) * validPageSize)
                         .Take(validPageSize)
@@ -171,7 +151,16 @@ namespace PropNest.Web.Seller.Services
 
         public async Task<bool> ToggleHideAsync(long id, CancellationToken cancellationToken = default)
         {
-            var url = $"/api/v1/listings/{id}/hide";
+            var listing = await GetPropertyByIdAsync(id, cancellationToken);
+            if (listing == null)
+            {
+                return false;
+            }
+
+            var url = listing.Status == ListingStatus.Hidden
+                ? $"/api/v1/listings/{id}/unhide"
+                : $"/api/v1/listings/{id}/hide";
+
             try
             {
                 var response = await _httpClient.PostAsync(url, null, cancellationToken);
@@ -205,30 +194,7 @@ namespace PropNest.Web.Seller.Services
             try
             {
                 var dto = await _httpClient.GetFromJsonAsync<ApiListingDto>(url, _jsonOptions, cancellationToken);
-                if (dto == null) return null;
-
-                return new SellerPropertyItemViewModel
-                {
-                    Id = dto.ListingId,
-                    Title = dto.Title,
-                    Description = dto.Description ?? string.Empty,
-                    PropertyType = dto.PropertyType,
-                    ListingType = dto.ListingType,
-                    Price = dto.Price,
-                    Area = dto.Area,
-                    City = dto.City,
-                    District = dto.District,
-                    Ward = dto.Ward,
-                    Address = dto.Address,
-                    Status = dto.Status,
-                    PackageCode = dto.PackageCode ?? "Standard",
-                    SellerName = dto.OwnerName ?? "Người bán",
-                    Images = (dto.Images != null && dto.Images.Count > 0)
-                        ? dto.Images
-                        : new List<string>(),
-                    CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
-                    RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty
-                };
+                return dto == null ? null : MapToViewModel(dto);
             }
             catch (HttpRequestException ex)
             {
@@ -267,7 +233,6 @@ namespace PropNest.Web.Seller.Services
                         DeltaChanges = ParseDeltas(h.DeltasJson)
                     });
                 }
-                // Sắp xếp thời gian mới nhất lên đầu
                 return result.OrderBy(x => x.ActionDate).ToList();
             }
             catch (HttpRequestException ex)
@@ -292,7 +257,16 @@ namespace PropNest.Web.Seller.Services
                     input.City,
                     input.District,
                     input.Ward,
-                    input.Address
+                    input.Address,
+                    input.Floors,
+                    input.Bedrooms,
+                    input.Bathrooms,
+                    input.BalconyDirection,
+                    string.IsNullOrWhiteSpace(input.AdministrativeMode) ? "PostMerger" : input.AdministrativeMode,
+                    input.ProvinceCode,
+                    input.DistrictCode,
+                    input.WardCode,
+                    input.LegacyAddress
                 );
                 var response = await _httpClient.PostAsJsonAsync(url, request, _jsonOptions, cancellationToken);
                 if (!response.IsSuccessStatusCode)
@@ -304,7 +278,6 @@ namespace PropNest.Web.Seller.Services
                 var created = await response.Content.ReadFromJsonAsync<ApiListingDto>(_jsonOptions, cancellationToken);
                 if (created == null) return null;
                 var listingId = created.ListingId;
-                // Upload ảnh nếu có
                 if (input.ImageFiles != null && input.ImageFiles.Count > 0)
                 {
                     await UploadPropertyImagesAsync(listingId, input.ImageFiles, cancellationToken);
@@ -334,10 +307,18 @@ namespace PropNest.Web.Seller.Services
                     input.District,
                     input.Ward,
                     input.Address,
-                    input.RowVersion ?? string.Empty
+                    input.RowVersion ?? string.Empty,
+                    input.Floors,
+                    input.Bedrooms,
+                    input.Bathrooms,
+                    input.BalconyDirection,
+                    string.IsNullOrWhiteSpace(input.AdministrativeMode) ? "PostMerger" : input.AdministrativeMode,
+                    input.ProvinceCode,
+                    input.DistrictCode,
+                    input.WardCode,
+                    input.LegacyAddress
                 );
                 var response = await _httpClient.PutAsJsonAsync(url, request, _jsonOptions, cancellationToken);
-                // Bắt mã 409 Conflict (Optimistic Concurrency)
                 if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
                 {
                     return UpdatePropertyStatus.ConcurrencyConflict;
@@ -350,7 +331,6 @@ namespace PropNest.Web.Seller.Services
                 {
                     return UpdatePropertyStatus.Failed;
                 }
-                // Upload thêm ảnh mới nếu có
                 if (input.ImageFiles != null && input.ImageFiles.Count > 0)
                 {
                     await UploadPropertyImagesAsync(id, input.ImageFiles, cancellationToken);
@@ -363,7 +343,6 @@ namespace PropNest.Web.Seller.Services
                 return UpdatePropertyStatus.Failed;
             }
         }
-
 
         public async Task<bool> UploadPropertyImagesAsync(long listingId, List<IFormFile> files, CancellationToken cancellationToken = default)
         {
@@ -397,7 +376,7 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
-        public async Task<Guid?> PurchasePackageAsync(long listingId, string packageCode, decimal amount, string? idempotencyKey=null, CancellationToken cancellationToken = default)
+        public async Task<PurchasePackageApiResult> PurchasePackageAsync(long listingId, string packageCode, decimal amount, string? idempotencyKey = null, CancellationToken cancellationToken = default)
         {
             var url = $"/api/v1/listings/{listingId}/purchase-package";
             try
@@ -411,16 +390,54 @@ namespace PropNest.Web.Seller.Services
                 {
                     var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                     LogPurchasePackageFailed(_logger, listingId, response.StatusCode, errorBody);
-                    return null;
+                    return new PurchasePackageApiResult(false, null, ExtractErrorMessage(errorBody));
                 }
                 var dto = await response.Content.ReadFromJsonAsync<ApiWorkflowDto>(_jsonOptions, cancellationToken);
-                return dto?.CorrelationId;
+                return dto?.CorrelationId is Guid cid
+                    ? new PurchasePackageApiResult(true, cid)
+                    : new PurchasePackageApiResult(false, null, "Không nhận được mã tiến trình từ hệ thống.");
             }
             catch (HttpRequestException ex)
             {
                 LogApiConnectionError(_logger, ex, url);
-                return null;
+                return new PurchasePackageApiResult(false, null, "Không thể kết nối tới máy chủ thanh toán. Vui lòng thử lại sau.");
             }
+        }
+
+        public async Task<IReadOnlyList<SellerPackageDefinitionViewModel>> GetActivePackagesAsync(CancellationToken cancellationToken = default)
+        {
+            const string url = "/api/v1/packages";
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<SellerPackageDefinitionViewModel>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
+        private static string? ExtractErrorMessage(string? body)
+        {
+            if (string.IsNullOrWhiteSpace(body)) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+                        return detail.GetString();
+                    if (doc.RootElement.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.String)
+                        return msg.GetString();
+                    if (doc.RootElement.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
+                        return title.GetString();
+                }
+            }
+            catch
+            {
+            }
+            return null;
         }
 
         public async Task<WorkflowStatusViewModel?> GetWorkflowStatusAsync(Guid correlationId, CancellationToken cancellationToken = default)
@@ -453,6 +470,158 @@ namespace PropNest.Web.Seller.Services
             }
         }
 
+        public async Task<IReadOnlyList<SellerProvinceItem>> GetProvincesAsync(string mode = "post", CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/locations/provinces?mode={Uri.EscapeDataString(mode)}";
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<SellerProvinceItem>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
+        public async Task<IReadOnlyList<SellerDistrictItem>> GetDistrictsByProvinceAsync(int provinceCode, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/locations/provinces/{provinceCode}/districts";
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<SellerDistrictItem>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
+        public async Task<IReadOnlyList<SellerWardItem>> GetWardsByProvinceAsync(int provinceCode, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/locations/provinces/{provinceCode}/wards";
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<SellerWardItem>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
+        public async Task<IReadOnlyList<SellerWardItem>> GetWardsByDistrictAsync(int districtCode, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/locations/districts/{districtCode}/wards";
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<SellerWardItem>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
+        public async Task<SellerLegacyWardMapping?> ConvertLegacyWardAsync(
+            int? legacyWardCode,
+            string? legacyWardName,
+            int? legacyProvinceCode = null,
+            CancellationToken cancellationToken = default)
+        {
+            var queryParts = new List<string>();
+            if (legacyWardCode.HasValue && legacyWardCode > 0)
+                queryParts.Add($"legacyWardCode={legacyWardCode.Value}");
+            if (!string.IsNullOrWhiteSpace(legacyWardName))
+                queryParts.Add($"legacyWardName={Uri.EscapeDataString(legacyWardName)}");
+            if (legacyProvinceCode.HasValue && legacyProvinceCode > 0)
+                queryParts.Add($"legacyProvinceCode={legacyProvinceCode.Value}");
+
+            var url = "/api/v1/locations/convert-legacy?" + string.Join("&", queryParts);
+            try
+            {
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<SellerLegacyWardMapping>(_jsonOptions, cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
+            }
+        }
+
+        public async Task<SellerParsedAddressResult?> ParseAddressAsync(string rawAddress, CancellationToken cancellationToken = default)
+        {
+            const string url = "/api/v1/locations/parse-address";
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(url, new { rawAddress }, _jsonOptions, cancellationToken);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<SellerParsedAddressResult>(_jsonOptions, cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
+            }
+        }
+
+        public async Task<SellerDescriptionSuggestionResult?> SuggestDescriptionAsync(SellerSuggestDescriptionInput input, CancellationToken cancellationToken = default)
+        {
+            const string url = "/api/v1/listings/suggest-description";
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(url, input, _jsonOptions, cancellationToken);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<SellerDescriptionSuggestionResult>(_jsonOptions, cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return null;
+            }
+        }
+
+        private static SellerPropertyItemViewModel MapToViewModel(ApiListingDto dto) => new()
+        {
+            Id = dto.ListingId,
+            Title = dto.Title,
+            Description = dto.Description ?? string.Empty,
+            PropertyType = dto.PropertyType,
+            ListingType = dto.ListingType,
+            Price = dto.Price,
+            Area = dto.Area,
+            Floors = dto.Floors,
+            Bedrooms = dto.Bedrooms,
+            Bathrooms = dto.Bathrooms,
+            BalconyDirection = dto.BalconyDirection,
+            City = dto.City,
+            District = dto.District ?? string.Empty,
+            Ward = dto.Ward,
+            Address = dto.Address,
+            AdministrativeMode = dto.AdministrativeMode ?? "PostMerger",
+            ProvinceCode = dto.ProvinceCode,
+            DistrictCode = dto.DistrictCode,
+            WardCode = dto.WardCode,
+            LegacyAddress = dto.LegacyAddress,
+            Status = dto.Status,
+            ModerationDecision = dto.ModerationDecision,
+            PackageCode = dto.PackageCode ?? ListingPackagePolicy.StandardPackageCode,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            PackageEndDate = dto.PackageEndDate,
+            SellerName = dto.OwnerName ?? "Người bán",
+            Images = (dto.Images != null && dto.Images.Count > 0) ? dto.Images : new List<string>(),
+            CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
+            RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
+            RejectReason = FormatRejectReason(dto.LatestRejectReason),
+            ModerationWarning = dto.LatestModerationWarning
+        };
+
         // ==========================================
         // DTOs & Helper Methods
         // ==========================================
@@ -464,10 +633,20 @@ namespace PropNest.Web.Seller.Services
             decimal Price,
             decimal Area,
             string City,
-            string District,
+            string? District,
             string? Ward,
-            string Address
+            string Address,
+            int? Floors,
+            int? Bedrooms,
+            int? Bathrooms,
+            string? BalconyDirection,
+            string AdministrativeMode,
+            int? ProvinceCode,
+            int? DistrictCode,
+            int? WardCode,
+            string? LegacyAddress
         );
+
         private sealed record ApiUpdateListingRequest(
             string Title,
             string Description,
@@ -476,11 +655,21 @@ namespace PropNest.Web.Seller.Services
             decimal Price,
             decimal Area,
             string City,
-            string District,
+            string? District,
             string? Ward,
             string Address,
-            string RowVersion
+            string RowVersion,
+            int? Floors,
+            int? Bedrooms,
+            int? Bathrooms,
+            string? BalconyDirection,
+            string AdministrativeMode,
+            int? ProvinceCode,
+            int? DistrictCode,
+            int? WardCode,
+            string? LegacyAddress
         );
+
         private sealed class ApiListingCollectionDto
         {
             public int Total { get; set; }
@@ -497,27 +686,34 @@ namespace PropNest.Web.Seller.Services
             public string ListingType { get; set; } = string.Empty;
             public decimal Price { get; set; }
             public decimal Area { get; set; }
+            public int? Floors { get; set; }
+            public int? Bedrooms { get; set; }
+            public int? Bathrooms { get; set; }
+            public string? BalconyDirection { get; set; }
             public string City { get; set; } = string.Empty;
-            public string District { get; set; } = string.Empty;
+            public string? District { get; set; }
             public string? Ward { get; set; }
             public string Address { get; set; } = string.Empty;
+            public string? AdministrativeMode { get; set; }
+            public int? ProvinceCode { get; set; }
+            public int? DistrictCode { get; set; }
+            public int? WardCode { get; set; }
+            public string? LegacyAddress { get; set; }
             public ListingStatus Status { get; set; }
+            public ModerationDecision ModerationDecision { get; set; }
             public string? PackageCode { get; set; }
             public DateTimeOffset? StartDate { get; set; }
             public DateTimeOffset? EndDate { get; set; }
+            public DateTimeOffset? PackageEndDate { get; set; }
             public byte[]? RowVersion { get; set; }
             public string? OwnerName { get; set; }
             public List<string>? Images { get; set; }
+            public string? LatestRejectReason { get; set; }
+            public string? LatestModerationWarning { get; set; }
         }
 
-        private static string GetFallbackImage(string propertyType) => propertyType switch
-        {
-            "Apartment" => "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
-            "House" => "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80",
-            "Villa" => "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
-            _ => "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
-        };
         private sealed record ApiPurchasePackageRequest(string PackageCode, decimal ChargeAmount);
+
         private sealed class ApiWorkflowDto
         {
             public Guid CorrelationId { get; set; }
@@ -531,19 +727,86 @@ namespace PropNest.Web.Seller.Services
             public DateTimeOffset UpdatedAt { get; set; }
         }
 
+        private static string? FormatRejectReason(string? reasonsJson)
+        {
+            if (string.IsNullOrWhiteSpace(reasonsJson)) return null;
+
+            try
+            {
+                // ReasonsJson from AME: {"Summary":"...", "ReasonCodes":["..."]}
+                // ReasonsJson from manual moderator: plain text or JSON array ["reason1"]
+                using var doc = System.Text.Json.JsonDocument.Parse(reasonsJson);
+                var root = doc.RootElement;
+
+                // Case 1: AME format { "Summary": "...", "ReasonCodes": [...] }
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    var summary = root.TryGetProperty("Summary", out var s)
+                        ? s.GetString()
+                        : root.TryGetProperty("summary", out var s2)
+                            ? s2.GetString()
+                            : null;
+
+                    var codes = new List<string>();
+                    if (root.TryGetProperty("ReasonCodes", out var rc) || root.TryGetProperty("reasonCodes", out rc))
+                    {
+                        if (rc.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var item in rc.EnumerateArray())
+                            {
+                                var val = item.GetString();
+                                if (!string.IsNullOrWhiteSpace(val)) codes.Add(val);
+                            }
+                        }
+                    }
+
+                    var parts = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(summary)) parts.Add(summary);
+                    if (codes.Count > 0) parts.Add("Mã cảnh báo: " + string.Join(", ", codes));
+
+                    return parts.Count > 0 ? string.Join(" — ", parts) : reasonsJson;
+                }
+
+                // Case 2: JSON array ["reason1", "reason2"]
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var reasons = new List<string>();
+                    foreach (var item in root.EnumerateArray())
+                    {
+                        var val = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(val)) reasons.Add(val);
+                    }
+                    return reasons.Count > 0 ? string.Join("; ", reasons) : reasonsJson;
+                }
+
+                return reasonsJson;
+            }
+            catch
+            {
+                // Not valid JSON — return as-is (plain text reject reason from moderator)
+                return reasonsJson;
+            }
+        }
+
         private static string NormalizeActionType(string actionType) => actionType switch
         {
             "Create" => "Tạo mới tin",
             "UpdateContent" or "Update" => "Cập nhật thông tin",
             "Submit" => "Gửi duyệt",
             "Approve" => "Đã duyệt",
+            "AutoApprove" => "Hệ thống tự động duyệt",
             "Reject" => "Từ chối duyệt",
+            "AutoReject" => "Hệ thống tự động từ chối",
+            "RouteManualReview" => "Chuyển kiểm duyệt viên",
             "Expire" => "Hết hạn",
             "Hide" => "Tạm ẩn",
-            "UpgradePackage" => "Nâng cấp gói",
+            "Unhide" => "Bật hiển thị lại",
+            "UpgradePackage" => "Thanh toán / Nâng cấp gói",
+            "DowngradePackage" => "Hết hạn VIP (chuyển về Standard)",
             "Delete" => "Xóa tin",
             _ => actionType
         };
+
         private static string FormatActor(string? actorName, string? actorRole)
         {
             if (string.IsNullOrWhiteSpace(actorName))
@@ -560,10 +823,10 @@ namespace PropNest.Web.Seller.Services
             };
             return $"{actorName} ({roleLabel})";
         }
+
         private static string? FormatNote(string actionType, string? note)
         {
             if (string.IsNullOrWhiteSpace(note)) return null;
-            // Nếu là Reject và Note lưu dạng JSON array: ["Lý do 1", "Lý do 2"]
             if (string.Equals(actionType, "Reject", StringComparison.OrdinalIgnoreCase) && note.TrimStart().StartsWith('['))
             {
                 try
@@ -576,11 +839,11 @@ namespace PropNest.Web.Seller.Services
                 }
                 catch
                 {
-                    // fallback nếu không parse được json
                 }
             }
             return note;
         }
+
         private static List<DeltaItemViewModel> ParseDeltas(string? deltasJson)
         {
             var list = new List<DeltaItemViewModel>();
@@ -601,10 +864,10 @@ namespace PropNest.Web.Seller.Services
             }
             catch
             {
-                // Bỏ qua nếu json lỗi
             }
             return list;
         }
+
         private static string FormatFieldName(string fieldName) => fieldName switch
         {
             "Title" => "Tiêu đề tin",
@@ -613,35 +876,45 @@ namespace PropNest.Web.Seller.Services
             "ListingType" => "Hình thức (Bán/Cho thuê)",
             "Price" => "Giá bán/cho thuê",
             "Area" => "Diện tích",
+            "Floors" => "Số tầng",
+            "Bedrooms" => "Số phòng ngủ",
+            "Bathrooms" => "Số toilet / WC",
+            "BalconyDirection" => "Hướng ban công",
+            "AdministrativeMode" => "Chuẩn địa giới hành chính",
             "City" => "Tỉnh / Thành phố",
             "District" => "Quận / Huyện",
             "Ward" => "Phường / Xã",
             "Address" => "Địa chỉ cụ thể",
+            "LegacyAddress" => "Địa chỉ trước sáp nhập",
             "PackageCode" => "Gói dịch vụ",
             _ => fieldName
         };
+
         private static string FormatFieldValue(string fieldName, object? value)
         {
             if (value == null) return "(Trống)";
             var strValue = value.ToString()?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(strValue)) return "(Trống)";
-            // Format tiền VND
             if (string.Equals(fieldName, "Price", StringComparison.OrdinalIgnoreCase) && decimal.TryParse(strValue, out var price))
             {
                 return $"{price:N0} ₫";
             }
-            // Format diện tích m²
             if (string.Equals(fieldName, "Area", StringComparison.OrdinalIgnoreCase) && decimal.TryParse(strValue, out var area))
             {
                 return $"{area:N1} m²";
             }
-            // Format hình thức
             if (string.Equals(fieldName, "ListingType", StringComparison.OrdinalIgnoreCase))
             {
                 return string.Equals(strValue, "sale", StringComparison.OrdinalIgnoreCase) ? "Cần bán" : "Cho thuê";
             }
+            if (string.Equals(fieldName, "Description", StringComparison.OrdinalIgnoreCase))
+            {
+                var plain = RichTextHtmlHelper.ToPlainTextPreview(strValue);
+                return string.IsNullOrWhiteSpace(plain) ? "(Trống)" : plain;
+            }
             return strValue;
         }
+
         private sealed class ApiListingHistoryDto
         {
             public string ActionType { get; set; } = string.Empty;
@@ -653,6 +926,7 @@ namespace PropNest.Web.Seller.Services
             public string? DeltasJson { get; set; }
             public string? Note { get; set; }
         }
+
         private sealed class ApiListingDeltaDto
         {
             public string FieldName { get; set; } = string.Empty;

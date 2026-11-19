@@ -19,12 +19,10 @@ public sealed class ModerationFlowTests
         const long listingId = 1L;
         const long moderatorUserId = 99L;
         var listing = CreateListingWithStatus(listingId, ListingStatus.PendingModeration);
-        var package = new PackageDefinitions(1L, "Standard", "Gói thường", 50_000m, 30, "Standard");
 
         var repository = new FakeListingRepository
         {
-            Listing = listing,
-            Package = package
+            Listing = listing
         };
         var unitOfWork = new FakeUnitOfWork();
         var service = new ListingService(repository, unitOfWork);
@@ -32,14 +30,14 @@ public sealed class ModerationFlowTests
         // Act
         var result = await service.ApproveAsync(listingId, moderatorUserId);
 
-        // Assert
-        Assert.Equal(ListingStatus.Published, result.Status);
+        // Assert: first-time approval transitions to PendingPayment until seller pays for a package
+        Assert.Equal(ListingStatus.PendingPayment, result.Status);
         Assert.Equal(ModerationDecision.Approved, result.ModerationDecision);
-        Assert.NotNull(result.StartDate);
-        Assert.NotNull(result.EndDate);
-        Assert.True(result.EndDate > result.StartDate);
+        Assert.Null(result.StartDate);
+        Assert.Null(result.EndDate);
+        Assert.Null(result.PackageEndDate);
 
-        // Kiểm tra ghi nhận Moderation Review
+        // Moderation Review recorded
         var review = Assert.Single(repository.Reviews);
         Assert.Equal(listingId, review.ListingId);
         Assert.Equal(ModerationDecision.Approved, review.Decision);
@@ -47,19 +45,57 @@ public sealed class ModerationFlowTests
         Assert.Equal("Manual", review.Source);
         Assert.Null(review.ReasonsJson);
 
-        // Kiểm tra ghi nhận Listing History
+        // History recorded
         var history = Assert.Single(repository.Histories);
         Assert.Equal(listingId, history.ListingId);
         Assert.Equal(moderatorUserId, history.ActorUserId);
         Assert.Equal("Approve", history.ActionType);
 
-        // Kiểm tra lưu thay đổi vào cơ sở dữ liệu
+        var outbox = Assert.Single(repository.OutboxMessages);
+        Assert.Equal("ListingApprovedPendingPayment", outbox.Type);
+
         Assert.Equal(1, unitOfWork.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task approve_edited_active_published_listing_restores_published_without_repayment()
+    {
+        const long listingId = 2L;
+        const long moderatorUserId = 99L;
+        var listing = CreateListingWithStatus(listingId, ListingStatus.Published);
+        var originalEndDate = listing.EndDate;
+
+        listing.UpdateContent(
+            "Updated title for moderation",
+            "Updated description content.",
+            "Apartment",
+            "Sale",
+            3_500_000_000m,
+            69m,
+            "TP Hồ Chí Minh",
+            "Thủ Đức",
+            "Long Thạnh Mỹ",
+            "Nguyễn Xiển");
+        Assert.Equal(ListingStatus.PendingModeration, listing.Status);
+
+        var repository = new FakeListingRepository { Listing = listing };
+        var unitOfWork = new FakeUnitOfWork();
+        var service = new ListingService(repository, unitOfWork);
+
+        var result = await service.ApproveAsync(listingId, moderatorUserId);
+
+        Assert.Equal(ListingStatus.Published, result.Status);
+        Assert.Equal(ModerationDecision.Approved, result.ModerationDecision);
+        Assert.Equal(originalEndDate, result.EndDate);
+
+        var outbox = Assert.Single(repository.OutboxMessages);
+        Assert.Equal("ListingPublished", outbox.Type);
     }
 
     [Theory]
     [InlineData(ListingStatus.Draft)]
     [InlineData(ListingStatus.Published)]
+    [InlineData(ListingStatus.PendingPayment)]
     [InlineData(ListingStatus.Rejected)]
     [InlineData(ListingStatus.Hidden)]
     public async Task approve_wrong_status_fails(ListingStatus invalidStatus)
@@ -68,12 +104,10 @@ public sealed class ModerationFlowTests
         const long listingId = 1L;
         const long moderatorUserId = 99L;
         var listing = CreateListingWithStatus(listingId, invalidStatus);
-        var package = new PackageDefinitions(1L, "Standard", "Gói thường", 50_000m, 30, "Standard");
 
         var repository = new FakeListingRepository
         {
-            Listing = listing,
-            Package = package
+            Listing = listing
         };
         var unitOfWork = new FakeUnitOfWork();
         var service = new ListingService(repository, unitOfWork);
@@ -84,7 +118,6 @@ public sealed class ModerationFlowTests
 
         Assert.Contains("pending moderation", exception.Message, StringComparison.OrdinalIgnoreCase);
 
-        // Đảm bảo không ghi review và history khi xảy ra lỗi
         Assert.Empty(repository.Reviews);
         Assert.Empty(repository.Histories);
         Assert.Equal(0, unitOfWork.SaveChangesCalls);
@@ -93,7 +126,6 @@ public sealed class ModerationFlowTests
     [Fact]
     public async Task reject_success()
     {
-        // Arrange
         const long listingId = 1L;
         const long moderatorUserId = 99L;
         const string reasonsJson = "{\"reason\":\"Hình ảnh mờ và vi phạm quy định đăng tin\"}";
@@ -106,14 +138,11 @@ public sealed class ModerationFlowTests
         var unitOfWork = new FakeUnitOfWork();
         var service = new ListingService(repository, unitOfWork);
 
-        // Act
         var result = await service.RejectAsync(listingId, moderatorUserId, reasonsJson);
 
-        // Assert
         Assert.Equal(ListingStatus.Rejected, result.Status);
         Assert.Equal(ModerationDecision.Rejected, result.ModerationDecision);
 
-        // Kiểm tra ghi nhận Moderation Review
         var review = Assert.Single(repository.Reviews);
         Assert.Equal(listingId, review.ListingId);
         Assert.Equal(ModerationDecision.Rejected, review.Decision);
@@ -121,13 +150,11 @@ public sealed class ModerationFlowTests
         Assert.Equal("Manual", review.Source);
         Assert.Equal(reasonsJson, review.ReasonsJson);
 
-        // Kiểm tra ghi nhận Listing History
         var history = Assert.Single(repository.Histories);
         Assert.Equal(listingId, history.ListingId);
         Assert.Equal(moderatorUserId, history.ActorUserId);
         Assert.Equal("Reject", history.ActionType);
 
-        // Kiểm tra lưu thay đổi vào cơ sở dữ liệu
         Assert.Equal(1, unitOfWork.SaveChangesCalls);
     }
 
@@ -137,7 +164,6 @@ public sealed class ModerationFlowTests
     [InlineData("   ")]
     public async Task reject_without_reason_fails(string? invalidReason)
     {
-        // Arrange
         const long listingId = 1L;
         const long moderatorUserId = 99L;
         var listing = CreateListingWithStatus(listingId, ListingStatus.PendingModeration);
@@ -149,13 +175,10 @@ public sealed class ModerationFlowTests
         var unitOfWork = new FakeUnitOfWork();
         var service = new ListingService(repository, unitOfWork);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             service.RejectAsync(listingId, moderatorUserId, invalidReason!));
 
         Assert.Equal("reasonsJson", exception.ParamName);
-
-        // Đảm bảo không ghi review và history khi thiếu reason
         Assert.Empty(repository.Reviews);
         Assert.Empty(repository.Histories);
         Assert.Equal(0, unitOfWork.SaveChangesCalls);
@@ -164,7 +187,6 @@ public sealed class ModerationFlowTests
     [Fact]
     public async Task get_pending_moderation_queue_returns_items_with_owner_info()
     {
-        // Arrange
         var listingDto = new ListingDto(
             ListingId: 10L,
             OwnerUserId: 1L,
@@ -179,7 +201,7 @@ public sealed class ModerationFlowTests
             Ward: "Bến Nghé",
             Address: "123 Lê Lợi",
             Status: ListingStatus.PendingModeration,
-            ModerationDecision: ModerationDecision.NotRequested,
+            ModerationDecision: ModerationDecision.ManualReview,
             PackageCode: "Standard",
             StartDate: null,
             EndDate: null,
@@ -194,10 +216,8 @@ public sealed class ModerationFlowTests
         var unitOfWork = new FakeUnitOfWork();
         var service = new ListingService(repository, unitOfWork);
 
-        // Act
         var result = await service.GetPendingModerationAsync();
 
-        // Assert
         Assert.Equal(1, result.Total);
         var item = Assert.Single(result.Items);
         Assert.Equal(10L, item.ListingId);
@@ -226,6 +246,7 @@ public sealed class ModerationFlowTests
         typeof(Listing).GetProperty(nameof(Listing.ListingId), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?
             .SetValue(listing, listingId);
 
+        var now = DateTimeOffset.UtcNow;
         switch (status)
         {
             case ListingStatus.Draft:
@@ -233,9 +254,14 @@ public sealed class ModerationFlowTests
             case ListingStatus.PendingModeration:
                 listing.SubmitForModeration();
                 break;
+            case ListingStatus.PendingPayment:
+                listing.SubmitForModeration();
+                listing.Approve(now);
+                break;
             case ListingStatus.Published:
                 listing.SubmitForModeration();
-                listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30));
+                listing.Approve(now);
+                listing.ApplyPackagePurchase("Standard", 15, now);
                 break;
             case ListingStatus.Rejected:
                 listing.SubmitForModeration();
@@ -243,19 +269,67 @@ public sealed class ModerationFlowTests
                 break;
             case ListingStatus.Hidden:
                 listing.SubmitForModeration();
-                listing.Approve(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30));
+                listing.Approve(now);
+                listing.ApplyPackagePurchase("Standard", 15, now);
                 listing.Hide();
                 break;
             case ListingStatus.Expired:
                 listing.SubmitForModeration();
-                listing.Approve(DateTimeOffset.UtcNow.AddDays(-30), DateTimeOffset.UtcNow.AddDays(-1));
-                listing.Expire(DateTimeOffset.UtcNow);
+                listing.Approve(now.AddDays(-20));
+                listing.ApplyPackagePurchase("Standard", 7, now.AddDays(-20));
+                listing.Expire(now);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, null);
         }
 
         return listing;
+    }
+
+    [Fact]
+    public async Task hide_and_unhide_restores_previous_status_from_hide_snapshot()
+    {
+        const long listingId = 55L;
+        var listing = CreateListingWithStatus(listingId, ListingStatus.Published);
+        var ownerUserId = listing.OwnerUserId;
+
+        var repository = new FakeListingRepository { Listing = listing };
+        var unitOfWork = new FakeUnitOfWork();
+        var service = new ListingService(repository, unitOfWork);
+
+        await service.HideAsync(listingId, ownerUserId);
+        Assert.Equal(ListingStatus.Hidden, listing.Status);
+        var hideHistory = Assert.Single(repository.Histories);
+        Assert.Equal("Hide", hideHistory.ActionType);
+        Assert.Contains("Published", hideHistory.SnapshotJson, StringComparison.Ordinal);
+
+        var restored = await service.UnhideAsync(listingId, ownerUserId);
+
+        Assert.Equal(ListingStatus.Published, restored.Status);
+        Assert.Equal(ListingStatus.Published, listing.Status);
+        Assert.Equal(2, repository.Histories.Count);
+        Assert.Equal("Unhide", repository.Histories[1].ActionType);
+    }
+
+    [Fact]
+    public async Task unhide_legacy_listing_without_hide_snapshot_infers_status_from_history()
+    {
+        const long listingId = 56L;
+        var listing = CreateListingWithStatus(listingId, ListingStatus.Hidden);
+        var ownerUserId = listing.OwnerUserId;
+
+        var repository = new FakeListingRepository { Listing = listing };
+        repository.Histories.Add(ListingHistory.CreateSnapshot(listingId, ownerUserId, "Create", "{}"));
+        repository.Histories.Add(ListingHistory.CreateEvent(listingId, ownerUserId, "Submit"));
+        repository.Histories.Add(ListingHistory.CreateEvent(listingId, 99L, "Approve"));
+        repository.Histories.Add(ListingHistory.CreateEvent(listingId, ownerUserId, "Hide"));
+
+        var unitOfWork = new FakeUnitOfWork();
+        var service = new ListingService(repository, unitOfWork);
+
+        var restored = await service.UnhideAsync(listingId, ownerUserId);
+
+        Assert.Equal(ListingStatus.Published, restored.Status);
     }
 
     private sealed class FakeListingRepository : IListingRepository
@@ -276,6 +350,9 @@ public sealed class ModerationFlowTests
 
         public Task<PackageDefinitions?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default)
             => Task.FromResult(Package != null && Package.PackageCode.Equals(packageCode, StringComparison.OrdinalIgnoreCase) ? Package : null);
+
+        public Task<IReadOnlyList<PackageDefinitions>> GetActivePackagesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PackageDefinitions>>(Package is not null ? [Package] : []);
 
         public void AddModerationReview(ListingModerationReview review) => Reviews.Add(review);
 
@@ -300,7 +377,11 @@ public sealed class ModerationFlowTests
             => Task.FromResult(new PagedResult<ListingSummaryDto>([], 0, 1, 10));
 
         public Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ListingHistoryDto>>([]);
+            => Task.FromResult<IReadOnlyList<ListingHistoryDto>>(Histories
+                .Where(h => h.ListingId == listingId)
+                .OrderBy(h => h.ActionDate)
+                .Select(h => new ListingHistoryDto(h.ActionType, h.ActionDate, h.ActorUserId, "Owner", "Seller", h.SnapshotJson, h.DeltasJson, h.Note))
+                .ToList());
 
         public Task<IReadOnlyList<Listing>> GetExpiredPublishedListingsAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
         {
@@ -310,6 +391,9 @@ public sealed class ModerationFlowTests
             }
             return Task.FromResult<IReadOnlyList<Listing>>([]);
         }
+
+        public Task<IReadOnlyList<Listing>> GetListingsWithExpiredPackageAsync(DateTimeOffset now, int batchSize = 100, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Listing>>([]);
 
         public Task<Listing?> GetByIdWithImagesAsync(long listingId, CancellationToken cancellationToken = default)
             => Task.FromResult<Listing?>(null);
@@ -323,6 +407,15 @@ public sealed class ModerationFlowTests
         public void AddImage(ListingImage image) { }
 
         public void RemoveImage(ListingImage image) { }
+
+        public Task<AmeModerationResult?> GetLatestAmeResultAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<AmeModerationResult?>(null);
+
+        public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
+
+        public Task<string?> GetLatestModerationWarningAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

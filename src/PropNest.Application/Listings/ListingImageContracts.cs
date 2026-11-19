@@ -27,6 +27,7 @@ public interface IListingImageService
         long listingId,
         long userId,
         IReadOnlyList<UploadImageItem> files,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingImageDto>> GetImagesByListingIdAsync(
@@ -38,11 +39,13 @@ public interface IListingImageService
         long imageId,
         long userId,
         UpdateListingImageRequest request,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default);
 
     Task DeleteImageAsync(
         long listingId,
         long imageId,
         long userId,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default);
 }

@@ -68,9 +68,11 @@ namespace PropNest.Infrastructure.Consumers
 
             //trừ tiền
             var totalBalanceBefore = wallet.MainBalance + wallet.PromoBalance;
+            decimal promoUsed;
+            decimal mainUsed;
             try
             {
-                wallet.Charge(commnad.Amount);
+                (promoUsed, mainUsed) = wallet.Charge(commnad.Amount);
             }
             catch(InvalidOperationException ex)
             {
@@ -102,7 +104,9 @@ namespace PropNest.Infrastructure.Consumers
             await context.Publish(new WalletDeducted(
                 commnad.CorrelationId,
                 commnad.UserId,
-                commnad.Amount
+                commnad.Amount,
+                promoUsed,
+                mainUsed
             ));
 
         }

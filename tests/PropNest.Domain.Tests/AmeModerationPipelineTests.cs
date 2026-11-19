@@ -168,10 +168,10 @@ public sealed class AmeModerationPipelineTests
         await consumer.Consume(consumeContextMock.Object);
 
         var updatedListing = await dbContext.Listings.SingleAsync(x => x.ListingId == listing.ListingId);
-        Assert.Equal(ListingStatus.Published, updatedListing.Status);
+        Assert.Equal(ListingStatus.PendingPayment, updatedListing.Status);
         Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
-        Assert.NotNull(updatedListing.StartDate);
-        Assert.NotNull(updatedListing.EndDate);
+        Assert.Null(updatedListing.StartDate);
+        Assert.Null(updatedListing.EndDate);
 
         var ameResult = await dbContext.AmeModerationResults.SingleAsync(x => x.CorrelationId == correlationId);
         Assert.Equal(ModerationDecision.Approved, ameResult.Decision);
@@ -182,6 +182,66 @@ public sealed class AmeModerationPipelineTests
         Assert.Null(review.ReviewerUserId);
 
         Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoApprove"));
+        Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingApprovedPendingPayment"));
+    }
+
+    [Fact]
+    public async Task AmeModerationConsumerShouldAutoApproveEditedPaidListingToPublished()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        await using var dbContext = await CreateSqliteContextAsync(connection);
+
+        var listing = await SeedPendingListingAsync(dbContext);
+        var now = DateTimeOffset.UtcNow;
+        listing.Approve(now);
+        listing.ApplyPackagePurchase("Standard", 15, now);
+        var expectedEndDate = listing.EndDate;
+        listing.UpdateContent(
+            "Căn hộ cao cấp Quận 7 (cập nhật)",
+            "Cập nhật nội thất mới hoàn toàn, dọn vào ở ngay.",
+            "Apartment",
+            "Sale",
+            4_900_000_000m,
+            75m,
+            "TP. Hồ Chí Minh",
+            "Quận 7",
+            "Tân Phú",
+            "1 Nguyễn Văn Linh");
+        await dbContext.SaveChangesAsync();
+
+        var correlationId = Guid.NewGuid();
+        var ameClientMock = new Mock<IAmeModerationClient>();
+        ameClientMock
+            .Setup(x => x.ModerateAsync(It.IsAny<AmeModerationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AmeModerationResponse(
+                Decision: ModerationDecision.Approved,
+                TotalRiskScore: 8m,
+                KeywordRiskScore: 0m,
+                PriceAnomalyScore: 3m,
+                CompletenessScore: 95m,
+                DuplicateScore: 0m,
+                AiSemanticScore: 5m,
+                Summary: "Nội dung cập nhật hợp lệ.",
+                ProcessingTimeMs: 95,
+                ReasonCodes: ["PASS_ALL_RULES"],
+                RawResponseJson: "{\"decision\":\"Approved\"}"));
+
+        var repository = new ListingRepository(dbContext);
+        var consumer = new AmeModerationConsumer(
+            dbContext,
+            repository,
+            ameClientMock.Object,
+            dbContext,
+            NullLogger<AmeModerationConsumer>.Instance);
+
+        var consumeContextMock = CreateConsumeContext(listing, correlationId);
+        await consumer.Consume(consumeContextMock.Object);
+
+        var updatedListing = await dbContext.Listings.SingleAsync(x => x.ListingId == listing.ListingId);
+        Assert.Equal(ListingStatus.Published, updatedListing.Status);
+        Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
+        Assert.Equal(expectedEndDate, updatedListing.EndDate);
         Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingPublished"));
     }
 
@@ -268,6 +328,197 @@ public sealed class AmeModerationPipelineTests
         Assert.Equal(ModerationDecision.ManualReview, ameResult.Decision);
 
         Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "RouteManualReview"));
+    }
+
+    [Fact]
+    public async Task ListingRepositoryShouldExcludeAmePendingAndShowOnlyManualReviewInAdminQueue()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        await using var dbContext = await CreateSqliteContextAsync(connection);
+
+        var awaitingAme = new Listing(
+            ownerUserId: 1,
+            title: "Tin đang chờ AME quét",
+            description: "Nội dung đầy đủ đang được AME xử lý tự động.",
+            propertyType: "Apartment",
+            listingType: "Sale",
+            price: 3_500_000_000m,
+            area: 70m,
+            city: "Tỉnh Bắc Ninh",
+            district: "",
+            ward: "Phường Việt Yên",
+            address: "Evergreen Việt Yên",
+            administrativeMode: "PostMerger",
+            provinceCode: 24,
+            legacyAddress: "Thành phố Bắc Ninh, Tỉnh Bắc Ninh");
+        awaitingAme.SubmitForModeration(); // ModerationDecision = Pending
+
+        var escalatedToAdmin = new Listing(
+            ownerUserId: 1,
+            title: "Tin AME đẩy sang Admin do ảnh mờ",
+            description: "Mô tả hợp lệ nhưng ảnh cần kiểm duyệt viên xác minh.",
+            propertyType: "House",
+            listingType: "Sale",
+            price: 5_200_000_000m,
+            area: 80m,
+            city: "Thành phố Hồ Chí Minh",
+            district: "Quận 7",
+            ward: "Tân Phú",
+            address: "25 Nguyễn Văn Linh");
+        escalatedToAdmin.SubmitForModeration();
+        escalatedToAdmin.MarkForManualReview(); // ModerationDecision = ManualReview
+
+        dbContext.Listings.AddRange(awaitingAme, escalatedToAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var repository = new ListingRepository(dbContext);
+        var entityQueue = await repository.GetPendingModerationAsync();
+        var dtoQueue = await repository.GetPendingModerationWithOwnersAsync();
+
+        var singleEntity = Assert.Single(entityQueue);
+        Assert.Equal(escalatedToAdmin.ListingId, singleEntity.ListingId);
+        Assert.DoesNotContain(entityQueue, x => x.ListingId == awaitingAme.ListingId);
+
+        var singleDto = Assert.Single(dtoQueue);
+        Assert.Equal(escalatedToAdmin.ListingId, singleDto.ListingId);
+        Assert.Equal(ModerationDecision.ManualReview, singleDto.ModerationDecision);
+    }
+
+    [Fact]
+    public async Task AmeModerationConsumerShouldAutoApproveWithPriceWarningAndExposeWarningOnListingDto()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        await using var dbContext = await CreateSqliteContextAsync(connection);
+
+        var listing = new Listing(
+            ownerUserId: 1,
+            title: "Căn hộ Quận 7 giá cực rẻ bất thường",
+            description: "Căn hộ 2 phòng ngủ đầy đủ nội thất, sổ hồng chính chủ tại Quận 7.",
+            propertyType: "Apartment",
+            listingType: "Sale",
+            price: 300_000_000m, // 4 triệu/m² cho 75m² -> quá thấp so với bình quân 65 triệu/m² Q7
+            area: 75m,
+            city: "Thành phố Hồ Chí Minh",
+            district: "",
+            ward: "Phường Tân Phú",
+            address: "10 Nguyễn Văn Linh",
+            administrativeMode: "PostMerger",
+            provinceCode: 79,
+            legacyAddress: "Quận 7, Thành phố Hồ Chí Minh");
+        listing.SubmitForModeration();
+        dbContext.Listings.Add(listing);
+        await dbContext.SaveChangesAsync();
+
+        var correlationId = Guid.NewGuid();
+        AmeModerationRequest? capturedRequest = null;
+
+        var ameClientMock = new Mock<IAmeModerationClient>();
+        ameClientMock
+            .Setup(x => x.ModerateAsync(It.IsAny<AmeModerationRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<AmeModerationRequest, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new AmeModerationResponse(
+                Decision: ModerationDecision.Approved,
+                TotalRiskScore: 36m,
+                KeywordRiskScore: 0m,
+                PriceAnomalyScore: 80m,
+                CompletenessScore: 95m,
+                DuplicateScore: 0m,
+                AiSemanticScore: 10m,
+                Summary: "Thông tin & hình ảnh hợp lệ (tự động duyệt). Cảnh báo: Giá đăng ~4.0 triệu đ/m² thấp hơn đáng kể so với giá bình quân khu vực (~65.0 triệu đ/m²). Giá tin đăng này có thể là giá ảo.",
+                ProcessingTimeMs: 110,
+                ReasonCodes: ["PRICE_TOO_LOW", "PASS_CONTENT_AND_IMAGE"],
+                RawResponseJson: "{\"decision\":\"Approved\"}",
+                Violations:
+                [
+                    new AmeRuleViolationDto("PRICE_TOO_LOW", "price_warning", "Đơn giá ~4.0 triệu đ/m² thấp hơn đáng kể so với giá bình quân khu vực (~65.0 triệu đ/m²). Giá tin đăng này có thể là giá ảo.")
+                ],
+                PriceWarningMessage: "Đơn giá ~4.0 triệu đ/m² thấp hơn đáng kể so với giá bình quân khu vực (~65.0 triệu đ/m²). Giá tin đăng này có thể là giá ảo."));
+
+        var repository = new ListingRepository(dbContext);
+        var consumer = new AmeModerationConsumer(
+            dbContext,
+            repository,
+            ameClientMock.Object,
+            dbContext,
+            NullLogger<AmeModerationConsumer>.Instance);
+
+        var consumeContextMock = CreateConsumeContext(listing, correlationId);
+        await consumer.Consume(consumeContextMock.Object);
+
+        // Xác nhận tìm được benchmark Q7 dù City là "Thành phố Hồ Chí Minh" và Quận nằm trong LegacyAddress
+        Assert.NotNull(capturedRequest);
+        Assert.NotNull(capturedRequest!.PriceBenchmark);
+        Assert.Equal("Quận 7", capturedRequest.PriceBenchmark!.District);
+        Assert.Equal(65_000_000m, capturedRequest.PriceBenchmark.AvgPricePerSqm);
+
+        var updatedListing = await dbContext.Listings.SingleAsync(x => x.ListingId == listing.ListingId);
+        Assert.Equal(ListingStatus.PendingPayment, updatedListing.Status);
+        Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
+
+        // History phải ghi lại cảnh báo giá ảo
+        var history = await dbContext.ListingHistories
+            .SingleAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoApprove");
+        Assert.Contains("giá ảo", history.Note, StringComparison.OrdinalIgnoreCase);
+
+        // ListingService phải trả về LatestModerationWarning cho Seller xem
+        var listingService = new ListingService(repository, dbContext);
+        var dto = await listingService.GetByIdAsync(listing.ListingId);
+        Assert.NotNull(dto);
+        Assert.Contains("giá ảo", dto!.LatestModerationWarning, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AmeModerationClientShouldParseCamelCasePriceWarningAndViolations()
+    {
+        var correlationId = Guid.NewGuid();
+        const string json = """
+            {
+              "listingId": 100,
+              "decision": "Approved",
+              "source": "AI-Aggregated",
+              "score": 0.85,
+              "totalRiskScore": 36.0,
+              "keywordRiskScore": 0.0,
+              "priceAnomalyScore": 80.0,
+              "completenessScore": 95.0,
+              "duplicateScore": 0.0,
+              "aiSemanticScore": 10.0,
+              "summary": "Tin hợp lệ. Cảnh báo giá ảo.",
+              "processingTimeMs": 92,
+              "reasonCodes": ["PRICE_TOO_HIGH", "PASS_CONTENT_AND_IMAGE"],
+              "priceWarningMessage": "Đơn giá cao hơn đáng kể so với khu vực. Giá tin đăng này có thể là giá ảo.",
+              "violations": [
+                {
+                  "rule": "PRICE_TOO_HIGH",
+                  "severity": "price_warning",
+                  "message": "Đơn giá cao hơn đáng kể so với khu vực. Giá tin đăng này có thể là giá ảo."
+                }
+              ]
+            }
+            """;
+
+        using var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:8001") };
+        var client = new AmeModerationClient(
+            httpClient,
+            Options.Create(new AmeOptions { BaseUrl = "http://localhost:8001", TimeoutSeconds = 15, Enabled = true }),
+            NullLogger<AmeModerationClient>.Instance);
+
+        var response = await client.ModerateAsync(CreateSampleAmeRequest(correlationId));
+
+        Assert.Equal(ModerationDecision.Approved, response.Decision);
+        Assert.Equal(80m, response.PriceAnomalyScore);
+        Assert.Equal("Đơn giá cao hơn đáng kể so với khu vực. Giá tin đăng này có thể là giá ảo.", response.PriceWarningMessage);
+        Assert.NotNull(response.Violations);
+        var v = Assert.Single(response.Violations!);
+        Assert.Equal("PRICE_TOO_HIGH", v.Rule);
     }
 
     private static async Task<PropNestDbContext> CreateSqliteContextAsync(SqliteConnection connection)

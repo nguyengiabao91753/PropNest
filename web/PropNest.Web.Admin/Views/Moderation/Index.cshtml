@@ -1,7 +1,7 @@
 @model PropNest.Web.Admin.Models.ViewModels.ModerationQueueViewModel
 
 @{
-    ViewData["Title"] = "Hàng đợi kiểm duyệt (Moderation Queue)";
+    ViewData["Title"] = "Hàng đợi kiểm duyệt";
     var selected = Model.SelectedProperty;
 }
 
@@ -13,7 +13,7 @@
                 <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Kiểm duyệt nội dung</span>
                 
             </div>
-            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Duyệt Tin Đăng (Moderation Queue)</h1>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Kiểm Duyệt Tin Đăng</h1>
             <p class="mt-1 text-xs text-muted-foreground">
                 Thẩm định tin đăng người bán theo thứ tự gửi duyệt. Click vào tin để xem đầy đủ nội dung, ảnh và lịch sử.
             </p>
@@ -86,7 +86,7 @@
                                     @if (p.IsResubmission)
                                     {
                                         <span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">
-                                            Gửi lại (Diff)
+                                            Gửi duyệt lại
                                         </span>
                                     }
                                     @if (p.PackageCode == "VIP")
@@ -127,7 +127,7 @@
                                 <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
                                     <a href="@Url.Action("Detail", "Moderation", new { id = p.Id })" onclick="event.stopPropagation()"
                                        class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
-                                       title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                       title="Mở toàn màn hình xem chi tiết &amp; đối chiếu thay đổi">
                                         <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
                                     </a>
                                     <button type="button" onclick="handleApproveClick('@p.Id', event)"
@@ -181,8 +181,8 @@
                             </span>
                             <a id="detailOpenFullPageBtn" href="@Url.Action("Detail", "Moderation", new { id = selected.Id })"
                                class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary-hover bg-brand-soft/50 border border-primary/30 px-2.5 py-1 rounded-lg transition-colors ml-auto"
-                               title="Mở toàn màn hình xem chi tiết, gallery ảnh, lịch sử và so sánh diff">
-                                <i data-lucide="external-link" class="size-3"></i> Xem chi tiết & So sánh Diff
+                               title="Mở toàn màn hình xem chi tiết, bộ sưu tập ảnh, lịch sử và đối chiếu thay đổi">
+                                <i data-lucide="external-link" class="size-3"></i> Xem chi tiết &amp; Đối chiếu thay đổi
                             </a>
                         </div>
                         <h2 id="detailTitle" class="font-display text-xl sm:text-2xl font-bold mt-1 text-neutral-900 leading-snug">
@@ -191,6 +191,10 @@
                         <p id="detailAddress" class="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                             <span>📍 @selected.FullAddress</span>
                         </p>
+                        <p id="detailLegacyAddress" class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-0.5 mt-1 @(string.IsNullOrWhiteSpace(selected.LegacyAddress) ? "hidden" : "inline-flex") items-center gap-1">
+                            <span>Trước sáp nhập: @(selected.LegacyAddress ?? "")</span>
+                        </p>
+                        
                     </div>
                     <div class="text-right shrink-0">
                         <span id="detailPrice" class="text-2xl font-extrabold text-primary font-display block">
@@ -221,7 +225,15 @@
                 </div>
 
                 <!-- 4-Stat Specs Grid -->
-                <div class="grid grid-cols-4 gap-3 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-2.5 rounded-xl bg-surface p-4 text-center text-xs border border-border/60">
+                    <div>
+                        <strong id="detailFloors" class="text-sm block text-neutral-900">@(selected.Floors.HasValue ? $"{selected.Floors.Value} tầng" : "—")</strong>
+                        <span class="text-muted-foreground text-[11px]">Số tầng</span>
+                    </div>
+                    <div>
+                        <strong id="detailBalcony" class="text-sm block text-neutral-900 truncate">@(!string.IsNullOrWhiteSpace(selected.BalconyDirection) ? selected.BalconyDirection : "—")</strong>
+                        <span class="text-muted-foreground text-[11px]">Ban công</span>
+                    </div>
                     <div>
                         <strong id="detailBeds" class="text-sm block text-neutral-900">@selected.Beds</strong>
                         <span class="text-muted-foreground text-[11px]">Phòng ngủ</span>
@@ -243,15 +255,15 @@
                 <!-- Description -->
                 <div>
                     <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-1">Mô tả bất động sản</h4>
-                    <p id="detailDescription" class="text-xs text-neutral-700 leading-relaxed bg-surface/50 p-3.5 rounded-xl border border-border/60 whitespace-pre-line">
-                        @selected.Description
-                    </p>
+                    <div id="detailDescription" class="propnest-richtext text-xs text-neutral-700 leading-relaxed bg-surface/50 p-3.5 rounded-xl border border-border/60">
+                        @Html.Raw(selected.SafeFormattedDescriptionHtml)
+                    </div>
                 </div>
 
                 <!-- Listing Change & Moderation History Timeline -->
                 <div>
                     <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
-                        <i data-lucide="history" class="size-3.5"></i> Lịch sử tin đăng (Audit & History)
+                        <i data-lucide="history" class="size-3.5"></i> Lịch sử hoạt động tin đăng
                     </h4>
                     <div id="detailHistoryContainer" class="rounded-xl border border-border bg-surface/40 p-3.5 space-y-3 max-h-[180px] overflow-y-auto">
                         @if (selected.Histories != null && selected.Histories.Count > 0)
@@ -383,6 +395,10 @@
         const listingType = p.ListingType || p.listingType || "sale";
         const price = Number(p.Price !== undefined ? p.Price : (p.price !== undefined ? p.price : 0)) || 0;
         const area = Number(p.Area !== undefined ? p.Area : (p.area !== undefined ? p.area : 0)) || 0;
+        const floors = p.Floors !== undefined && p.Floors !== null ? p.Floors : (p.floors !== undefined ? p.floors : null);
+        const balconyDirection = p.BalconyDirection || p.balconyDirection || "";
+        const legacyAddress = p.LegacyAddress || p.legacyAddress || "";
+        const safeFormattedDescriptionHtml = p.SafeFormattedDescriptionHtml || p.safeFormattedDescriptionHtml || "";
         const beds = Number(p.Beds !== undefined ? p.Beds : (p.beds !== undefined ? p.beds : 0)) || 0;
         const baths = Number(p.Baths !== undefined ? p.Baths : (p.baths !== undefined ? p.baths : 0)) || 0;
         const city = p.City || p.city || "";
@@ -430,6 +446,10 @@
             ListingType: listingType, listingType: listingType,
             Price: price, price: price,
             Area: area, area: area,
+            Floors: floors, floors: floors,
+            BalconyDirection: balconyDirection, balconyDirection: balconyDirection,
+            LegacyAddress: legacyAddress, legacyAddress: legacyAddress,
+            SafeFormattedDescriptionHtml: safeFormattedDescriptionHtml, safeFormattedDescriptionHtml: safeFormattedDescriptionHtml,
             Beds: beds, beds: beds,
             Baths: baths, baths: baths,
             City: city, city: city,
@@ -571,7 +591,7 @@
             const isSelected = selectedId === p.Id;
             const queueIndex = idx + 1;
             const resubmissionBadge = p.IsResubmission
-                ? `<span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">Gửi lại (Diff)</span>`
+                ? `<span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">Gửi duyệt lại</span>`
                 : "";
             const vipBadge = p.PackageCode === "VIP"
                 ? `<span class="rounded bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2">VIP</span>`
@@ -628,7 +648,7 @@
                             <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
                                 <a href="/Moderation/Detail/${p.Id}" onclick="event.stopPropagation()"
                                    class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
-                                   title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                   title="Mở toàn màn hình xem chi tiết &amp; đối chiếu thay đổi">
                                     <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
                                 </a>
                                 <button type="button" onclick="handleApproveClick('${p.Id}', event)"
@@ -727,6 +747,18 @@
         setText("detailPackageBadge", item.PackageCode || "Standard");
         setText("detailTitle", item.Title || "Chưa có tiêu đề");
         setText("detailAddress", "📍 " + (item.FullAddress || item.Address || item.FormattedLocation || ""));
+        const legacyEl = document.getElementById("detailLegacyAddress");
+        if (legacyEl) {
+            if (item.LegacyAddress) {
+                legacyEl.textContent = "Trước sáp nhập: " + item.LegacyAddress;
+                legacyEl.classList.remove("hidden");
+                legacyEl.classList.add("inline-flex");
+            } else {
+                legacyEl.textContent = "";
+                legacyEl.classList.add("hidden");
+                legacyEl.classList.remove("inline-flex");
+            }
+        }
         setText("detailPrice", formatVnd(item.Price, item.ListingType));
 
         const openBtn = document.getElementById("detailOpenFullPageBtn");
@@ -743,11 +775,18 @@
         // Specs
         setText("detailBeds", item.Beds || 0);
         setText("detailBaths", item.Baths || 0);
+        setText("detailFloors", item.Floors ? (item.Floors + " tầng") : "—");
+        setText("detailBalcony", item.BalconyDirection || "—");
         setText("detailArea", (item.Area || 0) + " m²");
         setText("detailPackage", item.PackageCode || "Standard");
 
         // Description
-        setText("detailDescription", item.Description || "Không có mô tả chi tiết.");
+        const descEl = document.getElementById("detailDescription");
+        if (descEl) {
+            descEl.innerHTML = item.SafeFormattedDescriptionHtml
+                || formatRichDescriptionHtml(item.Description)
+                || '<span class="text-muted-foreground italic">Không có mô tả chi tiết.</span>';
+        }
 
         // History Timeline
         const historyContainer = document.getElementById("detailHistoryContainer");
@@ -773,6 +812,62 @@
         }
 
         if (window.lucide) lucide.createIcons();
+    }
+
+    function formatRichDescriptionHtml(raw) {
+        if (!raw || !String(raw).trim()) return "";
+        const text = String(raw).trim();
+        if (!/<[a-zA-Z][^>]*>/.test(text)) {
+            return text.split(/\n{2,}/).map(p => `<p>${escapeHtml(p).replace(/\n/g, "<br />")}</p>`).join("");
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/html");
+        doc.querySelectorAll("script, style, iframe, object, embed, svg, math, form, .ql-ui").forEach(el => el.remove());
+
+        // Normalize Quill v2 <ol><li data-list="bullet"> into <ul>
+        doc.querySelectorAll("ol").forEach(ol => {
+            const hasBullet = Array.from(ol.children).some(li => li.getAttribute && li.getAttribute("data-list") === "bullet");
+            if (!hasBullet) return;
+            const ul = doc.createElement("ul");
+            while (ol.firstChild) {
+                const child = ol.firstChild;
+                if (child.nodeType === 1 && child.removeAttribute) {
+                    child.removeAttribute("data-list");
+                }
+                ul.appendChild(child);
+            }
+            ol.replaceWith(ul);
+        });
+
+        const allowed = new Set(["P", "BR", "STRONG", "B", "EM", "I", "U", "S", "STRIKE", "H1", "H2", "H3", "H4", "H5", "H6", "UL", "OL", "LI", "BLOCKQUOTE", "HR", "SPAN", "DIV", "A"]);
+        const cleanNode = (node) => {
+            Array.from(node.childNodes).forEach(child => {
+                if (child.nodeType === 1) {
+                    if (!allowed.has(child.tagName)) {
+                        const frag = doc.createDocumentFragment();
+                        cleanNode(child);
+                        while (child.firstChild) frag.appendChild(child.firstChild);
+                        child.replaceWith(frag);
+                    } else {
+                        const cls = (child.getAttribute("class") || "").split(/\s+/).filter(c => /^ql-(align|indent)-/.test(c));
+                        const href = child.tagName === "A" ? (child.getAttribute("href") || "").trim() : "";
+                        Array.from(child.attributes).forEach(attr => child.removeAttribute(attr.name));
+                        if (cls.length) child.setAttribute("class", cls.join(" "));
+                        if (child.tagName === "A" && (/^https?:\/\//i.test(href) || href.startsWith("/") || href.startsWith("#"))) {
+                            child.setAttribute("href", href);
+                            child.setAttribute("target", "_blank");
+                            child.setAttribute("rel", "noopener noreferrer");
+                        }
+                        cleanNode(child);
+                    }
+                } else if (child.nodeType === 8) {
+                    child.remove();
+                }
+            });
+        };
+        cleanNode(doc.body);
+        return doc.body.innerHTML;
     }
 
     function setDetailMainImage(src) {

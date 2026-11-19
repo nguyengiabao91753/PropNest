@@ -1,0 +1,258 @@
+================================================================================
+HƯỚNG DẪN BÀI TOÁN: PHƯƠNG THỨC WALLET.CHARGE - ƯU TIÊN SỐ DƯ KHUYẾN MÃI (PROMO)
+================================================================================
+
+I. ĐÁNH GIÁ BẢN NHÁP VÀ CÁC ĐIỂM CẦN ĐIỀU CHỈNH
+--------------------------------------------------------------------------------
+1. Tư duy logic: Hoàn toàn chính xác khi sử dụng hàm Math.Min để trích xuất số
+   tiền khuyến mãi trước, sau đó khấu trừ phần chênh lệch vào tài khoản chính.
+2. Các điểm cần chuẩn hóa cú pháp C#:
+   - Sửa các từ viết sai: 'Waleet' -> 'Wallet', 'amout' -> 'amount',
+     'proBablace' / 'promoBalace' -> 'promoBalance', 'user Id' -> 'UserId'.
+   - Kiểu dữ liệu 'Long', 'Decimal' sửa thành chữ thường 'long', 'decimal'.
+   - Phương thức CreditMain chỉ đảm nhận việc nạp tiền vào tài khoản chính, vì
+     vậy chỉ nhận một tham số duy nhất là (decimal amount).
+   - Ngoại lệ đối với số tiền không dương (<= 0) là ArgumentOutOfRangeException.
+   - Ngoại lệ khi tổng số dư không đủ thanh toán là InvalidOperationException
+     với thông điệp "Insufficient wallet balance."
+
+
+II. MÃ NGUỒN C# HOÀN CHỈNH
+--------------------------------------------------------------------------------
+
+1. Class Wallet (PropNest.Domain.Wallets)
+--------------------------------------------------
+using System;
+
+namespace PropNest.Domain.Wallets;
+
+public sealed class Wallet
+{
+    public long WalletId { get; private set; }
+    public long UserId { get; private set; }
+    public decimal MainBalance { get; private set; }
+    public decimal PromoBalance { get; private set; }
+
+    private Wallet() { }
+
+    public Wallet(long userId, decimal promoBalance = 0m)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(userId);
+
+        if (promoBalance < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(promoBalance), "Số dư khuyến mãi ban đầu không thể âm.");
+        }
+
+        UserId = userId;
+        PromoBalance = promoBalance;
+        MainBalance = 0m;
+    }
+
+    public void CreditMain(decimal amount)
+    {
+        EnsurePositive(amount);
+        MainBalance += amount;
+    }
+
+    public void CreditPromo(decimal amount)
+    {
+        EnsurePositive(amount);
+        PromoBalance += amount;
+    }
+
+    public (decimal PromoUsed, decimal MainUsed) Charge(decimal amount)
+    {
+        EnsurePositive(amount);
+
+        if (MainBalance + PromoBalance < amount)
+        {
+            throw new InvalidOperationException("Insufficient wallet balance.");
+        }
+
+        var promoUsed = Math.Min(PromoBalance, amount);
+        var mainUsed = amount - promoUsed;
+
+        PromoBalance -= promoUsed;
+        MainBalance -= mainUsed;
+
+        return (promoUsed, mainUsed);
+    }
+
+    private static void EnsurePositive(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền giao dịch phải lớn hơn 0.");
+        }
+    }
+}
+
+
+2. Chương trình Console kiểm chứng (Program.cs)
+--------------------------------------------------
+using System;
+using PropNest.Domain.Wallets;
+
+class Program
+{
+    static void Main()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        var w = new Wallet(100, promoBalance: 150_000m);
+        w.CreditMain(400_000m);
+
+        Console.WriteLine($"[Trạng thái ban đầu] Promo = {w.PromoBalance:N0}đ | Main = {w.MainBalance:N0}đ | Tổng = {w.PromoBalance + w.MainBalance:N0}đ\n");
+
+        decimal[] amounts = { 120_000m, 200_000m, 500_000m, 0m };
+
+        foreach (var amount in amounts)
+        {
+            Console.WriteLine($"--> Giao dịch: Charge({amount:N0}đ)");
+            try
+            {
+                var (promoUsed, mainUsed) = w.Charge(amount);
+                Console.WriteLine($"    Kết quả: Thành công | Promo đã dùng: {promoUsed:N0}đ | Main đã dùng: {mainUsed:N0}đ");
+                Console.WriteLine($"    Số dư còn lại: Promo = {w.PromoBalance:N0}đ | Main = {w.MainBalance:N0}đ");
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                Console.WriteLine($"    Kết quả: Bắt lỗi tham số (ArgumentOutOfRangeException) -> {ex.Message}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"    Kết quả: Bắt lỗi số dư (InvalidOperationException) -> {ex.Message}");
+            }
+            Console.WriteLine(new string('-', 70));
+        }
+    }
+}
+
+
+3. Bộ Unit Test tự động (xUnit)
+--------------------------------------------------
+using System;
+using PropNest.Domain.Wallets;
+using Xunit;
+
+public class WalletChargeTests
+{
+    [Fact]
+    public void Charge_WhenPromoIsEnough_ShouldDeductOnlyFromPromo()
+    {
+        var wallet = new Wallet(1, promoBalance: 150_000m);
+        wallet.CreditMain(400_000m);
+
+        var (promoUsed, mainUsed) = wallet.Charge(120_000m);
+
+        Assert.Equal(120_000m, promoUsed);
+        Assert.Equal(0m, mainUsed);
+        Assert.Equal(30_000m, wallet.PromoBalance);
+        Assert.Equal(400_000m, wallet.MainBalance);
+    }
+
+    [Fact]
+    public void Charge_WhenPromoPartiallyCovers_ShouldDeductRemainderFromMain()
+    {
+        var wallet = new Wallet(1, promoBalance: 30_000m);
+        wallet.CreditMain(400_000m);
+
+        var (promoUsed, mainUsed) = wallet.Charge(200_000m);
+
+        Assert.Equal(30_000m, promoUsed);
+        Assert.Equal(170_000m, mainUsed);
+        Assert.Equal(0m, wallet.PromoBalance);
+        Assert.Equal(230_000m, wallet.MainBalance);
+    }
+
+    [Fact]
+    public void Charge_WhenBalanceInsufficient_ShouldThrowInvalidOperationException()
+    {
+        var wallet = new Wallet(1, promoBalance: 0m);
+        wallet.CreditMain(230_000m);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => wallet.Charge(500_000m));
+        Assert.Equal("Insufficient wallet balance.", ex.Message);
+        Assert.Equal(230_000m, wallet.MainBalance);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-50000)]
+    public void Charge_NonPositiveAmount_ShouldThrowArgumentOutOfRangeException(decimal invalidAmount)
+    {
+        var wallet = new Wallet(1, promoBalance: 100_000m);
+        Assert.Throws<ArgumentOutOfRangeException>(() => wallet.Charge(invalidAmount));
+    }
+}
+
+
+III. KẾT QUẢ THỰC THI (OUTPUT)
+--------------------------------------------------------------------------------
+[Trạng thái ban đầu] Promo = 150,000đ | Main = 400,000đ | Tổng = 550,000đ
+
+--> Giao dịch: Charge(120,000đ)
+    Kết quả: Thành công | Promo đã dùng: 120,000đ | Main đã dùng: 0đ
+    Số dư còn lại: Promo = 30,000đ | Main = 400,000đ
+----------------------------------------------------------------------
+--> Giao dịch: Charge(200,000đ)
+    Kết quả: Thành công | Promo đã dùng: 30,000đ | Main đã dùng: 170,000đ
+    Số dư còn lại: Promo = 0đ | Main = 230,000đ
+----------------------------------------------------------------------
+--> Giao dịch: Charge(500,000đ)
+    Kết quả: Bắt lỗi số dư (InvalidOperationException) -> Insufficient wallet balance.
+----------------------------------------------------------------------
+--> Giao dịch: Charge(0đ)
+    Kết quả: Bắt lỗi tham số (ArgumentOutOfRangeException) -> Số tiền giao dịch phải lớn hơn 0.
+----------------------------------------------------------------------
+
+
+IV. MÔ TẢ VÀ GIẢI THÍCH CHI TIẾT CƠ CHẾ HOẠT ĐỘNG
+--------------------------------------------------------------------------------
+
+1. Nguyên lý phân tách hai nguồn tiền (Dual-Balance Mechanism):
+   - Hệ thống ví duy trì độc lập hai trường số dư: PromoBalance (số dư khuyến mãi)
+     và MainBalance (số dư tài khoản chính).
+   - Thuộc tính 'private set' đảm bảo tính bao đóng (encapsulation), ngăn chặn việc
+     thay đổi giá trị trực tiếp từ bên ngoài mà bắt buộc phải thông qua các phương
+     thức nghiệp vụ (CreditMain, CreditPromo, Charge).
+
+2. Kỹ thuật ưu tiên khấu trừ số dư khuyến mãi:
+   - Sử dụng hàm Math.Min(PromoBalance, amount):
+     + Khi PromoBalance >= amount: promoUsed lấy bằng chính amount. Phần chênh lệch
+       mainUsed = amount - promoUsed sẽ bằng 0. Toàn bộ giao dịch được tài trợ bằng
+       tiền khuyến mãi, bảo toàn tối đa số dư chính cho người dùng.
+     + Khi PromoBalance < amount: promoUsed lấy toàn bộ số dư khuyến mãi hiện có.
+       Phần còn thiếu chính là mainUsed = amount - promoUsed, sẽ được trừ vào MainBalance.
+   - Trả về Tuple (decimal PromoUsed, decimal MainUsed):
+     + Giúp tầng ứng dụng (Application Layer), tầng Consumer và hệ thống hạch toán
+       kế toán ghi nhận chính xác chi tiết giao dịch (Transaction Logs/Audit Trails)
+       biết rõ người dùng đã tiêu bao nhiêu tiền khuyến mãi và bao nhiêu tiền thật.
+
+3. Cơ chế kiểm soát ngoại lệ và bảo toàn trạng thái (State Integrity):
+   - Kiểm tra điều kiện tiên quyết (Preconditions) trước khi thay đổi dữ liệu:
+     + Nếu amount <= 0: Hàm EnsurePositive lập tức ném ArgumentOutOfRangeException.
+       Điều này ngăn ngừa các lỗi logic như nạp tiền âm hay rút 0 đồng.
+     + Nếu MainBalance + PromoBalance < amount: Hệ thống ném InvalidOperationException.
+       Điểm quan trọng ở đây là ngoại lệ xảy ra trước khi có bất kỳ phép trừ nào được
+       thực hiện. Do đó, nếu giao dịch thất bại, trạng thái số dư của ví hoàn toàn
+       nguyên vẹn, không xảy ra hiện tượng trừ dở dang một phần rồi dừng lại.
+
+4. Phân tích diễn biến qua 4 trường hợp thử nghiệm:
+   - Trường hợp 1 (Trừ 120.000đ):
+     Promo (150k) lớn hơn số tiền cần trừ (120k). Math.Min(150k, 120k) trả về 120k.
+     Hệ thống khấu trừ hoàn toàn 120k từ Promo, Main giữ nguyên 400k.
+     Số dư còn lại: Promo = 30k, Main = 400k.
+   - Trường hợp 2 (Trừ 200.000đ):
+     Promo chỉ còn 30k, nhỏ hơn 200k. Math.Min(30k, 200k) trả về 30k.
+     Hệ thống vét hết 30k từ Promo. Số tiền còn thiếu 200k - 30k = 170k được trừ
+     tiếp vào Main.
+     Số dư còn lại: Promo = 0đ, Main = 230k (400k - 170k).
+   - Trường hợp 3 (Trừ 500.000đ):
+     Tổng số dư ví lúc này là 0đ + 230k = 230k, không đủ đáp ứng 500k.
+     Điều kiện (MainBalance + PromoBalance < amount) kích hoạt, ném InvalidOperationException.
+     Số dư không bị thay đổi.
+   - Trường hợp 4 (Trừ 0đ hoặc số âm):
+     Hàm EnsurePositive bắt được giá trị không hợp lệ ngay từ bước đầu tiên và ném
+     ArgumentOutOfRangeException.
