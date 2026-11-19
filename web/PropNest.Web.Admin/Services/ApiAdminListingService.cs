@@ -328,7 +328,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                             UserName = GetString(elem, "userName") ?? string.Empty,
                             TransactionType = GetString(elem, "transactionType") ?? "TopUp",
                             Amount = GetDecimal(elem, "amount"),
-                            CreatedAt = TryGetProp(elem, "createdAt", out var ca) && ca.TryGetDateTimeOffset(out var dto) ? dto : DateTimeOffset.UtcNow,
+                            CreatedAt = TryGetProp(elem, "createdAt", out var ca) && TryReadDateTimeOffset(ca, out var dto) ? dto : DateTimeOffset.UtcNow,
                             Status = GetString(elem, "status") ?? "Thành công",
                             Description = GetString(elem, "description") ?? string.Empty
                         });
@@ -380,7 +380,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                         var actionType = h.TryGetProperty("actionType", out var at) ? at.GetString() ?? "Update" : "Update";
                         var note = h.TryGetProperty("note", out var n) ? n.GetString() : null;
                         var deltasJson = h.TryGetProperty("deltasJson", out var dj) ? dj.GetString() : null;
-                        var actionDate = h.TryGetProperty("actionDate", out var ad) && ad.TryGetDateTimeOffset(out var dto)
+                        var actionDate = h.TryGetProperty("actionDate", out var ad) && TryReadDateTimeOffset(ad, out var dto)
                             ? dto
                             : DateTimeOffset.UtcNow;
 
@@ -510,17 +510,17 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         // Package Code & Validity Dates
         vm.PackageCode = GetString(elem, "packageCode", "PackageCode") ?? "Standard";
         if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&
-            startElem.TryGetDateTimeOffset(out var startDate))
+            TryReadDateTimeOffset(startElem, out var startDate))
         {
             vm.StartDate = startDate;
         }
         if ((TryGetProp(elem, "endDate", out var endElem) || TryGetProp(elem, "EndDate", out endElem)) &&
-            endElem.TryGetDateTimeOffset(out var endDate))
+            TryReadDateTimeOffset(endElem, out var endDate))
         {
             vm.EndDate = endDate;
         }
         if ((TryGetProp(elem, "packageEndDate", out var pkgEndElem) || TryGetProp(elem, "PackageEndDate", out pkgEndElem)) &&
-            pkgEndElem.TryGetDateTimeOffset(out var packageEndDate))
+            TryReadDateTimeOffset(pkgEndElem, out var packageEndDate))
         {
             vm.PackageEndDate = packageEndDate;
         }
@@ -535,7 +535,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         // Created At
         if ((TryGetProp(elem, "createdAt", out var createdElem) || TryGetProp(elem, "CreatedAt", out createdElem) ||
              TryGetProp(elem, "createdDate", out createdElem) || TryGetProp(elem, "CreatedDate", out createdElem)) &&
-            createdElem.TryGetDateTimeOffset(out var createdDate))
+            TryReadDateTimeOffset(createdElem, out var createdDate))
         {
             vm.CreatedAt = createdDate;
         }
@@ -589,7 +589,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
 
             result.ModelInfo = GetString(root, "modelInfo") ?? "Unknown";
             if (TryGetProp(root, "checkedAt", out var checkedElem) &&
-            checkedElem.TryGetDateTimeOffset(out var checkedAt))
+                TryReadDateTimeOffset(checkedElem, out var checkedAt))
             {
                 result.CheckedAt = checkedAt;
             }
@@ -713,6 +713,17 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         }
 
         return result;
+    }
+
+    private static bool TryReadDateTimeOffset(JsonElement elem, out DateTimeOffset value)
+    {
+        if (elem.ValueKind == JsonValueKind.String && elem.TryGetDateTimeOffset(out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 
     private static bool TryGetProp(JsonElement elem, string name, out JsonElement value)
