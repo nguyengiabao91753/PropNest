@@ -139,6 +139,7 @@ services:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
       ServiceUrls__BackendApi: "http://api:8080"
+      ServiceUrls__WebClient: "http://localhost:5241"
     ports:
       - "5198:8080"
     networks:
