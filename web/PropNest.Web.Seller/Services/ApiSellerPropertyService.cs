@@ -618,7 +618,8 @@ namespace PropNest.Web.Seller.Services
             Images = (dto.Images != null && dto.Images.Count > 0) ? dto.Images : new List<string>(),
             CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
             RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
-            RejectReason = FormatRejectReason(dto.LatestRejectReason)
+            RejectReason = FormatRejectReason(dto.LatestRejectReason),
+            ModerationWarning = dto.LatestModerationWarning
         };
 
         // ==========================================
@@ -708,6 +709,7 @@ namespace PropNest.Web.Seller.Services
             public string? OwnerName { get; set; }
             public List<string>? Images { get; set; }
             public string? LatestRejectReason { get; set; }
+            public string? LatestModerationWarning { get; set; }
         }
 
         private sealed record ApiPurchasePackageRequest(string PackageCode, decimal ChargeAmount);
@@ -792,7 +794,10 @@ namespace PropNest.Web.Seller.Services
             "UpdateContent" or "Update" => "Cập nhật thông tin",
             "Submit" => "Gửi duyệt",
             "Approve" => "Đã duyệt",
+            "AutoApprove" => "Hệ thống tự động duyệt",
             "Reject" => "Từ chối duyệt",
+            "AutoReject" => "Hệ thống tự động từ chối",
+            "RouteManualReview" => "Chuyển kiểm duyệt viên",
             "Expire" => "Hết hạn",
             "Hide" => "Tạm ẩn",
             "Unhide" => "Bật hiển thị lại",
