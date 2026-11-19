@@ -1,4 +1,9 @@
 @* Partial View: Modal Chọn Gói Dịch Vụ & Thanh Toán Chạy Ngầm *@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var purchaseCsrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+<input type="hidden" id="purchaseCsrfToken" value="@purchaseCsrfToken" />
 
 <div id="purchasePackageModal"
      class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-200"
@@ -598,9 +603,13 @@
         }
 
         try {
+            const csrfToken = document.getElementById('purchaseCsrfToken')?.value || '';
             const response = await fetch('/Properties/PurchasePackage', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': csrfToken
+                },
                 body: JSON.stringify({
                     listingId: targetListingId,
                     packageCode: selectedPackageCode,
