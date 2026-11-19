@@ -425,6 +425,8 @@ namespace PropNest.Infrastructure.Migrations
 
                     b.HasIndex("City", "District", "PropertyType");
 
+                    b.HasIndex("Status", "ModerationDecision", "CreatedAt");
+
                     b.HasIndex("Status", "PackageCode", "PackageEndDate");
 
                     b.ToTable("Listings", (string)null);
@@ -986,6 +988,8 @@ namespace PropNest.Infrastructure.Migrations
 
                     b.HasKey("TransactionId");
 
+                    b.HasIndex("WalletId", "CreatedAt");
+
                     b.HasIndex("WalletId", "CorrelationId", "TransactionType")
                         .IsUnique();
 
@@ -1227,10 +1231,18 @@ namespace PropNest.Infrastructure.Migrations
                     b.Property<long>("ListingId")
                         .HasColumnType("bigint");
 
+                    b.Property<decimal>("MainUsed")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("PackageCode")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("PromoUsed")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
