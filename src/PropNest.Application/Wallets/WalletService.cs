@@ -44,19 +44,28 @@ namespace PropNest.Application.Wallets
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(command.Amount);
 
-            var wallet = await walletRepository.GetByUserIdAsync(command.UserId, cancellationToken) ?? throw new InvalidOperationException($"Wallet for user {command.UserId} not found.");
+            var wallet = await walletRepository.GetByUserIdAsync(command.UserId, cancellationToken)
+                ?? throw new KeyNotFoundException($"Wallet for user {command.UserId} not found.");
 
-            var balanceBefore = wallet.MainBalance;
+            // Idempotency: nếu giao dịch TopUp cùng CorrelationId đã tồn tại -> không cộng tiền lần 2
+            if (command.CorrelationId.HasValue &&
+                await walletRepository.TransactionExistsAsync(wallet.WalletId, command.CorrelationId.Value, WalletTransactionType.TopUp, cancellationToken))
+            {
+                return WalletMappingExtensions.ToDto(wallet);
+            }
+
+            // Thống nhất hạch toán sổ cái theo tổng số dư (Main + Promo) giống Charge và Refund
+            var totalBalanceBefore = wallet.MainBalance + wallet.PromoBalance;
             wallet.CreditMain(command.Amount);
-            var balanceAfter = wallet.MainBalance;
+            var totalBalanceAfter = wallet.MainBalance + wallet.PromoBalance;
 
             var transaction = new WalletTransaction(
                 walletId: wallet.WalletId,
                 correlationId: command.CorrelationId ?? Guid.NewGuid(),
                 type: WalletTransactionType.TopUp,
                 amount: command.Amount,
-                balanceBefore: balanceBefore,
-                balanceAfter: balanceAfter,
+                balanceBefore: totalBalanceBefore,
+                balanceAfter: totalBalanceAfter,
                 description: command.Description ?? "Nạp tiền vào ví"
                 );
 
