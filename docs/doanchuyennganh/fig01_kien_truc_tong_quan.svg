@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-label="Kiến trúc tổng quan hệ thống PropNest">
+  <defs>
+    <style>
+      .sans { font-family: Segoe UI, Arial, Helvetica, sans-serif; }
+      .math { font-family: Cambria Math, Georgia, Times New Roman, serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-open" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#DC5656"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#54B56C"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#4AA3D8"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#F27D32"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1440" height="780" fill="#FFFFFF"/>
+  <text x="145.0" y="56.0" text-anchor="middle" fill="#111827" font-size="19" font-weight="700" class="sans">CLIENTS / PORTALS</text>
+  <text x="1290.0" y="44.0" text-anchor="middle" fill="#111827" font-size="19" font-weight="700" class="sans">DATA, SEARCH &amp;</text>
+  <text x="1290.0" y="68.0" text-anchor="middle" fill="#111827" font-size="19" font-weight="700" class="sans">AI SERVICES</text>
+  <rect x="103.0" y="165.0" width="84" height="52" rx="5" fill="#54B56C" stroke="#111827" stroke-width="2.3"/>
+  <rect x="110.0" y="172.0" width="70" height="38" rx="2" fill="#FFFFFF" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="145.0" cy="191.0" r="12" fill="none" stroke="#111827" stroke-width="1.8"/>
+  <ellipse cx="145.0" cy="191.0" rx="5.5" ry="12" fill="none" stroke="#111827" stroke-width="1.5"/>
+  <line x1="133.0" y1="191.0" x2="157.0" y2="191.0" stroke="#111827" stroke-width="1.5"/>
+  <path d="M 93.0 219.0 L 197.0 219.0 L 191.0 228.0 L 99.0 228.0 Z" fill="#54B56C" stroke="#111827" stroke-width="2.2" stroke-linejoin="round"/>
+  <text x="145.0" y="254.0" text-anchor="middle" fill="#111827" font-size="14.5" font-weight="700" class="sans">WEB CLIENT</text>
+  <text x="145.0" y="273.0" text-anchor="middle" fill="#4B5563" font-size="12" font-weight="500" class="sans">Người mua (:5241)</text>
+  <rect x="104.0" y="353.0" width="82" height="54" rx="5" fill="#4AA3D8" stroke="#111827" stroke-width="2.3"/>
+  <rect x="111.0" y="360.0" width="68" height="40" rx="2" fill="#FFFFFF" stroke="#111827" stroke-width="1.8"/>
+  <rect x="117.0" y="366.0" width="22" height="14" rx="2" fill="#4AA3D8" stroke="#111827" stroke-width="1.4"/>
+  <line x1="145.0" y1="370.0" x2="166.0" y2="370.0" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="145.0" y1="377.0" x2="162.0" y2="377.0" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="117.0" y1="388.0" x2="166.0" y2="388.0" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="137.0" y="407.0" width="16" height="10" fill="#4AA3D8" stroke="#111827" stroke-width="2.1"/>
+  <line x1="123.0" y1="417.0" x2="167.0" y2="417.0" stroke="#111827" stroke-width="2.8" stroke-linecap="round"/>
+  <text x="145.0" y="446.0" text-anchor="middle" fill="#111827" font-size="14.5" font-weight="700" class="sans">WEB SELLER</text>
+  <text x="145.0" y="465.0" text-anchor="middle" fill="#4B5563" font-size="12" font-weight="500" class="sans">Người bán (:5198)</text>
+  <rect x="107.0" y="545.0" width="76" height="56" rx="6" fill="#F2CA4E" stroke="#111827" stroke-width="2.3"/>
+  <rect x="114.0" y="552.0" width="62" height="42" rx="2.5" fill="#FFFFFF" stroke="#111827" stroke-width="1.8"/>
+  <path d="M 145.0 559.0 L 158.0 564.0 L 156.0 577.0 Q 145.0 587.0 145.0 587.0 Q 145.0 587.0 134.0 577.0 L 132.0 564.0 Z" fill="#F2CA4E" stroke="#111827" stroke-width="1.9" stroke-linejoin="round"/>
+  <polyline points="140.0,573.0 144.0,577.0 151.0,569.0" fill="none" stroke="#111827" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="145.0" y="632.0" text-anchor="middle" fill="#111827" font-size="14.5" font-weight="700" class="sans">WEB ADMIN</text>
+  <text x="145.0" y="651.0" text-anchor="middle" fill="#4B5563" font-size="12" font-weight="500" class="sans">Quản trị (:5015)</text>
+  <text x="285.0" y="152.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="700" class="sans">HTTP / JWT</text>
+  <text x="285.0" y="170.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="700" class="sans">REQUESTS</text>
+  <polyline points="222.0,195.0 344.0,195.0" fill="none" stroke="#111827" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="222.0,385.0 344.0,385.0" fill="none" stroke="#111827" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="222.0,575.0 344.0,575.0" fill="none" stroke="#111827" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <rect x="356" y="36" width="616" height="634" rx="12" fill="#FFFFFF" stroke="#F27D32" stroke-width="3.2"/>
+  <path d="M 368 36 L 960 36 Q 972 36 972 48 L 972 102 L 356 102 L 356 48 Q 356 36 368 36 Z" fill="#F27D32"/>
+  <text x="664.0" y="79.0" text-anchor="middle" fill="#111827" font-size="22" font-weight="700" class="sans">PROPNEST CORE PLATFORM (.NET 8)</text>
+  <line x1="726" y1="126" x2="726" y2="646" stroke="#CBD5E1" stroke-width="2"/>
+  <rect x="380" y="124" width="326" height="156" rx="7" fill="#FFFFFF" stroke="#F27D32" stroke-width="2.4"/>
+  <text x="543.0" y="154.0" text-anchor="middle" fill="#111827" font-size="15" font-weight="700" class="sans">SECURITY &amp; IDEMPOTENCY</text>
+  <path d="M 472.0 210.0 L 472.0 199.0 A 12 12 0 0 1 496.0 199.0 L 496.0 210.0" fill="none" stroke="#111827" stroke-width="4.2" stroke-linecap="round"/>
+  <rect x="465.0" y="209.0" width="38" height="30" rx="5" fill="#F27D32" stroke="#111827" stroke-width="2.3"/>
+  <circle cx="484.0" cy="221.0" r="3.6" fill="#111827"/>
+  <line x1="484.0" y1="224.0" x2="484.0" y2="231.0" stroke="#111827" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="597.0" y1="190.0" x2="611.0" y2="190.0" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+  <line x1="604.0" y1="190.0" x2="604.0" y2="196.0" stroke="#111827" stroke-width="2.5"/>
+  <circle cx="604.0" cy="217.0" r="21" fill="#4AA3D8" stroke="#111827" stroke-width="2.3"/>
+  <circle cx="604.0" cy="217.0" r="15.5" fill="#FFFFFF" stroke="#111827" stroke-width="1.5"/>
+  <line x1="604.0" y1="217.0" x2="604.0" y2="206.0" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <line x1="604.0" y1="217.0" x2="612.0" y2="220.0" stroke="#111827" stroke-width="2.3" stroke-linecap="round"/>
+  <circle cx="604.0" cy="217.0" r="2.4" fill="#111827"/>
+  <text x="484.0" y="265.0" text-anchor="middle" fill="#4B5563" font-size="11.5" font-weight="700" class="sans">JWT · RBAC</text>
+  <text x="604.0" y="265.0" text-anchor="middle" fill="#4B5563" font-size="11.5" font-weight="700" class="sans">Idempotency</text>
+  <rect x="380" y="302" width="326" height="162" rx="7" fill="#FFFFFF" stroke="#4AA3D8" stroke-width="2.4"/>
+  <text x="543.0" y="332.0" text-anchor="middle" fill="#111827" font-size="15" font-weight="700" class="sans">API ROUTING &amp; GATEWAY</text>
+  <line x1="448" y1="396" x2="516" y2="396" stroke="#111827" stroke-width="3.2" stroke-linecap="round"/>
+  <polyline points="516.0,396.0 578.0,366.0 674.0,366.0" fill="none" stroke="#111827" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="516.0,396.0 674.0,396.0" fill="none" stroke="#111827" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="516.0,396.0 578.0,426.0 674.0,426.0" fill="none" stroke="#111827" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <text x="543.0" y="452.0" text-anchor="middle" fill="#4B5563" font-size="11.5" font-weight="700" class="sans">Listings · Wallet · Search</text>
+  <rect x="380" y="486" width="326" height="162" rx="7" fill="#FFFFFF" stroke="#54B56C" stroke-width="2.4"/>
+  <text x="543.0" y="516.0" text-anchor="middle" fill="#111827" font-size="15" font-weight="700" class="sans">WORKER, SAGA &amp; OUTBOX</text>
+  <circle cx="492.0" cy="576.0" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="486.4" cy="589.4" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="473.0" cy="595.0" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="459.6" cy="589.4" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="454.0" cy="576.0" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="459.6" cy="562.6" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="473.0" cy="557.0" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="486.4" cy="562.6" r="3.6" fill="#F2CA4E" stroke="#111827" stroke-width="1.8"/>
+  <circle cx="473.0" cy="576.0" r="16" fill="#F2CA4E" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="473.0" cy="576.0" r="6.5" fill="#FFFFFF" stroke="#111827" stroke-width="2"/>
+  <circle cx="508.6" cy="590.7" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="498.7" cy="598.4" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="487.1" cy="593.7" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="485.4" cy="581.3" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="495.3" cy="573.6" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="506.9" cy="578.3" r="2.7" fill="#54B56C" stroke="#111827" stroke-width="1.6"/>
+  <circle cx="497.0" cy="586.0" r="10" fill="#54B56C" stroke="#111827" stroke-width="2.1"/>
+  <circle cx="497.0" cy="586.0" r="4" fill="#FFFFFF" stroke="#111827" stroke-width="1.8"/>
+  <path d="M 579.0 559.0 L 579.0 589.0 A 23.0 9.0 0 0 0 625.0 589.0 L 625.0 559.0 Z" fill="#54B56C" stroke="#111827" stroke-width="2.2"/>
+  <path d="M 579.0 574.0 A 23.0 9.0 0 0 0 625.0 574.0" fill="none" stroke="#111827" stroke-width="1.8"/>
+  <ellipse cx="602.0" cy="559.0" rx="23.0" ry="9.0" fill="#FFFFFF" stroke="#111827" stroke-width="2.2"/>
+  <ellipse cx="602.0" cy="559.0" rx="17.0" ry="5.5" fill="#54B56C" fill-opacity="0.45"/>
+  <text x="482.0" y="634.0" text-anchor="middle" fill="#4B5563" font-size="11.5" font-weight="700" class="sans">Saga · Quartz</text>
+  <text x="602.0" y="634.0" text-anchor="middle" fill="#4B5563" font-size="11.5" font-weight="700" class="sans">Outbox · MQ</text>
+  <path d="M 704 360 L 764 360 L 764 185 L 814 185 L 814 177 L 832 190 L 814 203 L 814 195 L 774 195 L 774 370 L 704 370 Z" fill="#F27D32" stroke="#111827" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 704 391 L 782 391 L 782 323 L 814 323 L 814 315 L 832 328 L 814 341 L 814 333 L 792 333 L 792 401 L 704 401 Z" fill="#4AA3D8" stroke="#111827" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 704 422 L 776 422 L 776 461 L 814 461 L 814 453 L 832 466 L 814 479 L 814 471 L 766 471 L 766 432 L 704 432 Z" fill="#F2CA4E" stroke="#111827" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 704 595 L 814 595 L 814 587 L 832 600 L 814 613 L 814 605 L 704 605 Z" fill="#54B56C" stroke="#111827" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="855.0" y="162.0" width="66" height="15" rx="3.5" fill="#F27D32" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="169.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="169.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="169.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="169.5" x2="913.0" y2="169.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="180.0" width="66" height="15" rx="3.5" fill="#F27D32" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="187.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="187.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="187.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="187.5" x2="913.0" y2="187.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="198.0" width="66" height="15" rx="3.5" fill="#F27D32" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="205.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="205.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="205.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="205.5" x2="913.0" y2="205.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="888.0" y1="213.0" x2="888.0" y2="224.0" stroke="#111827" stroke-width="2.2"/>
+  <line x1="862.0" y1="224.0" x2="914.0" y2="224.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="888.0" cy="224.0" r="5.5" fill="#F27D32" stroke="#111827" stroke-width="2.2"/>
+  <text x="888.0" y="248.0" text-anchor="middle" fill="#4B5563" font-size="11" font-weight="700" class="sans">CORE API</text>
+  <rect x="855.0" y="300.0" width="66" height="15" rx="3.5" fill="#4AA3D8" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="307.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="307.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="307.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="307.5" x2="913.0" y2="307.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="318.0" width="66" height="15" rx="3.5" fill="#4AA3D8" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="325.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="325.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="325.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="325.5" x2="913.0" y2="325.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="336.0" width="66" height="15" rx="3.5" fill="#4AA3D8" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="343.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="343.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="343.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="343.5" x2="913.0" y2="343.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="888.0" y1="351.0" x2="888.0" y2="362.0" stroke="#111827" stroke-width="2.2"/>
+  <line x1="862.0" y1="362.0" x2="914.0" y2="362.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="888.0" cy="362.0" r="5.5" fill="#4AA3D8" stroke="#111827" stroke-width="2.2"/>
+  <text x="888.0" y="386.0" text-anchor="middle" fill="#4B5563" font-size="11" font-weight="700" class="sans">SEARCH GW</text>
+  <rect x="855.0" y="438.0" width="66" height="15" rx="3.5" fill="#F2CA4E" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="445.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="445.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="445.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="445.5" x2="913.0" y2="445.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="456.0" width="66" height="15" rx="3.5" fill="#F2CA4E" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="463.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="463.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="463.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="463.5" x2="913.0" y2="463.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="474.0" width="66" height="15" rx="3.5" fill="#F2CA4E" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="481.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="481.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="481.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="481.5" x2="913.0" y2="481.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="888.0" y1="489.0" x2="888.0" y2="500.0" stroke="#111827" stroke-width="2.2"/>
+  <line x1="862.0" y1="500.0" x2="914.0" y2="500.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="888.0" cy="500.0" r="5.5" fill="#F2CA4E" stroke="#111827" stroke-width="2.2"/>
+  <text x="888.0" y="524.0" text-anchor="middle" fill="#4B5563" font-size="11" font-weight="700" class="sans">RABBITMQ</text>
+  <rect x="855.0" y="572.0" width="66" height="15" rx="3.5" fill="#54B56C" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="579.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="579.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="579.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="579.5" x2="913.0" y2="579.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="590.0" width="66" height="15" rx="3.5" fill="#54B56C" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="597.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="597.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="597.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="597.5" x2="913.0" y2="597.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <rect x="855.0" y="608.0" width="66" height="15" rx="3.5" fill="#54B56C" stroke="#111827" stroke-width="2.2"/>
+  <circle cx="864.0" cy="615.5" r="1.6" fill="#111827"/>
+  <circle cx="870.0" cy="615.5" r="1.6" fill="#111827"/>
+  <circle cx="876.0" cy="615.5" r="1.6" fill="#111827"/>
+  <line x1="897.0" y1="615.5" x2="913.0" y2="615.5" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+  <line x1="888.0" y1="623.0" x2="888.0" y2="634.0" stroke="#111827" stroke-width="2.2"/>
+  <line x1="862.0" y1="634.0" x2="914.0" y2="634.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="888.0" cy="634.0" r="5.5" fill="#54B56C" stroke="#111827" stroke-width="2.2"/>
+  <text x="888.0" y="656.0" text-anchor="middle" fill="#4B5563" font-size="11" font-weight="700" class="sans">ASYNC SYNC</text>
+  <text x="1056.0" y="134.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="700" class="sans">SERVICE</text>
+  <text x="1056.0" y="152.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="700" class="sans">REQUESTS</text>
+  <polyline points="982.0,179.0 1126.0,179.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="1126.0,201.0 982.0,201.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="982.0,317.0 1126.0,317.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="1126.0,339.0 982.0,339.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="982.0,455.0 1126.0,455.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="1126.0,477.0 982.0,477.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="982.0,589.0 1126.0,589.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <polyline points="1126.0,611.0 982.0,611.0" fill="none" stroke="#111827" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <path d="M 1159.0 170.0 L 1159.0 210.0 A 29.0 9.0 0 0 0 1217.0 210.0 L 1217.0 170.0 Z" fill="#F27D32" stroke="#111827" stroke-width="2.2"/>
+  <path d="M 1159.0 190.0 A 29.0 9.0 0 0 0 1217.0 190.0" fill="none" stroke="#111827" stroke-width="1.8"/>
+  <ellipse cx="1188.0" cy="170.0" rx="29.0" ry="9.0" fill="#FFFFFF" stroke="#111827" stroke-width="2.2"/>
+  <ellipse cx="1188.0" cy="170.0" rx="23.0" ry="5.5" fill="#F27D32" fill-opacity="0.45"/>
+  <text x="1236.0" y="186.0" text-anchor="start" fill="#111827" font-size="15.5" font-weight="700" class="sans">SQL SERVER</text>
+  <text x="1236.0" y="206.0" text-anchor="start" fill="#4B5563" font-size="12.5" font-weight="500" class="sans">Source of Truth</text>
+  <rect x="1160.0" y="304.0" width="46" height="48" rx="5" fill="#4AA3D8" stroke="#111827" stroke-width="2.2"/>
+  <line x1="1169.0" y1="316.0" x2="1196.0" y2="316.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="1169.0" y1="326.0" x2="1192.0" y2="326.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="1169.0" y1="336.0" x2="1186.0" y2="336.0" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="1198.0" cy="335.0" r="13" fill="#FFFFFF" stroke="#111827" stroke-width="2.5"/>
+  <line x1="1207.0" y1="344.0" x2="1218.0" y2="355.0" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
+  <text x="1236.0" y="324.0" text-anchor="start" fill="#111827" font-size="15.5" font-weight="700" class="sans">MEILISEARCH</text>
+  <text x="1236.0" y="344.0" text-anchor="start" fill="#4B5563" font-size="12.5" font-weight="500" class="sans">Search Engine (&lt;30ms)</text>
+  <line x1="1176.0" y1="437.0" x2="1176.0" y2="495.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="1159.0" y1="454.0" x2="1217.0" y2="454.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="1188.0" y1="437.0" x2="1188.0" y2="495.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="1159.0" y1="466.0" x2="1217.0" y2="466.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="1200.0" y1="437.0" x2="1200.0" y2="495.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="1159.0" y1="478.0" x2="1217.0" y2="478.0" stroke="#111827" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="1167.0" y="445.0" width="42" height="42" rx="6" fill="#F2CA4E" stroke="#111827" stroke-width="2.3"/>
+  <rect x="1175.0" y="453.0" width="26" height="26" rx="3" fill="#FFFFFF" stroke="#111827" stroke-width="1.8"/>
+  <text x="1188.0" y="471.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="700" class="sans">AI</text>
+  <text x="1236.0" y="462.0" text-anchor="start" fill="#111827" font-size="15.5" font-weight="700" class="sans">AME ENGINE</text>
+  <text x="1236.0" y="482.0" text-anchor="start" fill="#4B5563" font-size="12.5" font-weight="500" class="sans">Python AI Moderation</text>
+  <path d="M 1164.0 616.0 L 1213.0 616.0 A 14 14 0 0 0 1214.0 589.0 A 18 18 0 0 0 1180.0 582.0 A 15 15 0 0 0 1164.0 616.0 Z" fill="#54B56C" stroke="#111827" stroke-width="2.3" stroke-linejoin="round"/>
+  <text x="1189.0" y="607.0" text-anchor="middle" fill="#111827" font-size="11.5" font-weight="700" class="sans">API</text>
+  <text x="1236.0" y="596.0" text-anchor="start" fill="#111827" font-size="15.5" font-weight="700" class="sans">EXTERNAL APIs</text>
+  <text x="1236.0" y="616.0" text-anchor="start" fill="#4B5563" font-size="12.5" font-weight="500" class="sans">Price · LLM · CDN</text>
+  <polyline points="1056.0,611.0 1056.0,718.0 284.0,718.0 284.0,608.0" fill="none" stroke="#111827" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah-ink)"/>
+  <text x="670.0" y="746.0" text-anchor="middle" fill="#111827" font-size="15" font-weight="700" class="sans">AGGREGATED RESPONSE &amp; REAL-TIME SYNC</text>
+</svg>
