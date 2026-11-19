@@ -195,11 +195,11 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
                 break;
 
             case ModerationDecision.Rejected:
-                ApplyAutoReject(listing, reasonsJson);
+                ApplyAutoReject(listing, reasonsJson, ameResponse.Summary);
                 break;
 
             default:
-                ApplyManualReviewFallback(listing, reasonsJson);
+                ApplyManualReviewFallback(listing, reasonsJson, ameResponse.Summary);
                 break;
         }
 
@@ -395,7 +395,7 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             listing.ListingId,
             actorUserId: null,
             "AutoApprove",
-            historyNote));
+            TruncateHistoryNote(historyNote)));
 
         var outboxType = listing.Status == ListingStatus.Published
             ? "ListingPublished"
@@ -415,7 +415,7 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         _listingRepository.AddOutboxMessage(new OutboxMessage(outboxType, approvedPayload));
     }
 
-    private void ApplyAutoReject(Listing listing, string reasonsJson)
+    private void ApplyAutoReject(Listing listing, string reasonsJson, string summary)
     {
         listing.Reject();
 
@@ -426,11 +426,15 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reasonsJson,
             reviewerUserId: null));
 
+        var note = string.IsNullOrWhiteSpace(summary)
+            ? "AME tự động từ chối do vi phạm quy định nội dung."
+            : summary;
+
         _listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             actorUserId: null,
             "AutoReject",
-            reasonsJson));
+            TruncateHistoryNote(note)));
 
         var rejectedPayload = JsonSerializer.Serialize(new
         {
@@ -441,7 +445,7 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         _listingRepository.AddOutboxMessage(new OutboxMessage("ListingRejected", rejectedPayload));
     }
 
-    private void ApplyManualReviewFallback(Listing listing, string reasonsJson)
+    private void ApplyManualReviewFallback(Listing listing, string reasonsJson, string summary)
     {
         listing.MarkForManualReview();
 
@@ -452,11 +456,27 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reasonsJson,
             reviewerUserId: null));
 
+        var note = string.IsNullOrWhiteSpace(summary)
+            ? "AME chuyển sang hàng chờ kiểm duyệt thủ công của Admin."
+            : summary;
+
         _listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             actorUserId: null,
             "RouteManualReview",
-            reasonsJson));
+            TruncateHistoryNote(note)));
+    }
+
+    private static string TruncateHistoryNote(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return string.Empty;
+        }
+
+        const int maxLen = 480;
+        var trimmed = note.Trim();
+        return trimmed.Length <= maxLen ? trimmed : string.Concat(trimmed.AsSpan(0, maxLen - 3), "...");
     }
 
     [LoggerMessage(

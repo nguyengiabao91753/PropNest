@@ -515,11 +515,15 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             ModerationDecision.Rejected,
             reasonsJson,
             moderatorUserId));
+        var historyNote = reasonsJson.Length <= 480
+            ? reasonsJson
+            : string.Concat(reasonsJson.AsSpan(0, 477), "...");
+
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             moderatorUserId,
             "Reject",
-            reasonsJson));
+            historyNote));
 
         var payload = JsonSerializer.Serialize(new
         {
