@@ -38,6 +38,9 @@ public interface IWorkflowRepository
 
     Task<IdempotencyRequest?> GetIdempotencyRequestAsync(long userId, string key, CancellationToken cancellationToken = default);
 
+    Task<bool> HasActiveWorkflowForListingAsync(long listingId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
     Task AddAsync(WorkflowInstance workflow, CancellationToken cancellationToken = default);
 
     Task AddIdempotencyRequestAsync(IdempotencyRequest request, CancellationToken cancellationToken = default);
