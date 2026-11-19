@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PropNest AME — Theo dõi tiến trình kiểm duyệt thời gian thực</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --bg-card: #111827;
+      --bg-card-hover: #172033;
+      --bg-subtle: #1e293b;
+      --border: #263248;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.14);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.14);
+      --purple: #a855f7;
+      --purple-bg: rgba(168, 85, 247, 0.14);
+      --blue: #3b82f6;
+      --blue-bg: rgba(59, 130, 246, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .container { max-width: 1360px; margin: 0 auto; padding: 20px 24px 48px; }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      display: grid; place-items: center; font-weight: 800; font-size: 18px; color: #fff;
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+    }
+    .brand h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
+      border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: var(--green-bg); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .live-pill.offline { background: var(--amber-bg); color: var(--amber); border-color: rgba(245, 158, 11, 0.3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+      border-radius: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
+      text-decoration: none; transition: all 0.15s;
+    }
+    .btn:hover { background: var(--bg-subtle); border-color: #3b4b68; }
+    .btn-primary { background: #0284c7; border-color: #0ea5e9; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-danger { color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
+    .btn-danger:hover { background: var(--red-bg); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px; margin-bottom: 20px;
+    }
+    .kpi {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .kpi-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+    .kpi-value { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+    .kpi-sub { font-size: 11px; color: var(--text-muted); }
+    .c-blue { color: var(--primary); }
+    .c-green { color: var(--green); }
+    .c-amber { color: var(--amber); }
+    .c-purple { color: var(--purple); }
+    .c-red { color: var(--red); }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 16px;
+    }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+    .filter-btn {
+      padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-btn.active { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
+    .search-box {
+      padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--text); font-size: 13px; width: 280px; max-width: 100%;
+      outline: none;
+    }
+    .search-box:focus { border-color: var(--primary); }
+
+    .jobs-list { display: flex; flex-direction: column; gap: 14px; }
+    .empty-state {
+      background: var(--bg-card); border: 1px dashed var(--border); border-radius: 16px;
+      padding: 56px 24px; text-align: center; color: var(--text-muted);
+    }
+    .empty-state h3 { color: var(--text); font-size: 16px; margin-bottom: 6px; }
+
+    .job-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px 18px; transition: border-color 0.2s;
+    }
+    .job-card.running { border-color: rgba(56, 189, 248, 0.7); box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2); }
+    .job-top {
+      display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .job-title-wrap { min-width: 0; flex: 1; }
+    .job-meta-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-muted); margin-bottom: 4px;
+    }
+    .listing-id {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
+      color: var(--primary); background: var(--blue-bg); padding: 2px 8px; border-radius: 6px;
+    }
+    .job-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .job-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
+      border-radius: 999px; font-size: 11.5px; font-weight: 700;
+    }
+    .b-running { background: var(--blue-bg); color: var(--primary); }
+    .b-approved { background: var(--green-bg); color: var(--green); }
+    .b-price-warn { background: var(--amber-bg); color: var(--amber); }
+    .b-manual { background: var(--purple-bg); color: #d8b4fe; }
+    .b-rejected { background: var(--red-bg); color: #fca5a5; }
+    .time-pill {
+      font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--text-muted);
+      background: var(--bg-subtle); padding: 4px 9px; border-radius: 8px;
+    }
+
+    .stepper {
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;
+    }
+    @media (max-width: 960px) { .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) { .stepper { grid-template-columns: 1fr; } }
+
+    .step {
+      background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; min-width: 0;
+      position: relative;
+    }
+    .step.st-running { border-color: var(--primary); background: rgba(14, 165, 233, 0.12); }
+    .step.st-passed { border-color: rgba(16, 185, 129, 0.45); background: rgba(16, 185, 129, 0.08); }
+    .step.st-warning { border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.1); }
+    .step.st-failed { border-color: rgba(239, 68, 68, 0.55); background: rgba(239, 68, 68, 0.1); }
+    .step.st-skipped { opacity: 0.55; }
+    .step-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .step-label { font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .step-dur { font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+    .step-detail {
+      font-size: 11.5px; color: #cbd5e1;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .spinner {
+      width: 12px; height: 12px; border: 2px solid rgba(56, 189, 248, 0.3);
+      border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite;
+      display: inline-block; flex-shrink: 0;
+    }
+
+    .alert-price {
+      margin-top: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
+      background: var(--amber-bg); border: 1px solid rgba(245, 158, 11, 0.4); color: #fde68a;
+    }
+    .job-footer {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .expand-btn {
+      background: transparent; border: none; color: var(--primary); font-size: 12px;
+      font-weight: 600; cursor: pointer; padding: 2px 4px;
+    }
+    .expand-btn:hover { text-decoration: underline; }
+    .details-panel {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      background: #0d1424; border: 1px solid var(--border); font-size: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .violation-item {
+      padding: 7px 10px; border-radius: 8px; background: var(--bg-subtle);
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .v-rule {
+      font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+      padding: 2px 6px; border-radius: 5px; background: rgba(148, 163, 184, 0.18); white-space: nowrap;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(2, 6, 23, 0.75); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 560px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal h2 { font-size: 16px; margin-bottom: 6px; }
+    .modal p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; }
+    .preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+    .preset-btn {
+      text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg-subtle); color: var(--text); cursor: pointer; font-size: 12px;
+    }
+    .preset-btn:hover { border-color: var(--primary); background: var(--bg-card-hover); }
+    .preset-btn strong { display: block; font-size: 12.5px; margin-bottom: 2px; }
+    .preset-btn span { color: var(--text-muted); font-size: 11px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">AI</div>
+        <div>
+          <h1>PropNest AME — Giám sát luồng kiểm duyệt trực tiếp</h1>
+          <p>Theo dõi chi tiết từng bước xử lý: Khung giá khu vực → Luật &amp; Giá ảo → Kiểm ảnh → AI Ollama → Kết luận</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="connStatus" class="live-pill"><span class="dot"></span> Đang kết nối SSE...</span>
+        <button class="btn btn-primary" onclick="openTestModal()">▶ Chạy thử tin mẫu</button>
+        <a class="btn" href="/docs" target="_blank">Swagger API (/docs)</a>
+        <button class="btn btn-danger" onclick="clearHistory()">Xóa lịch sử</button>
+      </div>
+    </header>
+
+    <section class="kpi-grid">
+      <div class="kpi">
+        <span class="kpi-label">Tổng tin đã tiếp nhận</span>
+        <span id="statTotal" class="kpi-value">0</span>
+        <span class="kpi-sub">Lưu tối đa 150 tin gần nhất</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Đang xử lý (Live)</span>
+        <span id="statRunning" class="kpi-value c-blue">0</span>
+        <span class="kpi-sub">Cập nhật theo từng bước</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Tự động duyệt (Sạch)</span>
+        <span id="statApprovedClean" class="kpi-value c-green">0</span>
+        <span class="kpi-sub">Đạt nội dung, ảnh &amp; giá</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Duyệt + Cảnh báo giá ảo</span>
+        <span id="statPriceWarn" class="kpi-value c-amber">0</span>
+        <span class="kpi-sub">Vẫn duyệt kèm cảnh báo Seller</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Chuyển Admin duyệt</span>
+        <span id="statManual" class="kpi-value c-purple">0</span>
+        <span class="kpi-sub">Ảnh mờ/thiếu hoặc AI cần xác minh</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Tự động từ chối</span>
+        <span id="statRejected" class="kpi-value c-red">0</span>
+        <span class="kpi-sub">Từ cấm / Lộ SĐT (dừng sớm)</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Thời gian xử lý TB</span>
+        <span id="statAvgMs" class="kpi-value">0 ms</span>
+        <span class="kpi-sub">Trên các tin đã hoàn tất</span>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="filters" id="filterBar">
+        <button class="filter-btn active" data-filter="all">Tất cả</button>
+        <button class="filter-btn" data-filter="running">Đang chạy</button>
+        <button class="filter-btn" data-filter="approved">Đã duyệt</button>
+        <button class="filter-btn" data-filter="price_warning">Cảnh báo giá ảo</button>
+        <button class="filter-btn" data-filter="manualreview">Chuyển Admin</button>
+        <button class="filter-btn" data-filter="rejected">Từ chối</button>
+      </div>
+      <input id="searchInput" class="search-box" type="search" placeholder="Tìm mã tin, tiêu đề, khu vực, CorrelationId..." />
+    </section>
+
+    <main id="jobsList" class="jobs-list"></main>
+  </div>
+
+  <!-- Modal chạy thử tin mẫu -->
+  <div id="testModal" class="modal-backdrop" onclick="if(event.target===this) closeTestModal()">
+    <div class="modal">
+      <h2>Chạy thử kiểm duyệt trực tiếp qua AME</h2>
+      <p>Chọn 1 kịch bản mẫu bên dưới để gửi request vào <code>POST /api/v1/moderate</code> và xem từng bước sáng lên theo thời gian thực.</p>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="runPreset('price_low')">
+          <strong>1. Tin giá ảo quá thấp (Quận 7)</strong>
+          <span>300 triệu / 75m² + ảnh mẫu → Kiểm tra khung giá Live API &amp; cảnh báo giá ảo</span>
+        </button>
+        <button class="preset-btn" onclick="runPreset('phone_reject')">
+          <strong>2. Tin lộ số điện thoại (Từ chối ngay)</strong>
+          <span>Chứa SĐT trong mô tả → Short-circuit Rejected ở bước 2, bỏ qua bước 3-4</span>
+        </button>
+        <button class="preset-btn" onclick="runPreset('missing_img')">
+          <strong>3. Tin thiếu hình ảnh (Đẩy Admin)</strong>
+          <span>Nội dung &amp; giá hợp lệ nhưng không có ảnh → ManualReview ở bước 3</span>
+        </button>
+        <button class="preset-btn" onclick="runPreset('normal')">
+          <strong>4. Tin chuẩn khu vực TP.HCM</strong>
+          <span>4.8 tỷ / 75m² Quận 7 + mô tả đầy đủ → Qua trọn vẹn cả 5 bước</span>
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeTestModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      jobs: [],
+      stats: {},
+      filter: 'all',
+      search: '',
+      expanded: new Set(),
+    };
+
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatPrice(vnd) {
+      if (!vnd || vnd <= 0) return '0 đ';
+      if (vnd >= 1e9) return (vnd / 1e9).toFixed(2).replace(/\.00$/, '') + ' tỷ';
+      if (vnd >= 1e6) return (vnd / 1e6).toFixed(1).replace(/\.0$/, '') + ' triệu';
+      return Math.round(vnd).toLocaleString('vi-VN') + ' đ';
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleTimeString('vi-VN', { hour12: false });
+      } catch { return iso; }
+    }
+
+    function decisionBadge(job) {
+      if (job.status === 'running') {
+        return `<span class="badge b-running"><span class="spinner"></span> Đang xử lý</span>`;
+      }
+      if (job.status === 'error') {
+        return `<span class="badge b-rejected">✕ Lỗi hệ thống</span>`;
+      }
+      if (job.decision === 'Approved' && job.hasPriceWarning) {
+        return `<span class="badge b-price-warn">⚠ Đã duyệt (Cảnh báo giá ảo)</span>`;
+      }
+      if (job.decision === 'Approved') {
+        return `<span class="badge b-approved">✓ Tự động duyệt</span>`;
+      }
+      if (job.decision === 'ManualReview') {
+        return `<span class="badge b-manual">👤 Chuyển Admin duyệt</span>`;
+      }
+      if (job.decision === 'Rejected') {
+        return `<span class="badge b-rejected">✕ Tự động từ chối</span>`;
+      }
+      return `<span class="badge">${esc(job.decision || 'Chờ')}</span>`;
+    }
+
+    function stepIcon(status) {
+      switch (status) {
+        case 'running': return '<span class="spinner"></span>';
+        case 'passed': return '<span style="color:var(--green)">✓</span>';
+        case 'warning': return '<span style="color:var(--amber)">⚠</span>';
+        case 'failed': return '<span style="color:var(--red)">✕</span>';
+        case 'skipped': return '<span style="color:var(--text-muted)">⏭</span>';
+        default: return '<span style="color:var(--text-muted)">○</span>';
+      }
+    }
+
+    function recomputeStats() {
+      const all = state.jobs;
+      const running = all.filter(j => j.status === 'running').length;
+      const approvedClean = all.filter(j => j.decision === 'Approved' && !j.hasPriceWarning).length;
+      const priceWarn = all.filter(j => j.decision === 'Approved' && j.hasPriceWarning).length;
+      const manual = all.filter(j => j.decision === 'ManualReview').length;
+      const rejected = all.filter(j => j.decision === 'Rejected').length;
+      const times = all.filter(j => j.status === 'completed' && typeof j.processingTimeMs === 'number').map(j => j.processingTimeMs);
+      const avgMs = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
+
+      document.getElementById('statTotal').textContent = all.length;
+      document.getElementById('statRunning').textContent = running;
+      document.getElementById('statApprovedClean').textContent = approvedClean;
+      document.getElementById('statPriceWarn').textContent = priceWarn;
+      document.getElementById('statManual').textContent = manual;
+      document.getElementById('statRejected').textContent = rejected;
+      document.getElementById('statAvgMs').textContent = avgMs + ' ms';
+    }
+
+    function filteredJobs() {
+      return state.jobs.filter(j => {
+        if (state.filter === 'running' && j.status !== 'running') return false;
+        if (state.filter === 'approved' && j.decision !== 'Approved') return false;
+        if (state.filter === 'price_warning' && !(j.decision === 'Approved' && j.hasPriceWarning)) return false;
+        if (state.filter === 'manualreview' && j.decision !== 'ManualReview') return false;
+        if (state.filter === 'rejected' && j.decision !== 'Rejected') return false;
+
+        if (state.search) {
+          const q = state.search.toLowerCase();
+          const hit = String(j.listingId).includes(q)
+            || (j.title || '').toLowerCase().includes(q)
+            || (j.location || '').toLowerCase().includes(q)
+            || (j.correlationId || '').toLowerCase().includes(q);
+          if (!hit) return false;
+        }
+        return true;
+      });
+    }
+
+    function render() {
+      recomputeStats();
+      const listEl = document.getElementById('jobsList');
+      const items = filteredJobs();
+
+      if (!items.length) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <h3>Chưa có phiên kiểm duyệt nào khớp bộ lọc</h3>
+            <p>Khi người bán gửi duyệt tin từ hệ thống PropNest (hoặc bạn bấm <strong>"Chạy thử tin mẫu"</strong>), từng bước xử lý của AME sẽ xuất hiện trực tiếp tại đây.</p>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = items.map(job => {
+        const isOpen = state.expanded.has(job.jobId);
+        const unitStr = job.unitPrice > 0 ? `${formatPrice(job.unitPrice)}/m²` : 'Chưa có đơn giá';
+        const stepsHtml = (job.steps || []).map(s => `
+          <div class="step st-${esc(s.status)}">
+            <div class="step-head">
+              <span class="step-label">${stepIcon(s.status)} ${esc(s.label)}</span>
+              <span class="step-dur">${s.durationMs !== null && s.durationMs !== undefined ? s.durationMs + 'ms' : (s.status === 'running' ? '...' : '—')}</span>
+            </div>
+            <div class="step-detail" title="${esc(s.detail || '')}">${esc(s.detail || (s.status === 'pending' ? 'Đang chờ bước trước...' : ''))}</div>
+          </div>
+        `).join('');
+
+        const priceWarnHtml = job.priceWarningMessage
+          ? `<div class="alert-price"><strong>⚠ Cảnh báo giá khu vực:</strong> ${esc(job.priceWarningMessage)}</div>`
+          : '';
+
+        const detailsHtml = isOpen ? `
+          <div class="details-panel">
+            <div><strong>Tóm tắt kết quả:</strong> ${esc(job.summary || 'Đang tổng hợp...')}</div>
+            <div><strong>CorrelationId:</strong> <code>${esc(job.correlationId || 'N/A')}</code> · <strong>Risk Score:</strong> ${job.totalRiskScore ?? '—'} · <strong>Ảnh gửi lên:</strong> ${job.imageCount}</div>
+            ${(job.violations && job.violations.length) ? `
+              <div><strong>Chi tiết vi phạm / cảnh báo (${job.violations.length}):</strong></div>
+              ${job.violations.map(v => `
+                <div class="violation-item">
+                  <span class="v-rule">${esc(v.rule)}</span>
+                  <span>[${esc(v.severity)}] ${esc(v.message)}</span>
+                </div>`).join('')}
+            ` : '<div style="color:var(--green)">✓ Không phát hiện vi phạm nào.</div>'}
+          </div>` : '';
+
+        return `
+          <article class="job-card ${job.status === 'running' ? 'running' : ''}">
+            <div class="job-top">
+              <div class="job-title-wrap">
+                <div class="job-meta-row">
+                  <span class="listing-id">Tin #${esc(job.listingId)}</span>
+                  <span>${esc(job.propertyType)} · ${esc(job.listingType)}</span>
+                  <span>• ${esc(job.location || 'Chưa rõ khu vực')}</span>
+                  <span>• ${formatPrice(job.price)} / ${esc(job.area)}m² (${unitStr})</span>
+                  <span>• ${esc(job.imageCount)} ảnh</span>
+                </div>
+                <div class="job-title">${esc(job.title)}</div>
+              </div>
+              <div class="job-right">
+                ${decisionBadge(job)}
+                <span class="time-pill">${job.processingTimeMs !== null && job.processingTimeMs !== undefined ? job.processingTimeMs + ' ms' : 'Đang đo...'}</span>
+              </div>
+            </div>
+            <div class="stepper">${stepsHtml}</div>
+            ${priceWarnHtml}
+            <div class="job-footer">
+              <span>Bắt đầu: ${formatTime(job.startedAt)}${job.finishedAt ? ' · Hoàn tất: ' + formatTime(job.finishedAt) : ''}</span>
+              <button class="expand-btn" onclick="toggleExpand('${esc(job.jobId)}')">${isOpen ? '▲ Thu gọn chi tiết' : '▼ Xem chi tiết các bước & vi phạm'}</button>
+            </div>
+            ${detailsHtml}
+          </article>`;
+      }).join('');
+    }
+
+    function toggleExpand(jobId) {
+      if (state.expanded.has(jobId)) state.expanded.delete(jobId);
+      else state.expanded.add(jobId);
+      render();
+    }
+
+    function upsertJob(job) {
+      const idx = state.jobs.findIndex(j => j.jobId === job.jobId);
+      if (idx >= 0) {
+        state.jobs[idx] = job;
+      } else {
+        state.jobs.unshift(job);
+        if (state.jobs.length > 150) state.jobs.length = 150;
+      }
+      render();
+    }
+
+    async function fetchInitial() {
+      try {
+        const res = await fetch('/api/v1/monitor/jobs?limit=150');
+        if (!res.ok) return;
+        const data = await res.json();
+        state.jobs = data.jobs || [];
+        render();
+      } catch (e) {
+        console.error('Failed to fetch initial jobs:', e);
+      }
+    }
+
+    function connectSse() {
+      const pill = document.getElementById('connStatus');
+      const es = new EventSource('/api/v1/monitor/stream');
+      es.onopen = () => {
+        pill.classList.remove('offline');
+        pill.innerHTML = '<span class="dot"></span> Trực tuyến • SSE Realtime';
+      };
+      es.addEventListener('job_updated', (ev) => {
+        try { upsertJob(JSON.parse(ev.data)); } catch {}
+      });
+      es.addEventListener('cleared', () => { fetchInitial(); });
+      es.onerror = () => {
+        pill.classList.add('offline');
+        pill.innerHTML = '<span class="dot"></span> Đang kết nối lại SSE...';
+      };
+    }
+
+    async function clearHistory() {
+      await fetch('/api/v1/monitor/jobs', { method: 'DELETE' });
+      await fetchInitial();
+    }
+
+    function openTestModal() { document.getElementById('testModal').classList.add('open'); }
+    function closeTestModal() { document.getElementById('testModal').classList.remove('open'); }
+
+    async function runPreset(type) {
+      closeTestModal();
+      const randId = Math.floor(1000 + Math.random() * 9000);
+      const base = {
+        listingId: randId,
+        propertyType: 'Apartment',
+        listingType: 'Sale',
+        city: 'Thành phố Hồ Chí Minh',
+        district: 'Quận 7',
+        ward: 'Phường Tân Phú',
+        address: '10 Nguyễn Văn Linh',
+        area: 75,
+        images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80'],
+      };
+      let payload;
+      if (type === 'price_low') {
+        payload = {
+          ...base,
+          title: 'Bán gấp căn hộ 2PN Quận 7 giá siêu mềm',
+          description: 'Căn hộ 2 phòng ngủ đầy đủ nội thất cao cấp, sổ hồng chính chủ, tiện ích hồ bơi gym đầy đủ, view thoáng đẹp.',
+          price: 300000000,
+        };
+      } else if (type === 'phone_reject') {
+        payload = {
+          ...base,
+          title: 'Bán căn hộ Quận 7 liên hệ chính chủ',
+          description: 'Nhà đẹp dọn vào ở ngay, sổ hồng sẵn, liên hệ số 0909.123.456 để đi xem thực tế hôm nay.',
+          price: 4500000000,
+        };
+      } else if (type === 'missing_img') {
+        payload = {
+          ...base,
+          title: 'Bán căn hộ 2PN Quận 7 chưa kịp chụp ảnh',
+          description: 'Căn hộ thoáng mát 2 phòng ngủ 2 nhà vệ sinh, đầy đủ nội thất gỗ cao cấp, sổ hồng riêng sang tên nhanh.',
+          price: 4800000000,
+          images: [],
+        };
+      } else {
+        payload = {
+          ...base,
+          title: 'Bán căn hộ 2PN 75m² Phú Mỹ Hưng Quận 7 full nội thất',
+          description: 'Căn hộ 2 phòng ngủ 2WC diện tích 75m², ban công Đông Nam mát mẻ, sổ hồng chính chủ, đầy đủ tiện ích hồ bơi công viên nội khu.',
+          price: 4800000000,
+        };
+      }
+
+      fetch('/api/v1/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(err => console.error(err));
+    }
+
+    document.getElementById('filterBar').addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.filter = btn.dataset.filter;
+      render();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.search = e.target.value.trim();
+      render();
+    });
+
+    fetchInitial();
+    connectSse();
+  </script>
+</body>
+</html>
