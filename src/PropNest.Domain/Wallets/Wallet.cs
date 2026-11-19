@@ -32,6 +32,13 @@ public sealed class Wallet : AuditableEntity
         Touch();
     }
 
+    public void CreditPromo(decimal amount)
+    {
+        EnsurePositive(amount);
+        PromoBalance += amount;
+        Touch();
+    }
+
     public (decimal PromoUsed, decimal MainUsed) Charge(decimal amount)
     {
         EnsurePositive(amount);
@@ -52,6 +59,18 @@ public sealed class Wallet : AuditableEntity
     {
         EnsurePositive(amount);
         MainBalance += amount;
+        Touch();
+    }
+
+    public void Refund(decimal mainAmount, decimal promoAmount)
+    {
+        if (mainAmount < 0m || promoAmount < 0m || (mainAmount == 0m && promoAmount == 0m))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mainAmount), "Refund amounts must be non-negative and total must be positive.");
+        }
+
+        MainBalance += mainAmount;
+        PromoBalance += promoAmount;
         Touch();
     }
 
