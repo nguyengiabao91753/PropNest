@@ -23,28 +23,31 @@ public sealed class ModerationController(
     [HttpGet("stats")]
     public async Task<IActionResult> GetDashboardStats(CancellationToken cancellationToken)
     {
-        // 1. Status distribution from database
-        var statusGroups = await dbContext.Listings.AsNoTracking()
-            .GroupBy(l => l.Status)
-            .Select(g => new { Status = g.Key, Count = g.Count() })
+        // 1. Status distribution from database (gộp query theo Status + ModerationDecision)
+        var statusDecisionGroups = await dbContext.Listings.AsNoTracking()
+            .GroupBy(l => new { l.Status, l.ModerationDecision })
+            .Select(g => new { g.Key.Status, g.Key.ModerationDecision, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
-        var statusDict = statusGroups.ToDictionary(g => g.Status.ToString(), g => g.Count);
+        int CountByStatus(ListingStatus s) => statusDecisionGroups.Where(g => g.Status == s).Sum(g => g.Count);
 
-        var publishedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Published), 0);
+        var publishedCount = CountByStatus(ListingStatus.Published);
         // Hàng chờ Admin chỉ bao gồm các tin AME từ chối tự động duyệt / cần duyệt thủ công (ManualReview)
-        var pendingCount = await dbContext.Listings.AsNoTracking()
-            .CountAsync(l => l.Status == ListingStatus.PendingModeration
-                          && l.ModerationDecision == ModerationDecision.ManualReview, cancellationToken);
-        var ameProcessingCount = await dbContext.Listings.AsNoTracking()
-            .CountAsync(l => l.Status == ListingStatus.PendingModeration
-                          && l.ModerationDecision != ModerationDecision.ManualReview, cancellationToken);
-        var pendingPaymentCount = statusDict.GetValueOrDefault(nameof(ListingStatus.PendingPayment), 0);
-        var rejectedCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Rejected), 0);
-        var draftCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Draft), 0);
-        var hiddenCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Hidden), 0);
-        var expiredCount = statusDict.GetValueOrDefault(nameof(ListingStatus.Expired), 0);
-        var totalProperties = await dbContext.Listings.CountAsync(cancellationToken);
+        var pendingCount = statusDecisionGroups
+            .Where(g => g.Status == ListingStatus.PendingModeration && g.ModerationDecision == ModerationDecision.ManualReview)
+            .Sum(g => g.Count);
+        var ameProcessingCount = statusDecisionGroups
+            .Where(g => g.Status == ListingStatus.PendingModeration && g.ModerationDecision != ModerationDecision.ManualReview)
+            .Sum(g => g.Count);
+        var pendingPaymentCount = CountByStatus(ListingStatus.PendingPayment);
+        var rejectedCount = CountByStatus(ListingStatus.Rejected);
+        var draftCount = CountByStatus(ListingStatus.Draft);
+        var hiddenCount = CountByStatus(ListingStatus.Hidden);
+        var expiredCount = CountByStatus(ListingStatus.Expired);
+        // Không tính các tin đã xóa (Deleted) vào tổng tin đăng
+        var totalProperties = statusDecisionGroups
+            .Where(g => g.Status != ListingStatus.Deleted)
+            .Sum(g => g.Count);
 
         // 2. Real users and active sellers/brokers count
         var totalUsers = await dbContext.Users.CountAsync(cancellationToken);
@@ -59,39 +62,46 @@ public sealed class ModerationController(
                           || dbContext.UserRoles.Any(ur => ur.UserId == u.Id && sellerRoleIds.Contains(ur.RoleId))
                           || dbContext.Listings.Any(l => l.OwnerUserId == u.Id), cancellationToken);
 
-        // 3. Real Wallet stats
-        var walletTxCount = await dbContext.WalletTransactions.CountAsync(cancellationToken);
-        var walletVolume = await dbContext.WalletTransactions.SumAsync(w => (decimal?)w.Amount, cancellationToken) ?? 0m;
+        // 3. Real Wallet stats (1 câu GROUP BY thay vì 7 câu query lẻ; doanh thu ròng = Charge - Refund)
+        var walletGroups = await dbContext.WalletTransactions.AsNoTracking()
+            .GroupBy(t => t.TransactionType)
+            .Select(g => new { Type = g.Key, Count = g.Count(), Amount = g.Sum(x => (decimal?)x.Amount) ?? 0m })
+            .ToListAsync(cancellationToken);
 
-        var topUpCount = await dbContext.WalletTransactions.AsNoTracking()
-            .CountAsync(t => t.TransactionType == WalletTransactionType.TopUp, cancellationToken);
-        var chargeCount = await dbContext.WalletTransactions.AsNoTracking()
-            .CountAsync(t => t.TransactionType == WalletTransactionType.Charge, cancellationToken);
-        var refundCount = await dbContext.WalletTransactions.AsNoTracking()
-            .CountAsync(t => t.TransactionType == WalletTransactionType.Refund, cancellationToken);
+        var topUpGroup = walletGroups.FirstOrDefault(g => g.Type == WalletTransactionType.TopUp);
+        var chargeGroup = walletGroups.FirstOrDefault(g => g.Type == WalletTransactionType.Charge);
+        var refundGroup = walletGroups.FirstOrDefault(g => g.Type == WalletTransactionType.Refund);
 
-        var totalTopUpAmount = await dbContext.WalletTransactions.AsNoTracking()
-            .Where(t => t.TransactionType == WalletTransactionType.TopUp)
-            .SumAsync(t => (decimal?)t.Amount, cancellationToken) ?? 0m;
+        var topUpCount = topUpGroup?.Count ?? 0;
+        var chargeCount = chargeGroup?.Count ?? 0;
+        var refundCount = refundGroup?.Count ?? 0;
+        var totalTopUpAmount = topUpGroup?.Amount ?? 0m;
+        var totalSpentAmount = chargeGroup?.Amount ?? 0m;
+        var totalRefundAmount = refundGroup?.Amount ?? 0m;
+        var walletTxCount = topUpCount + chargeCount + refundCount;
+        var netRevenue = Math.Max(0m, totalSpentAmount - totalRefundAmount);
 
-        var totalSpentAmount = await dbContext.WalletTransactions.AsNoTracking()
-            .Where(t => t.TransactionType == WalletTransactionType.Charge)
-            .SumAsync(t => (decimal?)t.Amount, cancellationToken) ?? 0m;
-
-        // 4. Real 6-month monthly metrics
+        // 4. Real 6-month monthly metrics (doanh thu thực = Charge - Refund, không cộng gộp TopUp + Refund)
         var now = DateTimeOffset.UtcNow;
         var sixMonthsAgo = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero).AddMonths(-5);
 
         var monthlyListings = await dbContext.Listings.AsNoTracking()
-            .Where(l => l.CreatedAt >= sixMonthsAgo)
+            .Where(l => l.CreatedAt >= sixMonthsAgo && l.Status != ListingStatus.Deleted)
             .GroupBy(l => new { l.CreatedAt.Year, l.CreatedAt.Month })
             .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
         var monthlyTxs = await dbContext.WalletTransactions.AsNoTracking()
             .Where(t => t.CreatedAt >= sixMonthsAgo)
-            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
-            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count(), Volume = g.Sum(x => x.Amount) })
+            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month, t.TransactionType })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                g.Key.TransactionType,
+                Count = g.Count(),
+                Amount = g.Sum(x => (decimal?)x.Amount) ?? 0m
+            })
             .ToListAsync(cancellationToken);
 
         var monthlyMetrics = new List<object>();
@@ -99,9 +109,11 @@ public sealed class ModerationController(
         {
             var targetDate = now.AddMonths(-i);
             var mList = monthlyListings.FirstOrDefault(x => x.Year == targetDate.Year && x.Month == targetDate.Month)?.Count ?? 0;
-            var mTx = monthlyTxs.FirstOrDefault(x => x.Year == targetDate.Year && x.Month == targetDate.Month);
-            var txCount = mTx?.Count ?? 0;
-            var rev = mTx?.Volume ?? 0m;
+            var monthTxRows = monthlyTxs.Where(x => x.Year == targetDate.Year && x.Month == targetDate.Month).ToList();
+            var txCount = monthTxRows.Sum(x => x.Count);
+            var monthCharge = monthTxRows.Where(x => x.TransactionType == WalletTransactionType.Charge).Sum(x => x.Amount);
+            var monthRefund = monthTxRows.Where(x => x.TransactionType == WalletTransactionType.Refund).Sum(x => x.Amount);
+            var rev = Math.Max(0m, monthCharge - monthRefund);
 
             monthlyMetrics.Add(new
             {
@@ -148,7 +160,7 @@ public sealed class ModerationController(
             totalUsers,
             activeSellersCount,
             totalWalletTransactions = walletTxCount,
-            totalWalletVolume = walletVolume,
+            totalWalletVolume = netRevenue,
             monthlyMetrics,
             statusDistribution = new Dictionary<string, int>
             {
@@ -167,18 +179,35 @@ public sealed class ModerationController(
                 packagePurchaseCount = chargeCount,
                 refundCount,
                 totalTopUpAmount,
-                totalSpentAmount
+                totalSpentAmount,
+                totalRefundAmount,
+                netRevenue
             }
         });
     }
 
     [HttpGet("listings/all")]
-    public async Task<IActionResult> GetAllListings(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllListings(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 200,
+        [FromQuery] ListingStatus? status = null,
+        CancellationToken cancellationToken = default)
     {
-        var query = from l in dbContext.Listings.AsNoTracking()
+        var safePage = Math.Max(1, pageNumber);
+        var safePageSize = Math.Clamp(pageSize, 1, 200);
+
+        var baseListings = dbContext.Listings.AsNoTracking().AsQueryable();
+        if (status.HasValue)
+        {
+            baseListings = baseListings.Where(l => l.Status == status.Value);
+        }
+
+        var total = await baseListings.CountAsync(cancellationToken);
+
+        var query = from l in baseListings
                     join u in dbContext.Users.AsNoTracking() on l.OwnerUserId equals u.Id into userGroup
                     from user in userGroup.DefaultIfEmpty()
-                    orderby l.CreatedAt descending
+                    orderby l.ListingId descending
                     select new ListingDto(
                         l.ListingId,
                         l.OwnerUserId,
@@ -216,8 +245,12 @@ public sealed class ModerationController(
                         null,
                         null);
 
-        var items = await query.ToListAsync(cancellationToken);
-        return Ok(new { total = items.Count, items });
+        var items = await query
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        return Ok(new { total, pageNumber = safePage, pageSize = safePageSize, items });
     }
 
     [HttpGet("listings")]
@@ -239,7 +272,7 @@ public sealed class ModerationController(
         long listingId,
         CancellationToken cancellationToken)
     {
-        var moderatorUserId = currentUser.UserId ?? 1;
+        var moderatorUserId = GetRequiredUserId();
 
         var listing = await listingService.ApproveAsync(
             listingId,
@@ -321,7 +354,7 @@ public sealed class ModerationController(
         }
 
         var reasonsJson = JsonSerializer.Serialize(reasonsList, NoEscapeJsonOptions);
-        var moderatorUserId = currentUser.UserId ?? 1;
+        var moderatorUserId = GetRequiredUserId();
 
         var listing = await listingService.RejectAsync(
             listingId,
@@ -331,6 +364,9 @@ public sealed class ModerationController(
 
         return Ok(listing);
     }
+
+    private long GetRequiredUserId() => currentUser.UserId
+        ?? throw new UnauthorizedAccessException("A valid moderator user identifier claim is required.");
 
     [HttpGet("listings/{listingId:long}/ame-result")]
     public async Task<IActionResult> GetAmeResult(
