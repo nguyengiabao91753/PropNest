@@ -68,6 +68,7 @@ public sealed class ListingImageService(
                 addedImages.Add(image);
             }
 
+            var wasPublished = listing.Status == ListingStatus.Published;
             if (listing.MarkPendingModerationAfterMediaChange())
             {
                 var allImageUrls = existingImages
@@ -85,6 +86,12 @@ public sealed class ListingImageService(
                     $"Tải lên {files.Count} hình ảnh mới - tự động chuyển AME kiểm duyệt lại."));
 
                 EnqueueListingSubmittedOutbox(listing, allImageUrls);
+            }
+
+            if (wasPublished || listing.Status == ListingStatus.Published)
+            {
+                var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+                listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -227,6 +234,7 @@ public sealed class ListingImageService(
 
         listingRepository.RemoveImage(image);
 
+        var wasPublished = listing.Status == ListingStatus.Published;
         if (listing.MarkPendingModerationAfterMediaChange())
         {
             var remainingUrls = remainingImages
@@ -245,7 +253,7 @@ public sealed class ListingImageService(
             EnqueueListingSubmittedOutbox(listing, remainingUrls);
         }
 
-        if (listing.Status == ListingStatus.Published)
+        if (wasPublished || listing.Status == ListingStatus.Published)
         {
             var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
             listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));

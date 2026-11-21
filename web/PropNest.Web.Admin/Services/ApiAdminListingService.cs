@@ -506,26 +506,19 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             }
         }
 
-        // Package Code
         // Package Code & Validity Dates
         vm.PackageCode = GetString(elem, "packageCode", "PackageCode") ?? "Standard";
         if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&
-            startElem.ValueKind != JsonValueKind.Null &&
-            startElem.TryGetDateTimeOffset(out var startDate))
             TryReadDateTimeOffset(startElem, out var startDate))
         {
             vm.StartDate = startDate;
         }
         if ((TryGetProp(elem, "endDate", out var endElem) || TryGetProp(elem, "EndDate", out endElem)) &&
-            endElem.ValueKind != JsonValueKind.Null &&
-            endElem.TryGetDateTimeOffset(out var endDate))
             TryReadDateTimeOffset(endElem, out var endDate))
         {
             vm.EndDate = endDate;
         }
         if ((TryGetProp(elem, "packageEndDate", out var pkgEndElem) || TryGetProp(elem, "PackageEndDate", out pkgEndElem)) &&
-            pkgEndElem.ValueKind != JsonValueKind.Null &&
-            pkgEndElem.TryGetDateTimeOffset(out var packageEndDate))
             TryReadDateTimeOffset(pkgEndElem, out var packageEndDate))
         {
             vm.PackageEndDate = packageEndDate;
@@ -541,8 +534,6 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         // Created At
         if ((TryGetProp(elem, "createdAt", out var createdElem) || TryGetProp(elem, "CreatedAt", out createdElem) ||
              TryGetProp(elem, "createdDate", out createdElem) || TryGetProp(elem, "CreatedDate", out createdElem)) &&
-            createdElem.ValueKind != JsonValueKind.Null &&
-            createdElem.TryGetDateTimeOffset(out var createdDate))
             TryReadDateTimeOffset(createdElem, out var createdDate))
         {
             vm.CreatedAt = createdDate;

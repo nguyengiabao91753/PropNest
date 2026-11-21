@@ -56,10 +56,8 @@ builder.Services.AddQuartz(q =>
         .ForJob(reconcileJobKey)
         .WithIdentity($"{nameof(SearchReconciliationJob)}-startup-trigger")
         .StartAt(DateTimeOffset.UtcNow.AddSeconds(10)));
-        .ForJob(jobKey)
-        .WithIdentity($"{nameof(ListingExpirationJob)}-trigger")
-        .WithCronSchedule("0 0/5 * * * ?"));
 
+    // 3. Job leo thang kiểm duyệt thủ công cho tin chờ duyệt quá lâu
     var staleJobKey = new JobKey(nameof(StaleModerationEscalationJob));
     q.AddJob<StaleModerationEscalationJob>(opts => opts.WithIdentity(staleJobKey));
     q.AddTrigger(opts => opts

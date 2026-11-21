@@ -41,27 +41,24 @@ namespace PropNest.Infrastructure.Services
 
                 case "ListingPublished":
                     await PublishDeserializedAsync<ListingPublishedEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingApprovedPendingPayment":
                     await PublishDeserializedAsync<ListingApprovedPendingPaymentEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingRejected":
                     await PublishDeserializedAsync<ListingRejectedEvent>(message, cancellationToken);
-                    break;
-                case "ListingSubmitted":
-                    var listingSubmitted = JsonSerializer.Deserialize<ListingSubmitted>(message.PayloadJson, JsonOptions) 
-                        ?? throw new InvalidOperationException($"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
-                    await _publishEndpoint.Publish(listingSubmitted, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingExpired":
                     await PublishDeserializedAsync<ListingExpiredEvent>(message, cancellationToken);
-                case "ListingPublished":
-                case "ListingApprovedPendingPayment":
-                case "ListingRejected":
-                case "ListingExpired":
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
+                    break;
+
                 case "ListingPackageDowngraded":
                 case "ListingPackageUpdated":
                 case "ListingSearchSyncRequested":
@@ -70,11 +67,7 @@ namespace PropNest.Infrastructure.Services
                 case "ListingDeleted":
                 case "ListingMediaUpdated":
                 case "ListingBumped":
-                    var syncRequested = TryCreateSearchSyncEvent(message);
-                    if (syncRequested is not null)
-                    {
-                        await _publishEndpoint.Publish(syncRequested, cancellationToken);
-                    }
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 default:
@@ -83,6 +76,15 @@ namespace PropNest.Infrastructure.Services
             }
 
             LogPublished(_logger, message.Type, message.OutboxId, message.CorrelationId);
+        }
+
+        private async Task PublishSearchSyncIfPresentAsync(OutboxMessage message, CancellationToken cancellationToken)
+        {
+            var syncRequested = TryCreateSearchSyncEvent(message);
+            if (syncRequested is not null)
+            {
+                await _publishEndpoint.Publish(syncRequested, cancellationToken);
+            }
         }
 
         private async Task PublishDeserializedAsync<TEvent>(OutboxMessage message, CancellationToken cancellationToken)
