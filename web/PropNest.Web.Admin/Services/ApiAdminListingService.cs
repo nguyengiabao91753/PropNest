@@ -328,7 +328,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                             UserName = GetString(elem, "userName") ?? string.Empty,
                             TransactionType = GetString(elem, "transactionType") ?? "TopUp",
                             Amount = GetDecimal(elem, "amount"),
-                            CreatedAt = TryGetProp(elem, "createdAt", out var ca) && ca.TryGetDateTimeOffset(out var dto) ? dto : DateTimeOffset.UtcNow,
+                            CreatedAt = TryGetProp(elem, "createdAt", out var ca) && TryReadDateTimeOffset(ca, out var dto) ? dto : DateTimeOffset.UtcNow,
                             Status = GetString(elem, "status") ?? "Thành công",
                             Description = GetString(elem, "description") ?? string.Empty
                         });
@@ -380,7 +380,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                         var actionType = h.TryGetProperty("actionType", out var at) ? at.GetString() ?? "Update" : "Update";
                         var note = h.TryGetProperty("note", out var n) ? n.GetString() : null;
                         var deltasJson = h.TryGetProperty("deltasJson", out var dj) ? dj.GetString() : null;
-                        var actionDate = h.TryGetProperty("actionDate", out var ad) && ad.TryGetDateTimeOffset(out var dto)
+                        var actionDate = h.TryGetProperty("actionDate", out var ad) && TryReadDateTimeOffset(ad, out var dto)
                             ? dto
                             : DateTimeOffset.UtcNow;
 
@@ -512,18 +512,21 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&
             startElem.ValueKind != JsonValueKind.Null &&
             startElem.TryGetDateTimeOffset(out var startDate))
+            TryReadDateTimeOffset(startElem, out var startDate))
         {
             vm.StartDate = startDate;
         }
         if ((TryGetProp(elem, "endDate", out var endElem) || TryGetProp(elem, "EndDate", out endElem)) &&
             endElem.ValueKind != JsonValueKind.Null &&
             endElem.TryGetDateTimeOffset(out var endDate))
+            TryReadDateTimeOffset(endElem, out var endDate))
         {
             vm.EndDate = endDate;
         }
         if ((TryGetProp(elem, "packageEndDate", out var pkgEndElem) || TryGetProp(elem, "PackageEndDate", out pkgEndElem)) &&
             pkgEndElem.ValueKind != JsonValueKind.Null &&
             pkgEndElem.TryGetDateTimeOffset(out var packageEndDate))
+            TryReadDateTimeOffset(pkgEndElem, out var packageEndDate))
         {
             vm.PackageEndDate = packageEndDate;
         }
@@ -540,6 +543,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
              TryGetProp(elem, "createdDate", out createdElem) || TryGetProp(elem, "CreatedDate", out createdElem)) &&
             createdElem.ValueKind != JsonValueKind.Null &&
             createdElem.TryGetDateTimeOffset(out var createdDate))
+            TryReadDateTimeOffset(createdElem, out var createdDate))
         {
             vm.CreatedAt = createdDate;
         }
@@ -593,7 +597,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
 
             result.ModelInfo = GetString(root, "modelInfo") ?? "Unknown";
             if (TryGetProp(root, "checkedAt", out var checkedElem) &&
-            checkedElem.TryGetDateTimeOffset(out var checkedAt))
+                TryReadDateTimeOffset(checkedElem, out var checkedAt))
             {
                 result.CheckedAt = checkedAt;
             }
@@ -618,8 +622,14 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             {
                 using var reasonsDoc = JsonDocument.Parse(reasonsJsonStr);
                 var r = reasonsDoc.RootElement;
-                result.Summary = GetString(r, "Summary");
-                if (r.TryGetProperty("ReasonCodes", out var codesElem) &&
+                result.Summary = GetString(r, "Summary", "summary");
+                var priceWarning = GetString(r, "PriceWarningMessage", "priceWarningMessage");
+                if (!string.IsNullOrWhiteSpace(priceWarning))
+                {
+                    result.PriceBenchmarkText = priceWarning;
+                }
+
+                if (TryGetProp(r, "ReasonCodes", out var codesElem) &&
                     codesElem.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var code in codesElem.EnumerateArray())
@@ -627,6 +637,26 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                         var codeStr = code.GetString();
                         if (!string.IsNullOrEmpty(codeStr))
                             result.ReasonCodes.Add(codeStr);
+                    }
+                }
+
+                if (TryGetProp(r, "Violations", out var violationsElem) &&
+                    violationsElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var v in violationsElem.EnumerateArray())
+                    {
+                        var rule = GetString(v, "Rule", "rule") ?? string.Empty;
+                        var severity = GetString(v, "Severity", "severity") ?? "info";
+                        var message = GetString(v, "Message", "message") ?? MapWarningMessage(rule);
+                        if (!string.IsNullOrWhiteSpace(rule))
+                        {
+                            result.Violations.Add(new AmeViolationViewModel
+                            {
+                                Rule = rule,
+                                Severity = severity,
+                                Message = message
+                            });
+                        }
                     }
                 }
             }
@@ -638,33 +668,47 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 {
                     result.BadwordsPassed = false;
                 }
-                if (code.Contains("PRICE", StringComparison.OrdinalIgnoreCase))
+                if (code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase))
                 {
-                    result.PriceBenchmarkText = "Giá bất thường so với khu vực";
+                    result.ImageQualityPassed = false;
+                }
+                if (code.Contains("PRICE", StringComparison.OrdinalIgnoreCase) &&
+                    result.PriceBenchmarkText == "Chưa có dữ liệu")
+                {
+                    result.PriceBenchmarkText = "Có dấu hiệu giá ảo (chênh lệch khu vực)";
                 }
             }
 
+            if (result.Violations.Any(v => v.Rule.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)))
+            {
+                result.ImageQualityPassed = false;
+            }
+
             if (result.BadwordsPassed &&
-            !result.ReasonCodes.Any(c => c.Contains("PRICE", StringComparison.OrdinalIgnoreCase)))
+                !result.ReasonCodes.Any(c => c.Contains("PRICE", StringComparison.OrdinalIgnoreCase)))
             {
                 result.PriceBenchmarkText = "Chuẩn khu vực";
             }
 
-            var warningsJsonStr = GetString(root, "warningsJson");
-            if (!string.IsNullOrWhiteSpace(warningsJsonStr))
+            if (result.Violations.Count == 0)
             {
-                using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
-                if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                var warningsJsonStr = GetString(root, "warningsJson");
+                if (!string.IsNullOrWhiteSpace(warningsJsonStr))
                 {
-                    foreach (var w in warningsDoc.RootElement.EnumerateArray())
+                    using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
+                    if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        var warnCode = w.GetString() ?? "";
-                        result.Violations.Add(new AmeViolationViewModel
+                        foreach (var w in warningsDoc.RootElement.EnumerateArray())
                         {
-                            Rule = warnCode,
-                            Severity = ClassifyWarningSeverity(warnCode),
-                            Message = MapWarningMessage(warnCode)
-                        });
+                            var warnCode = w.GetString() ?? "";
+                            if (string.IsNullOrWhiteSpace(warnCode)) continue;
+                            result.Violations.Add(new AmeViolationViewModel
+                            {
+                                Rule = warnCode,
+                                Severity = ClassifyWarningSeverity(warnCode),
+                                Message = MapWarningMessage(warnCode)
+                            });
+                        }
                     }
                 }
             }
@@ -677,6 +721,17 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         }
 
         return result;
+    }
+
+    private static bool TryReadDateTimeOffset(JsonElement elem, out DateTimeOffset value)
+    {
+        if (elem.ValueKind == JsonValueKind.String && elem.TryGetDateTimeOffset(out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 
     private static bool TryGetProp(JsonElement elem, string name, out JsonElement value)
@@ -763,9 +818,21 @@ public sealed partial class ApiAdminListingService : IAdminListingService
         _ when code.Contains("PHONE", StringComparison.OrdinalIgnoreCase)
             => "Phát hiện số điện thoại trong nội dung",
         _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase)
-            => "Giá bất thường so với khung giá khu vực",
-        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase)
-            => "Định dạng nội dung không đạt chuẩn",
+            => "Giá bất thường so với khung giá khu vực (có thể là giá ảo)",
+        _ when code.Contains("IMAGE_BLURRY", StringComparison.OrdinalIgnoreCase)
+            => "Ảnh bị mờ hoặc mất nét — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE_LOW_RESOLUTION", StringComparison.OrdinalIgnoreCase)
+            => "Ảnh có độ phân giải quá thấp — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE_MISSING", StringComparison.OrdinalIgnoreCase)
+            => "Tin đăng chưa có ảnh để AI đánh giá — cần Admin duyệt tay",
+        _ when code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)
+            => "Không đánh giá được chất lượng ảnh — cần Admin duyệt tay",
+        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("CAPS", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("SHORT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("REPETITION", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("SPECS", StringComparison.OrdinalIgnoreCase)
+            => "Định dạng nội dung hoặc thông số chưa đạt chuẩn",
         _ when code.Contains("FALLBACK", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase)
             => "Chuyển sang kiểm duyệt thủ công",

@@ -144,6 +144,11 @@ public sealed class Listing : AuditableEntity
         string? legacyAddress = null)
     {
         EnsureNotDeleted();
+        if (Status == ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Cannot edit a listing while it is pending moderation.");
+        }
+
         ApplyContent(
             title,
             description,
@@ -172,6 +177,26 @@ public sealed class Listing : AuditableEntity
         }
 
         Touch();
+    }
+
+    public bool MarkPendingModerationAfterMediaChange()
+    {
+        EnsureNotDeleted();
+        if (Status == ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Cannot modify images while a listing is pending moderation.");
+        }
+
+        if (Status is ListingStatus.Published or ListingStatus.Hidden or ListingStatus.PendingPayment)
+        {
+            Status = ListingStatus.PendingModeration;
+            ModerationDecision = ModerationDecision.Pending;
+            Touch();
+            return true;
+        }
+
+        Touch();
+        return false;
     }
 
     public void SubmitForModeration()

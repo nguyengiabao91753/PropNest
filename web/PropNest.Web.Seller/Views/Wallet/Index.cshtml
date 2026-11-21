@@ -110,7 +110,7 @@
                     <div class="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs w-72 sm:w-80 focus-within:border-primary transition-colors">
                         <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
                         <input type="text" name="q" value="@Model.SearchTerm"
-                               placeholder="Tìm mã GD, nội dung, correlation..."
+                               placeholder="Tìm mã giao dịch, nội dung..."
                                class="w-full bg-transparent outline-none text-neutral-900 placeholder:text-muted-foreground/70" />
                         @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
                         {
@@ -142,7 +142,7 @@
                                 <th class="px-4 py-3.5 font-semibold">Số dư sau GD</th>
                                 <th class="px-5 py-3.5 font-semibold">Nội dung</th>
                                 <th class="px-4 py-3.5 font-semibold">Thời gian</th>
-                                <th class="px-4 py-3.5 font-semibold text-right">Correlation ID</th>
+                                <th class="px-4 py-3.5 font-semibold text-right">Mã tham chiếu</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">

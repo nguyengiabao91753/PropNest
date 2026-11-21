@@ -1,7 +1,9 @@
 using PropNest.Web.Admin.Extensions;
+using PropNest.Web.Admin.Helpers;
 using PropNest.Web.Admin.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+JwtAdminHelper.Configure(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

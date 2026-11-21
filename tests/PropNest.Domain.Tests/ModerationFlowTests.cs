@@ -201,7 +201,7 @@ public sealed class ModerationFlowTests
             Ward: "Bến Nghé",
             Address: "123 Lê Lợi",
             Status: ListingStatus.PendingModeration,
-            ModerationDecision: ModerationDecision.NotRequested,
+            ModerationDecision: ModerationDecision.ManualReview,
             PackageCode: "Standard",
             StartDate: null,
             EndDate: null,
@@ -412,6 +412,9 @@ public sealed class ModerationFlowTests
             => Task.FromResult<AmeModerationResult?>(null);
 
         public Task<string?> GetLatestRejectReasonAsync(long listingId, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
+
+        public Task<string?> GetLatestModerationWarningAsync(long listingId, CancellationToken cancellationToken = default)
             => Task.FromResult<string?>(null);
     }
 

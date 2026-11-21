@@ -52,6 +52,7 @@ public sealed class SellerPropertyItemViewModel
     public List<string> Images { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? RejectReason { get; set; }
+    public string? ModerationWarning { get; set; }
     public string RowVersion { get; set; } = "AAAAAA==";
     public int Views { get; set; } = 142;
     public int Inquiries { get; set; } = 12;

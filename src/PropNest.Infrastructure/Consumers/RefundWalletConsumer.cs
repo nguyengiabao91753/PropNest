@@ -59,9 +59,16 @@ namespace PropNest.Infrastructure.Consumers
                 throw new InvalidOperationException($"Không tìm thấy ví của người dùng có ID {command.UserId} để hoàn tiền.");
             }
 
-            //hoàn tièn
+            // hoàn tiền đúng tỷ lệ ví chính (Main) / ví khuyến mãi (Promo) đã trừ
             var totalBalanceBefore = wallet.MainBalance + wallet.PromoBalance;
-            wallet.Refund(command.Amount);
+            if (command.PromoUsed > 0m || command.MainUsed > 0m)
+            {
+                wallet.Refund(command.MainUsed, command.PromoUsed);
+            }
+            else
+            {
+                wallet.Refund(command.Amount);
+            }
             var totalBalanceAfter = wallet.MainBalance + wallet.PromoBalance;
 
             var transaction = new WalletTransaction(

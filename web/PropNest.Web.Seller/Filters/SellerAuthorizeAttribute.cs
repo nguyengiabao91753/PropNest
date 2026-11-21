@@ -8,32 +8,43 @@ namespace PropNest.Web.Seller.Filters;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public sealed class SellerAuthorizeAttribute : Attribute, IAsyncActionFilter
 {
-    private const string ClientLoginUrl = "https://localhost:7129/login";
+    private const string DefaultClientBaseUrl = "https://localhost:7129";
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var httpContext = context.HttpContext;
         var hasToken = httpContext.Request.Cookies.TryGetValue(AuthHeaderHandler.TokenCookieName, out var token);
+        var clientLoginUrl = ResolveClientLoginUrl(httpContext);
 
         if (!hasToken || string.IsNullOrWhiteSpace(token))
         {
             var returnUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.Path}{httpContext.Request.QueryString}";
-            context.Result = new RedirectResult($"{ClientLoginUrl}?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            context.Result = new RedirectResult($"{clientLoginUrl}?returnUrl={Uri.EscapeDataString(returnUrl)}");
             return;
         }
 
         var profile = JwtUserHelper.GetProfileFromToken(token);
         if (profile == null)
         {
-            // Yêu cầu đăng nhập tài khoản hợp lệ
             var returnUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.Path}{httpContext.Request.QueryString}";
-            context.Result = new RedirectResult($"{ClientLoginUrl}?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            context.Result = new RedirectResult($"{clientLoginUrl}?returnUrl={Uri.EscapeDataString(returnUrl)}");
             return;
         }
 
-        // Lưu userProfile vào HttpContext.Items để View hoặc Controller dễ dàng truy xuất
         httpContext.Items["UserProfile"] = profile;
 
         await next();
+    }
+
+    private static string ResolveClientLoginUrl(HttpContext httpContext)
+    {
+        var configuration = httpContext.RequestServices.GetService<IConfiguration>();
+        var clientBaseUrl = configuration?["ServiceUrls:WebClient"];
+        if (string.IsNullOrWhiteSpace(clientBaseUrl))
+        {
+            clientBaseUrl = DefaultClientBaseUrl;
+        }
+
+        return $"{clientBaseUrl.TrimEnd('/')}/login";
     }
 }

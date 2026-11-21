@@ -188,16 +188,14 @@ public class PropertiesController : Controller
             ModelState.AddModelError(nameof(model.District), "Vui lòng chọn Quận / Huyện cho địa chỉ trước sáp nhập.");
         }
 
-        if (string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 10)
+        if (string.IsNullOrWhiteSpace(model.Title) || model.Title.Trim().Length < 10)
         {
-            model.Title = "Căn Hộ Thảo Điền Pearl 2PN View Sông Sài Gòn";
-            ModelState.Remove(nameof(model.Title));
+            ModelState.AddModelError(nameof(model.Title), "Tiêu đề tin đăng phải có ít nhất 10 ký tự.");
         }
 
-        if (string.IsNullOrWhiteSpace(model.Description) || model.Description.Length < 20)
+        if (string.IsNullOrWhiteSpace(model.Description) || model.Description.Trim().Length < 20)
         {
-            model.Description = "Căn hộ cao cấp hoàn thiện đầy đủ nội thất sang trọng, ban công thoáng rộng view trực diện sông, pháp lý chuẩn sổ hồng.";
-            ModelState.Remove(nameof(model.Description));
+            ModelState.AddModelError(nameof(model.Description), "Mô tả chi tiết bất động sản phải có ít nhất 20 ký tự.");
         }
 
         if (!ModelState.IsValid)
@@ -482,7 +480,7 @@ public class PropertiesController : Controller
     }
 
     [HttpPost("PurchasePackage")]
-    [IgnoreAntiforgeryToken]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> PurchasePackage([FromBody] PurchasePackageInputModel input, CancellationToken cancellationToken = default)
     {
         if (input == null || input.ListingId <= 0 || string.IsNullOrWhiteSpace(input.PackageCode))

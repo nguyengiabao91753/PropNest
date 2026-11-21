@@ -2,6 +2,7 @@ import json
 import logging
 import httpx
 from app.config import settings
+from app.engine.format_filter import strip_html
 from app.models.requests import ModerationRequest
 from app.models.responses import LLMResult
 
@@ -54,16 +55,19 @@ class OllamaAnalyzer:
             )
 
         unit_price = req.price / req.area if req.area > 0 else 0
+        location_desc = ", ".join(p for p in [req.ward, req.district, req.city] if p)
+        if req.legacy_address:
+            location_desc = f"{location_desc} (Trước sáp nhập: {req.legacy_address})"
 
         prompt = ANALYSIS_PROMPT.format(
-            title=req.title,
-            description=req.description or "(không có mô tả)",
+            title=strip_html(req.title),
+            description=strip_html(req.description) or "(không có mô tả)",
             property_type=req.property_type,
             listing_type=req.listing_type,
             price=req.price,
             area=req.area,
             unit_price=unit_price,
-            district=req.district,
+            district=location_desc or (req.district or ""),
             city=req.city
         )
 

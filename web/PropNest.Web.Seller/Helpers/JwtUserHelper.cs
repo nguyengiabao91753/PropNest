@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -18,9 +19,20 @@ public sealed class SellerUserProfile
 
 public static class JwtUserHelper
 {
+    private static string _signingKey = string.Empty;
+    private static string _issuer = "PropNest";
+    private static string _audience = "PropNest.Client";
+
+    public static void Configure(IConfiguration configuration)
+    {
+        _signingKey = configuration["Jwt:SigningKey"] ?? string.Empty;
+        _issuer = configuration["Jwt:Issuer"] ?? "PropNest";
+        _audience = configuration["Jwt:Audience"] ?? "PropNest.Client";
+    }
+
     public static SellerUserProfile? GetProfileFromToken(string? jwt)
     {
-        if (string.IsNullOrWhiteSpace(jwt))
+        if (string.IsNullOrWhiteSpace(jwt) || string.IsNullOrWhiteSpace(_signingKey))
         {
             return null;
         }
@@ -28,18 +40,24 @@ public static class JwtUserHelper
         try
         {
             var parts = jwt.Split('.');
-            if (parts.Length < 2) return null;
-
-            var payload = parts[1].Replace('-', '+').Replace('_', '/');
-            switch (payload.Length % 4)
+            if (parts.Length != 3)
             {
-                case 2: payload += "=="; break;
-                case 3: payload += "="; break;
+                return null;
             }
 
-            var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-            using var doc = JsonDocument.Parse(json);
+            if (!VerifyHeaderAndSignature(parts[0], parts[1], parts[2]))
+            {
+                return null;
+            }
+
+            var payloadBytes = DecodeBase64Url(parts[1]);
+            using var doc = JsonDocument.Parse(payloadBytes);
             var root = doc.RootElement;
+
+            if (!IsTokenClaimsValid(root))
+            {
+                return null;
+            }
 
             var profile = new SellerUserProfile();
 
@@ -74,12 +92,81 @@ public static class JwtUserHelper
             // 6. Status
             profile.Status = GetFirstString(root, "status") ?? "Active";
 
+            if (!string.Equals(profile.Status, "Active", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
             return profile;
         }
         catch
         {
             return null;
         }
+    }
+
+    private static bool VerifyHeaderAndSignature(string headerSegment, string payloadSegment, string signatureSegment)
+    {
+        var headerBytes = DecodeBase64Url(headerSegment);
+        using var headerDoc = JsonDocument.Parse(headerBytes);
+        if (!headerDoc.RootElement.TryGetProperty("alg", out var algProp) ||
+            !string.Equals(algProp.GetString(), "HS256", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var actualSignature = DecodeBase64Url(signatureSegment);
+        var signingInput = Encoding.ASCII.GetBytes($"{headerSegment}.{payloadSegment}");
+        var keyBytes = Encoding.UTF8.GetBytes(_signingKey);
+        var expectedSignature = HMACSHA256.HashData(keyBytes, signingInput);
+
+        return actualSignature.Length == expectedSignature.Length &&
+               CryptographicOperations.FixedTimeEquals(actualSignature, expectedSignature);
+    }
+
+    private static bool IsTokenClaimsValid(JsonElement root)
+    {
+        if (!root.TryGetProperty("exp", out var expProp) || !expProp.TryGetInt64(out var expUnix))
+        {
+            return false;
+        }
+
+        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expUnix);
+        if (expiresAt <= DateTimeOffset.UtcNow.AddMinutes(-1))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_issuer))
+        {
+            var iss = GetFirstString(root, "iss");
+            if (!string.Equals(iss, _issuer, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_audience))
+        {
+            var audiences = GetAllStrings(root, "aud");
+            if (!audiences.Contains(_audience, StringComparer.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static byte[] DecodeBase64Url(string segment)
+    {
+        var padded = segment.Replace('-', '+').Replace('_', '/');
+        switch (padded.Length % 4)
+        {
+            case 2: padded += "=="; break;
+            case 3: padded += "="; break;
+        }
+        return Convert.FromBase64String(padded);
     }
 
     private static string? GetFirstString(JsonElement root, params string[] propertyNames)
@@ -99,5 +186,30 @@ public static class JwtUserHelper
             }
         }
         return null;
+    }
+
+    private static List<string> GetAllStrings(JsonElement root, params string[] propertyNames)
+    {
+        var results = new List<string>();
+        foreach (var prop in propertyNames)
+        {
+            if (root.TryGetProperty(prop, out var element))
+            {
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var val = element.GetString();
+                    if (!string.IsNullOrWhiteSpace(val)) results.Add(val);
+                }
+                else if (element.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        var val = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(val)) results.Add(val);
+                    }
+                }
+            }
+        }
+        return results;
     }
 }

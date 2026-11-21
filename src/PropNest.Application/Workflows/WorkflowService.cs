@@ -18,15 +18,12 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
         var existing = await workflowRepository.GetIdempotencyRequestAsync(command.UserId, command.IdempotencyKey, cancellationToken);
         if (existing is not null)
         {
-            if (!string.Equals(existing.RequestHash, command.RequestHash, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("The Idempotency-Key has already been used with a different request.");
-            }
+            return await ReplayExistingWorkflowAsync(existing, command.RequestHash, cancellationToken);
+        }
 
-            var replay = await workflowRepository.GetByCorrelationIdAsync(existing.CorrelationId, cancellationToken)
-                ?? throw new InvalidOperationException("The idempotent request does not have an associated workflow.");
-            var steps = await workflowRepository.GetStepsByCorrelationIdAsync(replay.CorrelationId, cancellationToken);
-            return ToDto(replay, steps);
+        if (await workflowRepository.HasActiveWorkflowForListingAsync(command.ListingId, cancellationToken))
+        {
+            throw new InvalidOperationException("Tin đăng này đang có một giao dịch mua gói đang xử lý. Vui lòng chờ giao dịch hiện tại hoàn tất.");
         }
 
         var correlationId = Guid.NewGuid();
@@ -50,9 +47,45 @@ public sealed class WorkflowService(IWorkflowRepository workflowRepository, IUni
         await workflowRepository.AddAsync(workflow, cancellationToken);
         await workflowRepository.AddIdempotencyRequestAsync(request, cancellationToken);
         await workflowRepository.AddOutboxMessageAsync(new OutboxMessage("PurchasePackageRequested", payload, correlationId), cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Xử lý race condition khi 2 request đồng thời dùng cùng Idempotency-Key
+            var raced = await workflowRepository.GetIdempotencyRequestAsync(command.UserId, command.IdempotencyKey, cancellationToken);
+            if (raced is not null)
+            {
+                return await ReplayExistingWorkflowAsync(raced, command.RequestHash, cancellationToken);
+            }
+
+            throw;
+        }
 
         return ToDto(workflow, Array.Empty<WorkflowStep>());
+    }
+
+    private async Task<WorkflowDto> ReplayExistingWorkflowAsync(
+        IdempotencyRequest existing,
+        string requestHash,
+        CancellationToken cancellationToken)
+    {
+        if (existing.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("Idempotency-Key đã hết hạn. Vui lòng tạo yêu cầu mới.");
+        }
+
+        if (!string.Equals(existing.RequestHash, requestHash, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The Idempotency-Key has already been used with a different request.");
+        }
+
+        var replay = await workflowRepository.GetByCorrelationIdAsync(existing.CorrelationId, cancellationToken)
+            ?? throw new InvalidOperationException("The idempotent request does not have an associated workflow.");
+        var steps = await workflowRepository.GetStepsByCorrelationIdAsync(replay.CorrelationId, cancellationToken);
+        return ToDto(replay, steps);
     }
 
     public async Task<WorkflowDto?> GetByCorrelationIdAsync(Guid correlationId, CancellationToken cancellationToken = default)

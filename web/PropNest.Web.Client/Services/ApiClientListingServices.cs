@@ -210,6 +210,10 @@ namespace PropNest.Web.Client.Services
                         PackageCode = x.PackageCode,
                         ListingType = x.ListingType,
                         PropertyType = x.PropertyType,
+                        CreatedAt = x.CreatedDate,
+                        ImageUrls = !string.IsNullOrWhiteSpace(x.ThumbnailUrl)
+                            ? new List<string> { x.ThumbnailUrl }
+                            : new List<string>()
                         ThumbnailUrl = x.ThumbnailUrl,
                         CreatedAt = x.CreatedDate
                     }).ToList();
@@ -257,6 +261,8 @@ namespace PropNest.Web.Client.Services
             int? Bathrooms = null,
             string? BalconyDirection = null,
             string? AdministrativeMode = null,
+            string? LegacyAddress = null,
+            string? ThumbnailUrl = null
             string? LegacyAddress = null,
             string? ThumbnailUrl = null,
             int? ProvinceCode = null,

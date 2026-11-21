@@ -101,7 +101,7 @@
                         </h3>
                     </div>
                     <p class="text-xs text-rose-900/80 mt-1">
-                        Dưới đây là lý do từ chối cụ thể trong lần thẩm định trước. Vui lòng đối chiếu với nội dung mới và bảng <strong class="underline">So sánh Diff</strong> để xác nhận người bán đã khắc phục đầy đủ lỗi vi phạm.
+                        Dưới đây là lý do từ chối cụ thể trong lần thẩm định trước. Vui lòng đối chiếu với nội dung mới và bảng <strong class="underline">Đối chiếu thay đổi</strong> để xác nhận người bán đã khắc phục đầy đủ lỗi vi phạm.
                     </p>
 
                     <!-- Quote Lý do từ chối lần trước -->
@@ -129,7 +129,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-sm sm:text-base text-neutral-900">
-                            Bảng So Sánh Thay Đổi (Re-submission Diff View)
+                            Bảng Đối Chiếu Nội Dung Chỉnh Sửa
                         </h3>
                         <p class="text-xs text-muted-foreground">
                             Đối chiếu chi tiết giữa bản tin bị từ chối lần trước và bản đã chỉnh sửa vừa gửi lại
@@ -391,9 +391,9 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="font-bold text-sm text-neutral-900">AME Auto-Moderation</h3>
-                                <span class="rounded bg-neutral-100 text-neutral-600 px-1.5 py-0.5 text-[10px] font-mono font-medium">
-                                    @(Model.AmeRecommendation.ModelInfo ?? "PropNest-AME-v1")
+                                <h3 class="font-bold text-sm text-neutral-900">Đánh giá kiểm duyệt tự động</h3>
+                                <span class="rounded bg-neutral-100 text-neutral-600 px-1.5 py-0.5 text-[10px] font-medium">
+                                    Hệ thống tự động
                                 </span>
                             </div>
                             <p class="text-[11px] text-muted-foreground">
@@ -569,7 +569,7 @@
                 {
                     <div class="border-t border-border pt-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/60 p-2.5 rounded-lg border border-emerald-200">
                         <i data-lucide="check-circle" class="size-4 text-emerald-600 shrink-0"></i>
-                        <span>Không phát hiện cảnh báo vi phạm nào từ AME.</span>
+                        <span>Không phát hiện cảnh báo vi phạm nào.</span>
                     </div>
                 }
             </section>
@@ -579,7 +579,7 @@
                 <div class="flex items-center justify-between border-b border-border pb-3">
                     <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
                         <i data-lucide="history" class="size-4 text-primary"></i>
-                        <span>Lịch sử tin đăng (Audit & History)</span>
+                        <span>Lịch sử hoạt động tin đăng</span>
                     </h3>
                     <span class="text-xs text-muted-foreground font-mono">
                         @(Model.Histories?.Count ?? 0) sự kiện
@@ -692,7 +692,7 @@
 
             <div>
                 <label for="rejectReasonInput" class="text-xs font-bold text-neutral-900 mb-1.5 block">
-                    Lý do từ chối cụ thể (Bắt buộc theo F03) *
+                    Lý do từ chối cụ thể *
                 </label>
                 <textarea id="rejectReasonInput" name="Reason" rows="3" required
                           placeholder="Nhập lý do từ chối cụ thể để gửi thông báo cho Người bán..."

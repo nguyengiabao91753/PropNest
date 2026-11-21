@@ -16,6 +16,7 @@ public sealed class WalletTransactionConfiguration : IEntityTypeConfiguration<Wa
         builder.Property(x => x.BalanceAfter).HasPrecision(18, 2);
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.HasIndex(x => new { x.WalletId, x.CorrelationId, x.TransactionType }).IsUnique();
+        builder.HasIndex(x => new { x.WalletId, x.CreatedAt });
         builder.HasOne<Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);
     }
 }

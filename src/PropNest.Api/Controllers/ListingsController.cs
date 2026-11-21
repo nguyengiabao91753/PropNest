@@ -23,7 +23,36 @@ public sealed class ListingsController(
     public async Task<ActionResult<ListingDto>> GetById(long listingId, CancellationToken cancellationToken)
     {
         var listing = await listingService.GetByIdAsync(listingId, cancellationToken);
-        return listing is null ? NotFound() : Ok(listing);
+        if (listing is null)
+        {
+            return NotFound();
+        }
+
+        var isOwnerOrStaff =
+            (currentUser.UserId.HasValue && currentUser.UserId.Value == listing.OwnerUserId) ||
+            currentUser.IsInRole("Admin") ||
+            currentUser.IsInRole("Moderator");
+
+        var isPubliclyVisible =
+            listing.Status == PropNest.Domain.Listings.ListingStatus.Published &&
+            (!listing.EndDate.HasValue || listing.EndDate.Value > DateTimeOffset.UtcNow);
+
+        if (!isPubliclyVisible && !isOwnerOrStaff)
+        {
+            return NotFound();
+        }
+
+        if (!isOwnerOrStaff)
+        {
+            return Ok(listing with
+            {
+                RowVersion = Array.Empty<byte>(),
+                LatestRejectReason = null,
+                LatestModerationWarning = null
+            });
+        }
+
+        return Ok(listing);
     }
 
     [HttpGet("mine")]

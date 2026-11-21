@@ -14,7 +14,7 @@
             </div>
             <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Bảng Điều Khiển Tổng Quan</h1>
             <p class="text-xs text-muted-foreground mt-1">
-                Theo dõi thời gian thực số tin Published, tin chờ duyệt F03, lưu lượng người dùng và giao dịch ví điện tử.
+                Theo dõi thời gian thực số tin đang hiển thị, tin chờ kiểm duyệt, lưu lượng người dùng và giao dịch ví điện tử.
             </p>
         </div>
 
@@ -59,7 +59,7 @@
         <!-- Card 2: Số tin chờ duyệt (Pending Moderation) -->
         <div class="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-amber-500/60 hover:shadow-sm group">
             <div class="flex items-center justify-between text-muted-foreground">
-                <span class="font-semibold text-xs text-neutral-700">Tin đăng chờ duyệt (F03)</span>
+                <span class="font-semibold text-xs text-neutral-700">Tin đăng chờ kiểm duyệt</span>
                 <div class="grid size-10 place-items-center rounded-xl bg-amber-500/15 text-amber-600 group-hover:scale-105 transition-transform">
                     <i data-lucide="clock-3" class="size-5"></i>
                 </div>
@@ -277,7 +277,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-sm sm:text-base text-neutral-900">Giao Dịch Ví Điện Tử Gần Đây</h2>
-                        <p class="text-xs text-muted-foreground mt-0.5">Lịch sử nạp tiền, mua gói dịch vụ & bồi hoàn Saga</p>
+                        <p class="text-xs text-muted-foreground mt-0.5">Lịch sử nạp tiền, mua gói dịch vụ &amp; hoàn tiền tự động</p>
                     </div>
                 </div>
                 <span id="tableWalletTxBadge" class="rounded-full bg-emerald-500/10 text-emerald-800 font-bold px-2.5 py-1 text-xs border border-emerald-300">
@@ -339,7 +339,7 @@
                                         else if (isRefund)
                                         {
                                             <span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
-                                                <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                                <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Hoàn tiền tự động
                                             </span>
                                         }
                                         else
@@ -571,7 +571,7 @@
                                     </span>`;
                                 } else if (isRefund) {
                                     typeBadge = `<span class="rounded-md bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-blue-200">
-                                        <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Bồi hoàn Saga
+                                        <i data-lucide="rotate-ccw" class="size-3 text-blue-600"></i> Hoàn tiền tự động
                                     </span>`;
                                 } else {
                                     typeBadge = `<span class="rounded-md bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] inline-flex items-center gap-1 border border-amber-200">

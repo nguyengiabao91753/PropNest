@@ -63,27 +63,54 @@ public sealed class ListingService(
         var owner = await listingRepository.GetOwnerContactAsync(listing.OwnerUserId, cancellationToken);
 
         string? rejectReason = null;
+        string? moderationWarning = null;
         if (listing.Status == ListingStatus.Rejected)
         {
             rejectReason = await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken);
         }
+        else if (listing.ModerationDecision == ModerationDecision.Approved)
+        {
+            moderationWarning = await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken);
+        }
 
-        return ToDto(listing, owner, rejectReason);
+        return ToDto(listing, owner, rejectReason, moderationWarning);
     }
 
     public async Task<ListingCollectionDto> GetByOwnerAsync(long ownerUserId, CancellationToken cancellationToken = default)
     {
         var listings = await listingRepository.GetByOwnerUserIdAsync(ownerUserId, cancellationToken);
-        var items = new List<ListingDto>(listings.Count);
-        foreach (var l in listings)
+        if (listings.Count == 0)
         {
-            string? rejectReason = null;
-            if (l.Status == ListingStatus.Rejected)
-            {
-                rejectReason = await listingRepository.GetLatestRejectReasonAsync(l.ListingId, cancellationToken);
-            }
-            items.Add(ToDto(l, null, rejectReason));
+            return new ListingCollectionDto(0, Array.Empty<ListingDto>());
         }
+
+        var rejectedIds = listings
+            .Where(l => l.Status == ListingStatus.Rejected)
+            .Select(l => l.ListingId)
+            .ToArray();
+
+        var approvedIds = listings
+            .Where(l => l.Status != ListingStatus.Rejected && l.ModerationDecision == ModerationDecision.Approved)
+            .Select(l => l.ListingId)
+            .ToArray();
+
+        var rejectReasons = rejectedIds.Length > 0
+            ? await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken)
+            : new Dictionary<long, string>();
+
+        var moderationWarnings = approvedIds.Length > 0
+            ? await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken)
+            : new Dictionary<long, string>();
+
+        var items = listings
+            .Select(l =>
+            {
+                rejectReasons.TryGetValue(l.ListingId, out var rejectReason);
+                moderationWarnings.TryGetValue(l.ListingId, out var moderationWarning);
+                return ToDto(l, null, rejectReason, moderationWarning);
+            })
+            .ToList();
+
         return new ListingCollectionDto(items.Count, items);
     }
 
@@ -120,7 +147,6 @@ public sealed class ListingService(
             command.WardCode,
             command.LegacyAddress);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
         var after = ToDto(listing);
         var deltas = DeltaEngine.CreateDeltas(before, after);
         listingRepository.AddHistory(ListingHistory.CreateDelta(
@@ -134,12 +160,13 @@ public sealed class ListingService(
             EnqueueListingSubmittedOutbox(listing);
         }
 
+        // Lưu toàn bộ thay đổi tin đăng + lịch sử Delta + Outbox AME trong 1 lần SaveChanges nguyên tử
         var syncPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
         listingRepository.AddOutboxMessage(new OutboxMessage("ListingSearchSyncRequested", syncPayload));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return after;
+        return ToDto(listing);
     }
 
     public async Task SubmitAsync(long listingId, long ownerUserId, CancellationToken cancellationToken = default)
@@ -167,6 +194,13 @@ public sealed class ListingService(
     private void EnqueueListingSubmittedOutbox(Listing listing)
     {
         var correlationId = Guid.NewGuid();
+        var imageUrls = listing.Images?
+            .OrderBy(img => img.IsCover ? 0 : 1)
+            .ThenBy(img => img.SortOrder)
+            .Select(img => img.Url)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToList() ?? [];
+
         var submittedEvent = new ListingSubmitted(
             CorrelationId: correlationId,
             ListingId: listing.ListingId,
@@ -181,7 +215,14 @@ public sealed class ListingService(
             District: listing.District,
             Ward: listing.Ward,
             Address: listing.Address,
-            SubmittedAt: DateTimeOffset.UtcNow);
+            SubmittedAt: DateTimeOffset.UtcNow,
+            Images: imageUrls,
+            LegacyAddress: listing.LegacyAddress,
+            AdministrativeMode: listing.AdministrativeMode,
+            ProvinceCode: listing.ProvinceCode,
+            Floors: listing.Floors,
+            Bedrooms: listing.Bedrooms,
+            Bathrooms: listing.Bathrooms);
 
         var payloadJson = JsonSerializer.Serialize(submittedEvent);
         listingRepository.AddOutboxMessage(
@@ -222,7 +263,11 @@ public sealed class ListingService(
         listing.LegacyAddress,
         listing.PackageEndDate);
 
-    private static ListingDto ToDto(Listing listing, ListingOwnerContactDto? owner = null, string? rejectReason = null) => new(
+    private static ListingDto ToDto(
+        Listing listing,
+        ListingOwnerContactDto? owner = null,
+        string? rejectReason = null,
+        string? moderationWarning = null) => new(
         listing.ListingId,
         listing.OwnerUserId,
         listing.Title,
@@ -256,7 +301,8 @@ public sealed class ListingService(
         listing.WardCode,
         listing.LegacyAddress,
         listing.PackageEndDate,
-        rejectReason);
+        rejectReason,
+        moderationWarning);
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
@@ -485,11 +531,15 @@ public sealed class ListingService(
             ModerationDecision.Rejected,
             reasonsJson,
             moderatorUserId));
+        var historyNote = reasonsJson.Length <= 480
+            ? reasonsJson
+            : string.Concat(reasonsJson.AsSpan(0, 477), "...");
+
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             moderatorUserId,
             "Reject",
-            reasonsJson));
+            historyNote));
 
         var payload = JsonSerializer.Serialize(new
         {

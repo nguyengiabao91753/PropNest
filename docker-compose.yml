@@ -98,6 +98,7 @@ services:
       Meilisearch__ListingsIndexName: "listings"
       Meilisearch__Enabled: "true"
       Meilisearch__RequestTimeoutMs: "2000"
+      Ame__BaseUrl: "http://ame:8001"
     ports:
       - "65148:8080"
       - "5000:8080"
@@ -135,6 +136,7 @@ services:
       Meilisearch__ListingsIndexName: "listings"
       Meilisearch__Enabled: "true"
       Meilisearch__RequestTimeoutMs: "2000"
+      Ame__BaseUrl: "http://ame:8001"
     networks:
       - propnest-network
 
@@ -175,6 +177,7 @@ services:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
       ServiceUrls__BackendApi: "http://api:8080"
+      ServiceUrls__WebClient: "http://localhost:5241"
     ports:
       - "5198:8080"
     networks:
