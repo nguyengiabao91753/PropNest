@@ -198,7 +198,13 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                 x.Bathrooms,
                 x.BalconyDirection,
                 x.AdministrativeMode,
-                x.LegacyAddress))
+                x.LegacyAddress,
+                null,
+                x.ProvinceCode,
+                x.DistrictCode,
+                x.WardCode,
+                x.PackageEndDate,
+                x.EndDate))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Workflows;
 
 namespace PropNest.Application.Listings;
 
@@ -48,6 +50,12 @@ public sealed class ListingImageService(
                 item.Caption);
 
             listingRepository.AddImage(image);
+        }
+
+        if (listing.Status == ListingStatus.Published)
+        {
+            var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+            listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -122,6 +130,12 @@ public sealed class ListingImageService(
             image.SetCaption(request.Caption.Trim());
         }
 
+        if (listing.Status == ListingStatus.Published)
+        {
+            var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+            listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(image);
     }
@@ -158,6 +172,12 @@ public sealed class ListingImageService(
             var remaining = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
             var nextCover = remaining.FirstOrDefault(x => x.ImageId != imageId);
             nextCover?.SetCover(true);
+        }
+
+        if (listing.Status == ListingStatus.Published)
+        {
+            var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+            listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

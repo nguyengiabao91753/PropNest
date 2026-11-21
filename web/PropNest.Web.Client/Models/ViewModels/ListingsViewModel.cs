@@ -10,6 +10,16 @@ public sealed class ListingsViewModel
     public string? District { get; set; }
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
+    public decimal? MinArea { get; set; }
+    public decimal? MaxArea { get; set; }
+    public int? MinBedrooms { get; set; }
+    public int? MinBathrooms { get; set; }
+    public string? BalconyDirection { get; set; }
+    public string? Ward { get; set; }
+    public int? ProvinceCode { get; set; }
+    public int? DistrictCode { get; set; }
+    public int? WardCode { get; set; }
+    public string SortBy { get; set; } = "default";
     public string Layout { get; set; } = "grid"; // 'grid' | 'list'
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 12;

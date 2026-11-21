@@ -45,6 +45,30 @@ services:
       - propnest-network
 
   # =============================================================================
+  # 2.1 Meilisearch Search Engine
+  # =============================================================================
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: propnest-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: "development"
+      MEILI_MASTER_KEY: "PropNest_Meili_Dev_MasterKey_2026"
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:7700/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - propnest-network
+
+  # =============================================================================
   # 3. PropNest Backend Web API
   # =============================================================================
   api:
@@ -58,6 +82,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
@@ -67,6 +93,11 @@ services:
       RabbitMq__VirtualHost: "/"
       RabbitMq__Username: "guest"
       RabbitMq__Password: "guest"
+      Meilisearch__Url: "http://meilisearch:7700"
+      Meilisearch__MasterKey: "PropNest_Meili_Dev_MasterKey_2026"
+      Meilisearch__ListingsIndexName: "listings"
+      Meilisearch__Enabled: "true"
+      Meilisearch__RequestTimeoutMs: "2000"
     ports:
       - "65148:8080"
       - "5000:8080"
@@ -87,6 +118,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      meilisearch:
+        condition: service_healthy
       api:
         condition: service_started
     environment:
@@ -97,6 +130,11 @@ services:
       RabbitMq__VirtualHost: "/"
       RabbitMq__Username: "guest"
       RabbitMq__Password: "guest"
+      Meilisearch__Url: "http://meilisearch:7700"
+      Meilisearch__MasterKey: "PropNest_Meili_Dev_MasterKey_2026"
+      Meilisearch__ListingsIndexName: "listings"
+      Meilisearch__Enabled: "true"
+      Meilisearch__RequestTimeoutMs: "2000"
     networks:
       - propnest-network
 
@@ -192,3 +230,4 @@ networks:
 volumes:
   sqlserver_data:
   rabbitmq_data:
+  meilisearch_data:

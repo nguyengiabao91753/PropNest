@@ -113,7 +113,13 @@ public sealed record ListingSummaryDto(
     int? Bathrooms = null,
     string? BalconyDirection = null,
     string AdministrativeMode = "PostMerger",
-    string? LegacyAddress = null);
+    string? LegacyAddress = null,
+    string? ThumbnailUrl = null,
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    DateTimeOffset? PackageEndDate = null,
+    DateTimeOffset? EndDate = null);
 
 public sealed record ListingCollectionDto(
     int Total,
@@ -229,7 +235,17 @@ public sealed record GetPublicListingsQuery(
     decimal? MaxPrice = null,
     [FromQuery(Name = "page")] int? Page = null,
     int PageNumber = 1,
-    int PageSize = 20);
+    int PageSize = 20,
+    decimal? MinArea = null,
+    decimal? MaxArea = null,
+    int? MinBedrooms = null,
+    int? MinBathrooms = null,
+    string? BalconyDirection = null,
+    int? ProvinceCode = null,
+    int? DistrictCode = null,
+    int? WardCode = null,
+    bool IncludeLegacy = true,
+    string? SortBy = null);
 
 //Listing History DTO
 public sealed record ListingHistoryDto(

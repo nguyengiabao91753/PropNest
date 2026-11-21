@@ -92,6 +92,15 @@ public sealed class ListingExpirationService(
                     null,
                     "DowngradePackage",
                     $"Hết hạn gói {previousPackage}, tự động chuyển về gói Standard (hiển thị đến {listing.EndDate?.ToOffset(ListingPackagePolicy.VietnamUtcOffset):dd/MM/yyyy HH:mm})"));
+
+                var payload = JsonSerializer.Serialize(new
+                {
+                    listing.ListingId,
+                    listing.OwnerUserId,
+                    listing.PackageCode,
+                    listing.EndDate
+                });
+                listingRepository.AddOutboxMessage(new OutboxMessage("ListingPackageDowngraded", payload));
                 batchUpdated++;
             }
 

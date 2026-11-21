@@ -9,7 +9,7 @@ public sealed class OutboxDispatchService(PropNestDbContext dbContext, IOutboxMe
     public async Task<int> DispatchPendingAsync(CancellationToken cancellationToken = default)
     {
         var pending = await dbContext.OutboxMessages
-            .Where(x => x.ProcessedOn == null)
+            .Where(x => x.ProcessedOn == null && x.RetryCount < 10)
             .OrderBy(x => x.OccurredOn)
             .Take(50)
             .ToListAsync(cancellationToken);

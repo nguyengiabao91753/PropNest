@@ -78,7 +78,8 @@ public sealed class ListingExpirationTests
         Assert.Null(listing.PackageEndDate);
         var history = Assert.Single(repository.Histories);
         Assert.Equal("DowngradePackage", history.ActionType);
-        Assert.Empty(repository.OutboxMessages);
+        var outbox = Assert.Single(repository.OutboxMessages);
+        Assert.Equal("ListingPackageDowngraded", outbox.Type);
         Assert.Equal(1, unitOfWork.SaveChangesCalls);
     }
 
