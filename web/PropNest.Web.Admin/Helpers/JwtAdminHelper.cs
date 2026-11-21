@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -12,7 +13,8 @@ public sealed class AdminUserProfile
     public List<string> Roles { get; set; } = new();
     public string Status { get; set; } = "Active";
 
-    public bool IsAdmin => Roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase)
+    public bool IsAdmin => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase)
+                        && Roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase)
                                        || string.Equals(r, "Moderator", StringComparison.OrdinalIgnoreCase));
 
     public bool HasRole(string role) => Roles.Any(r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
@@ -20,9 +22,20 @@ public sealed class AdminUserProfile
 
 public static class JwtAdminHelper
 {
+    private static string _signingKey = string.Empty;
+    private static string _issuer = "PropNest";
+    private static string _audience = "PropNest.Client";
+
+    public static void Configure(IConfiguration configuration)
+    {
+        _signingKey = configuration["Jwt:SigningKey"] ?? string.Empty;
+        _issuer = configuration["Jwt:Issuer"] ?? "PropNest";
+        _audience = configuration["Jwt:Audience"] ?? "PropNest.Client";
+    }
+
     public static AdminUserProfile? GetProfileFromToken(string? jwt)
     {
-        if (string.IsNullOrWhiteSpace(jwt))
+        if (string.IsNullOrWhiteSpace(jwt) || string.IsNullOrWhiteSpace(_signingKey))
         {
             return null;
         }
@@ -30,18 +43,24 @@ public static class JwtAdminHelper
         try
         {
             var parts = jwt.Split('.');
-            if (parts.Length < 2) return null;
-
-            var payload = parts[1].Replace('-', '+').Replace('_', '/');
-            switch (payload.Length % 4)
+            if (parts.Length != 3)
             {
-                case 2: payload += "=="; break;
-                case 3: payload += "="; break;
+                return null;
             }
 
-            var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-            using var doc = JsonDocument.Parse(json);
+            if (!VerifyHeaderAndSignature(parts[0], parts[1], parts[2]))
+            {
+                return null;
+            }
+
+            var payloadBytes = DecodeBase64Url(parts[1]);
+            using var doc = JsonDocument.Parse(payloadBytes);
             var root = doc.RootElement;
+
+            if (!IsTokenClaimsValid(root))
+            {
+                return null;
+            }
 
             var profile = new AdminUserProfile();
 
@@ -68,11 +87,10 @@ public static class JwtAdminHelper
             }
 
             // 4. Phone Number
-            profile.PhoneNumber = GetFirstString(root, "phone_number", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone") ?? "0901234567";
+            profile.PhoneNumber = GetFirstString(root, "phone_number", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone") ?? string.Empty;
 
-            // 5. Roles
-            var roles = GetAllStrings(root, "role", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
-            profile.Roles = roles.Count > 0 ? roles : new List<string> { "Admin" };
+            // 5. Roles (KHÔNG bao giờ fallback mặc định sang Admin)
+            profile.Roles = GetAllStrings(root, "role", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
 
             // 6. Status
             profile.Status = GetFirstString(root, "status") ?? "Active";
@@ -83,6 +101,70 @@ public static class JwtAdminHelper
         {
             return null;
         }
+    }
+
+    private static bool VerifyHeaderAndSignature(string headerSegment, string payloadSegment, string signatureSegment)
+    {
+        var headerBytes = DecodeBase64Url(headerSegment);
+        using var headerDoc = JsonDocument.Parse(headerBytes);
+        if (!headerDoc.RootElement.TryGetProperty("alg", out var algProp) ||
+            !string.Equals(algProp.GetString(), "HS256", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var actualSignature = DecodeBase64Url(signatureSegment);
+        var signingInput = Encoding.ASCII.GetBytes($"{headerSegment}.{payloadSegment}");
+        var keyBytes = Encoding.UTF8.GetBytes(_signingKey);
+        var expectedSignature = HMACSHA256.HashData(keyBytes, signingInput);
+
+        return actualSignature.Length == expectedSignature.Length &&
+               CryptographicOperations.FixedTimeEquals(actualSignature, expectedSignature);
+    }
+
+    private static bool IsTokenClaimsValid(JsonElement root)
+    {
+        if (!root.TryGetProperty("exp", out var expProp) || !expProp.TryGetInt64(out var expUnix))
+        {
+            return false;
+        }
+
+        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expUnix);
+        if (expiresAt <= DateTimeOffset.UtcNow.AddMinutes(-1))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_issuer))
+        {
+            var iss = GetFirstString(root, "iss");
+            if (!string.Equals(iss, _issuer, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_audience))
+        {
+            var audiences = GetAllStrings(root, "aud");
+            if (!audiences.Contains(_audience, StringComparer.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static byte[] DecodeBase64Url(string segment)
+    {
+        var padded = segment.Replace('-', '+').Replace('_', '/');
+        switch (padded.Length % 4)
+        {
+            case 2: padded += "=="; break;
+            case 3: padded += "="; break;
+        }
+        return Convert.FromBase64String(padded);
     }
 
     private static string? GetFirstString(JsonElement root, params string[] propertyNames)

@@ -83,6 +83,13 @@ public sealed class AuthController(
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
+        if (!string.Equals(user.Status, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { message = "Tài khoản của bạn đã bị khóa hoặc tạm ngưng hoạt động." });
+        }
+
         await userManager.ResetAccessFailedCountAsync(user);
 
         var roles = await userManager.GetRolesAsync(user);

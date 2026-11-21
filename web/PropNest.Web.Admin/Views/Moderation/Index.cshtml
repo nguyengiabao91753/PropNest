@@ -1,7 +1,7 @@
 @model PropNest.Web.Admin.Models.ViewModels.ModerationQueueViewModel
 
 @{
-    ViewData["Title"] = "Hàng đợi kiểm duyệt (Moderation Queue)";
+    ViewData["Title"] = "Hàng đợi kiểm duyệt";
     var selected = Model.SelectedProperty;
 }
 
@@ -13,7 +13,7 @@
                 <span class="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Kiểm duyệt nội dung</span>
                 
             </div>
-            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Duyệt Tin Đăng (Moderation Queue)</h1>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold mt-1 text-neutral-900">Hàng Đợi Kiểm Duyệt Tin Đăng</h1>
             <p class="mt-1 text-xs text-muted-foreground">
                 Thẩm định tin đăng người bán theo thứ tự gửi duyệt. Click vào tin để xem đầy đủ nội dung, ảnh và lịch sử.
             </p>
@@ -86,7 +86,7 @@
                                     @if (p.IsResubmission)
                                     {
                                         <span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">
-                                            Gửi lại (Diff)
+                                            Gửi duyệt lại
                                         </span>
                                     }
                                     @if (p.PackageCode == "VIP")
@@ -127,7 +127,7 @@
                                 <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
                                     <a href="@Url.Action("Detail", "Moderation", new { id = p.Id })" onclick="event.stopPropagation()"
                                        class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
-                                       title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                       title="Mở toàn màn hình xem chi tiết &amp; đối chiếu thay đổi">
                                         <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
                                     </a>
                                     <button type="button" onclick="handleApproveClick('@p.Id', event)"
@@ -181,8 +181,8 @@
                             </span>
                             <a id="detailOpenFullPageBtn" href="@Url.Action("Detail", "Moderation", new { id = selected.Id })"
                                class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary-hover bg-brand-soft/50 border border-primary/30 px-2.5 py-1 rounded-lg transition-colors ml-auto"
-                               title="Mở toàn màn hình xem chi tiết, gallery ảnh, lịch sử và so sánh diff">
-                                <i data-lucide="external-link" class="size-3"></i> Xem chi tiết & So sánh Diff
+                               title="Mở toàn màn hình xem chi tiết, bộ sưu tập ảnh, lịch sử và đối chiếu thay đổi">
+                                <i data-lucide="external-link" class="size-3"></i> Xem chi tiết &amp; Đối chiếu thay đổi
                             </a>
                         </div>
                         <h2 id="detailTitle" class="font-display text-xl sm:text-2xl font-bold mt-1 text-neutral-900 leading-snug">
@@ -263,7 +263,7 @@
                 <!-- Listing Change & Moderation History Timeline -->
                 <div>
                     <h4 class="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
-                        <i data-lucide="history" class="size-3.5"></i> Lịch sử tin đăng (Audit & History)
+                        <i data-lucide="history" class="size-3.5"></i> Lịch sử hoạt động tin đăng
                     </h4>
                     <div id="detailHistoryContainer" class="rounded-xl border border-border bg-surface/40 p-3.5 space-y-3 max-h-[180px] overflow-y-auto">
                         @if (selected.Histories != null && selected.Histories.Count > 0)
@@ -591,7 +591,7 @@
             const isSelected = selectedId === p.Id;
             const queueIndex = idx + 1;
             const resubmissionBadge = p.IsResubmission
-                ? `<span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">Gửi lại (Diff)</span>`
+                ? `<span class="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.2" title="Gửi duyệt lại sau khi bị từ chối">Gửi duyệt lại</span>`
                 : "";
             const vipBadge = p.PackageCode === "VIP"
                 ? `<span class="rounded bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.2">VIP</span>`
@@ -648,7 +648,7 @@
                             <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-dashed border-border/60">
                                 <a href="/Moderation/Detail/${p.Id}" onclick="event.stopPropagation()"
                                    class="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-neutral-100 border border-border text-neutral-800 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition-all"
-                                   title="Mở toàn màn hình xem chi tiết & so sánh diff">
+                                   title="Mở toàn màn hình xem chi tiết &amp; đối chiếu thay đổi">
                                     <i data-lucide="eye" class="size-3.5 text-primary"></i> Chi tiết
                                 </a>
                                 <button type="button" onclick="handleApproveClick('${p.Id}', event)"

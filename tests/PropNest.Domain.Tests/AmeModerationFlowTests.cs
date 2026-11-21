@@ -334,6 +334,11 @@ public sealed class AmeModerationFlowTests
         {
             return Task.FromResult<string?>(null);
         }
+
+        public Task<string?> GetLatestModerationWarningAsync(long listingId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<string?>(null);
+        }
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

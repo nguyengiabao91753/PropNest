@@ -109,6 +109,17 @@
         </div>
     }
 
+    @if (!string.IsNullOrWhiteSpace(Model.ModerationWarning) && (Model.Status == PropNest.Domain.Listings.ListingStatus.PendingPayment || Model.Status == PropNest.Domain.Listings.ListingStatus.Published))
+    {
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-xs text-amber-900 space-y-1.5 shadow-xs">
+            <div class="flex items-center gap-2 font-bold text-sm text-amber-800">
+                <i data-lucide="alert-circle" class="size-4 shrink-0 text-amber-600"></i>
+                <span>Phản hồi kiểm duyệt về mức giá (Tin vẫn được duyệt):</span>
+            </div>
+            <p class="leading-relaxed pl-6">@Model.ModerationWarning</p>
+        </div>
+    }
+
     <!-- ================= HEADER SECTION: TITLE & BADGES ================= -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 pb-4 border-b border-border">
         <div class="space-y-2 max-w-4xl">
@@ -397,7 +408,7 @@
                     <i data-lucide="info" class="size-4 text-primary"></i> Lưu ý dành cho Seller
                 </p>
                 <p class="leading-relaxed">
-                    Đây là chế độ xem trước nội bộ của Người bán. Tin đăng chỉ xuất hiện công khai trên trang Tìm kiếm của Khách hàng khi có trạng thái <strong>Đang hiển thị (Published)</strong>.
+                    Đây là chế độ xem trước nội bộ của Người bán. Tin đăng chỉ xuất hiện công khai trên trang Tìm kiếm của Khách hàng khi có trạng thái <strong>Đang hiển thị</strong>.
                 </p>
             </div>
         </aside>

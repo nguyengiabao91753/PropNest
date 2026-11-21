@@ -92,7 +92,9 @@ public sealed partial class OllamaListingDescriptionGenerator : IListingDescript
 
             var finalDesc = string.IsNullOrWhiteSpace(parsedDesc)
                 ? BuildFallbackHtml(command)
-                : FormatAsQuillHtml(parsedDesc);
+                : PropNest.Domain.Common.RichTextHtmlHelper.FormatRichDescriptionHtml(
+                    FormatAsQuillHtml(parsedDesc),
+                    BuildFallbackHtml(command));
 
             return new ListingDescriptionSuggestionResult(
                 finalTitle,

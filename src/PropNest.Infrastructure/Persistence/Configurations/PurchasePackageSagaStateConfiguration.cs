@@ -24,6 +24,10 @@ namespace PropNest.Infrastructure.Persistence.Configurations
                 .IsRequired();
             builder.Property(x => x.ChargeAmount)
                 .HasPrecision(18, 2);
+            builder.Property(x => x.PromoUsed)
+                .HasPrecision(18, 2);
+            builder.Property(x => x.MainUsed)
+                .HasPrecision(18, 2);
             builder.Property(x => x.ErrorMessage)
                 .HasMaxLength(500);
             builder.Property(x => x.Version)

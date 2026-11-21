@@ -24,6 +24,7 @@ namespace PropNest.Application.Wallets
         Task AddAsync(Wallet wallet, CancellationToken cancellationToken = default);
         Task<bool> ExistsByUserIdAsync(long userId, CancellationToken cancellationToken = default);
         Task AddTransactionAsync(WalletTransaction transaction, CancellationToken cancellationToken = default);
+        Task<bool> TransactionExistsAsync(long walletId, Guid correlationId, WalletTransactionType type, CancellationToken cancellationToken = default);
 
         Task<IEnumerable<WalletTransaction>> GetTransactionsByUserIdAsync(long userId, int? page = 1, WalletTransactionType? type = null, CancellationToken cancellationToken = default);
     }

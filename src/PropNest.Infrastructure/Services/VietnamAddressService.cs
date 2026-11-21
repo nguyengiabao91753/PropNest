@@ -15,6 +15,8 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
 {
     private const string PostCacheKey = "vn_address_v2_tree";
     private const string PreCacheKey = "vn_address_v1_tree";
+    private static readonly SemaphoreSlim PostTreeLock = new(1, 1);
+    private static readonly SemaphoreSlim PreTreeLock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -141,6 +143,12 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
             return null;
         }
 
+        var cacheKey = $"vn_legacy_conv:{legacyWardCode}:{legacyWardName?.Trim().ToLowerInvariant()}:{legacyProvinceCode}";
+        if (_cache.TryGetValue(cacheKey, out LegacyWardMappingDto? cachedMapping))
+        {
+            return cachedMapping;
+        }
+
         var query = legacyWardCode.HasValue && legacyWardCode > 0
             ? $"/api/v2/w/from-legacy/?legacy_code={legacyWardCode.Value}"
             : $"/api/v2/w/from-legacy/?legacy_name={Uri.EscapeDataString(legacyWardName!.Trim())}";
@@ -176,7 +184,7 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
         var newProvince = postTree.FirstOrDefault(p => p.Code == chosen.Ward.ProvinceCode);
         var mergedLegacyNames = await FetchLegacySourcesForWardAsync(chosen.Ward.Code, cancellationToken);
 
-        return new LegacyWardMappingDto(
+        var mappingDto = new LegacyWardMappingDto(
             SourceCode: chosen.SourceCode,
             NewWard: new WardDto(
                 chosen.Ward.Code,
@@ -188,6 +196,9 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
                 ? null
                 : new ProvinceDto(newProvince.Code, newProvince.Name, newProvince.DivisionType, newProvince.Codename),
             MergedFromLegacyNames: mergedLegacyNames);
+
+        _cache.Set(cacheKey, mappingDto, TimeSpan.FromHours(Math.Max(1, _options.CacheHours)));
+        return mappingDto;
     }
 
     public async Task<ParsedAddressResultDto> ParseAndSuggestAddressAsync(
@@ -329,8 +340,14 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
             return cached;
         }
 
+        await PostTreeLock.WaitAsync(cancellationToken);
         try
         {
+            if (_cache.TryGetValue(PostCacheKey, out cached) && cached is { Count: > 0 })
+            {
+                return cached;
+            }
+
             var data = await _httpClient.GetFromJsonAsync<List<ApiPostProvince>>("/api/v2/?depth=2", JsonOptions, cancellationToken)
                        ?? [];
             if (data.Count > 0)
@@ -344,6 +361,10 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
             LogExternalApiError(_logger, ex, "/api/v2/?depth=2");
             return [];
         }
+        finally
+        {
+            PostTreeLock.Release();
+        }
     }
 
     private async Task<IReadOnlyList<ApiPreProvince>> GetPreMergerTreeAsync(CancellationToken cancellationToken)
@@ -353,8 +374,14 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
             return cached;
         }
 
+        await PreTreeLock.WaitAsync(cancellationToken);
         try
         {
+            if (_cache.TryGetValue(PreCacheKey, out cached) && cached is { Count: > 0 })
+            {
+                return cached;
+            }
+
             var data = await _httpClient.GetFromJsonAsync<List<ApiPreProvince>>("/api/v1/?depth=3", JsonOptions, cancellationToken)
                        ?? [];
             if (data.Count > 0)
@@ -368,10 +395,20 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
             LogExternalApiError(_logger, ex, "/api/v1/?depth=3");
             return [];
         }
+        finally
+        {
+            PreTreeLock.Release();
+        }
     }
 
     private async Task<IReadOnlyList<string>> FetchLegacySourcesForWardAsync(int wardCode, CancellationToken cancellationToken)
     {
+        var cacheKey = $"vn_ward_legacies:{wardCode}";
+        if (_cache.TryGetValue(cacheKey, out List<string>? cachedSources) && cachedSources is not null)
+        {
+            return cachedSources;
+        }
+
         try
         {
             var list = await _httpClient.GetFromJsonAsync<List<ApiLegacyWardItem>>(
@@ -383,7 +420,9 @@ public sealed partial class VietnamAddressService : IVietnamAddressService
                 return [];
             }
 
-            return list.Select(x => x.Name).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+            var names = list.Select(x => x.Name).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+            _cache.Set(cacheKey, names, TimeSpan.FromHours(Math.Max(1, _options.CacheHours)));
+            return names;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {

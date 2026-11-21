@@ -77,6 +77,8 @@ namespace PropNest.Infrastructure.Workflows
                 When(WalletDeductedEvent)
                     .Then(context =>
                     {
+                        context.Saga.PromoUsed = context.Message.PromoUsed;
+                        context.Saga.MainUsed = context.Message.MainUsed;
                         context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
                     })
                     .ThenAsync(async context =>
@@ -130,7 +132,9 @@ namespace PropNest.Infrastructure.Workflows
                     .Publish(context => new RefundWalletCommand(
                         context.Saga.CorrelationId,
                         context.Saga.UserId,
-                        context.Saga.ChargeAmount))
+                        context.Saga.ChargeAmount,
+                        context.Saga.PromoUsed,
+                        context.Saga.MainUsed))
             );
 
             // Step 4: hoàn trả tiền

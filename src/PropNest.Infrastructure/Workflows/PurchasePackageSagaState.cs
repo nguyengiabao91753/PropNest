@@ -18,6 +18,8 @@ namespace PropNest.Infrastructure.Workflows
         public long UserId { get; set; }
         public string PackageCode { get; set; } = string.Empty;
         public decimal ChargeAmount { get; set; }
+        public decimal PromoUsed { get; set; }
+        public decimal MainUsed { get; set; }
         public string? ErrorMessage { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }

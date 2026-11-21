@@ -30,7 +30,9 @@ namespace PropNest.Application.Workflows
     public sealed record WalletDeducted(
         Guid CorrelationId,
         long UserId,
-        decimal Amount);
+        decimal Amount,
+        decimal PromoUsed = 0m,
+        decimal MainUsed = 0m);
 
     /// <summary>
     /// Event thông báo trừ tiền ví thất bại
@@ -70,7 +72,9 @@ namespace PropNest.Application.Workflows
     public sealed record RefundWalletCommand(
         Guid CorrelationId,
         long UserId,
-        decimal Amount);
+        decimal Amount,
+        decimal PromoUsed = 0m,
+        decimal MainUsed = 0m);
 
     /// <summary>
     /// Event thông báo hoàn tiền ví thành công

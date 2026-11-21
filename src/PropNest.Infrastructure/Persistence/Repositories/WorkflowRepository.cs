@@ -12,6 +12,14 @@ public sealed class WorkflowRepository(PropNestDbContext dbContext) : IWorkflowR
     public Task<IdempotencyRequest?> GetIdempotencyRequestAsync(long userId, string key, CancellationToken cancellationToken = default) =>
         dbContext.IdempotencyRequests.SingleOrDefaultAsync(x => x.UserId == userId && x.Key == key, cancellationToken);
 
+    public Task<bool> HasActiveWorkflowForListingAsync(long listingId, CancellationToken cancellationToken = default) =>
+        dbContext.WorkflowInstances.AnyAsync(
+            x => x.ListingId == listingId
+                 && x.Status != WorkflowStatus.Completed
+                 && x.Status != WorkflowStatus.Failed
+                 && x.Status != WorkflowStatus.Compensated,
+            cancellationToken);
+
     public Task AddAsync(WorkflowInstance workflow, CancellationToken cancellationToken = default) =>
         dbContext.WorkflowInstances.AddAsync(workflow, cancellationToken).AsTask();
 

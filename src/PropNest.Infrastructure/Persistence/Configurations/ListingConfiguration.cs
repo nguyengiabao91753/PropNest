@@ -36,6 +36,7 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(x => x.PackageEndDate);
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.HasIndex(x => new { x.OwnerUserId, x.Status });
+        builder.HasIndex(x => new { x.Status, x.ModerationDecision, x.CreatedAt });
         builder.HasIndex(x => new { x.Status, x.EndDate });
         builder.HasIndex(x => new { x.Status, x.PackageCode, x.PackageEndDate });
         builder.HasIndex(x => new { x.City, x.District, x.PropertyType });

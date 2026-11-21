@@ -1,5 +1,7 @@
+using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Workflows;
 
 namespace PropNest.Application.Listings;
 
@@ -8,10 +10,13 @@ public sealed class ListingImageService(
     IPhotoService photoService,
     IUnitOfWork unitOfWork) : IListingImageService
 {
+    public const int MaxImagesPerListing = 15;
+
     public async Task<IReadOnlyList<ListingImageDto>> UploadImagesAsync(
         long listingId,
         long userId,
         IReadOnlyList<UploadImageItem> files,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(listingId);
@@ -22,35 +27,84 @@ public sealed class ListingImageService(
             throw new ArgumentException("At least one image file is required.", nameof(files));
         }
 
-        var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
+        var listing = await listingRepository.GetByIdWithImagesAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing with ID {listingId} was not found.");
 
-        EnsureOwner(listing, userId);
+        EnsureOwner(listing, userId, isAdmin);
         EnsureCanModifyImages(listing);
 
-        var existingImages = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
-        var nextSortOrder = existingImages.Count > 0 ? existingImages.Max(x => x.SortOrder) + 1 : 0;
-        var hasCover = existingImages.Any(x => x.IsCover);
-
-        for (var i = 0; i < files.Count; i++)
+        var existingImages = listing.Images.OrderBy(x => x.SortOrder).ToList();
+        if (existingImages.Count + files.Count > MaxImagesPerListing)
         {
-            var item = files[i];
-            var folder = $"propnest/listings/{listingId}";
-            var uploadResult = await photoService.UploadPhotoAsync(item.ContentStream, item.FileName, folder, cancellationToken);
-
-            var isCover = !hasCover && i == 0;
-            var image = new ListingImage(
-                listingId,
-                uploadResult.Url,
-                uploadResult.PublicId,
-                nextSortOrder++,
-                isCover,
-                item.Caption);
-
-            listingRepository.AddImage(image);
+            throw new ArgumentException(
+                $"Mỗi tin đăng chỉ được chứa tối đa {MaxImagesPerListing} hình ảnh (hiện có {existingImages.Count} ảnh).",
+                nameof(files));
         }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var nextSortOrder = existingImages.Count > 0 ? existingImages.Max(x => x.SortOrder) + 1 : 0;
+        var hasCover = existingImages.Any(x => x.IsCover);
+        var uploadedPublicIds = new List<string>(files.Count);
+        var addedImages = new List<ListingImage>(files.Count);
+
+        try
+        {
+            for (var i = 0; i < files.Count; i++)
+            {
+                var item = files[i];
+                var folder = $"propnest/listings/{listingId}";
+                var uploadResult = await photoService.UploadPhotoAsync(item.ContentStream, item.FileName, folder, cancellationToken);
+                uploadedPublicIds.Add(uploadResult.PublicId);
+
+                var isCover = !hasCover && i == 0;
+                var image = new ListingImage(
+                    listingId,
+                    uploadResult.Url,
+                    uploadResult.PublicId,
+                    nextSortOrder++,
+                    isCover,
+                    item.Caption);
+
+                listingRepository.AddImage(image);
+                addedImages.Add(image);
+            }
+
+            if (listing.MarkPendingModerationAfterMediaChange())
+            {
+                var allImageUrls = existingImages
+                    .Concat(addedImages)
+                    .OrderBy(img => img.IsCover ? 0 : 1)
+                    .ThenBy(img => img.SortOrder)
+                    .Select(img => img.Url)
+                    .Where(url => !string.IsNullOrWhiteSpace(url))
+                    .ToList();
+
+                listingRepository.AddHistory(ListingHistory.CreateEvent(
+                    listingId,
+                    userId,
+                    "UpdateImages",
+                    $"Tải lên {files.Count} hình ảnh mới - tự động chuyển AME kiểm duyệt lại."));
+
+                EnqueueListingSubmittedOutbox(listing, allImageUrls);
+            }
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            foreach (var publicId in uploadedPublicIds)
+            {
+                try
+                {
+                    await photoService.DeletePhotoAsync(publicId, CancellationToken.None);
+                }
+                catch
+                {
+                    // Best-effort cleanup of uploaded assets when transaction fails.
+                }
+            }
+
+            throw;
+        }
 
         var updatedImages = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
         return updatedImages.Select(ToDto).ToList();
@@ -62,7 +116,7 @@ public sealed class ListingImageService(
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(listingId);
 
-        var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
+        _ = await listingRepository.GetByIdAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing with ID {listingId} was not found.");
 
         var images = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
@@ -74,6 +128,7 @@ public sealed class ListingImageService(
         long imageId,
         long userId,
         UpdateListingImageRequest request,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(listingId);
@@ -83,7 +138,7 @@ public sealed class ListingImageService(
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing with ID {listingId} was not found.");
 
-        EnsureOwner(listing, userId);
+        EnsureOwner(listing, userId, isAdmin);
         EnsureCanModifyImages(listing);
 
         var image = await listingRepository.GetImageByIdAsync(imageId, cancellationToken)
@@ -98,8 +153,9 @@ public sealed class ListingImageService(
         {
             if (request.IsCover.Value)
             {
-                var allImages = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
-                foreach (var other in allImages.Where(x => x.ImageId != imageId && x.IsCover))
+                // Dùng truy vấn có Tracking để EF Core thực sự lưu IsCover = false cho các ảnh khác
+                var allTrackedImages = await listingRepository.GetTrackedImagesByListingIdAsync(listingId, cancellationToken);
+                foreach (var other in allTrackedImages.Where(x => x.ImageId != imageId && x.IsCover))
                 {
                     other.SetCover(false);
                 }
@@ -130,19 +186,21 @@ public sealed class ListingImageService(
         long listingId,
         long imageId,
         long userId,
+        bool isAdmin = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(listingId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(imageId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(userId);
 
-        var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken)
+        var listing = await listingRepository.GetByIdWithImagesAsync(listingId, cancellationToken)
             ?? throw new KeyNotFoundException($"Listing with ID {listingId} was not found.");
 
-        EnsureOwner(listing, userId);
+        EnsureOwner(listing, userId, isAdmin);
         EnsureCanModifyImages(listing);
 
-        var image = await listingRepository.GetImageByIdAsync(imageId, cancellationToken)
+        var image = listing.Images.FirstOrDefault(x => x.ImageId == imageId)
+            ?? await listingRepository.GetImageByIdAsync(imageId, cancellationToken)
             ?? throw new KeyNotFoundException($"Image with ID {imageId} was not found.");
 
         if (image.ListingId != listingId)
@@ -150,22 +208,82 @@ public sealed class ListingImageService(
             throw new InvalidOperationException("The specified image does not belong to this listing.");
         }
 
-        await photoService.DeletePhotoAsync(image.PublicId, cancellationToken);
+        var remainingImages = listing.Images
+            .Where(x => x.ImageId != imageId)
+            .OrderBy(x => x.SortOrder)
+            .ToList();
+
+        if (image.IsCover && remainingImages.Count > 0)
+        {
+            // remainingImages đã được EF Core track qua GetByIdWithImagesAsync -> lưu IsCover = true chuẩn xác
+            remainingImages[0].SetCover(true);
+        }
+
         listingRepository.RemoveImage(image);
 
-        if (image.IsCover)
+        if (listing.MarkPendingModerationAfterMediaChange())
         {
-            var remaining = await listingRepository.GetImagesByListingIdAsync(listingId, cancellationToken);
-            var nextCover = remaining.FirstOrDefault(x => x.ImageId != imageId);
-            nextCover?.SetCover(true);
+            var remainingUrls = remainingImages
+                .OrderBy(img => img.IsCover ? 0 : 1)
+                .ThenBy(img => img.SortOrder)
+                .Select(img => img.Url)
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .ToList();
+
+            listingRepository.AddHistory(ListingHistory.CreateEvent(
+                listingId,
+                userId,
+                "DeleteImage",
+                "Xóa hình ảnh khỏi tin đăng - tự động chuyển AME kiểm duyệt lại."));
+
+            EnqueueListingSubmittedOutbox(listing, remainingUrls);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await photoService.DeletePhotoAsync(image.PublicId, cancellationToken);
+        }
+        catch
+        {
+            // DB transaction already succeeded; asset deletion failure shouldn't break user flow.
+        }
     }
 
-    private static void EnsureOwner(Listing listing, long userId)
+    private void EnqueueListingSubmittedOutbox(Listing listing, IReadOnlyList<string> imageUrls)
     {
-        if (listing.OwnerUserId != userId)
+        var correlationId = Guid.NewGuid();
+        var submittedEvent = new ListingSubmitted(
+            CorrelationId: correlationId,
+            ListingId: listing.ListingId,
+            OwnerUserId: listing.OwnerUserId,
+            Title: listing.Title,
+            Description: listing.Description,
+            PropertyType: listing.PropertyType,
+            ListingType: listing.ListingType,
+            Price: listing.Price,
+            Area: listing.Area,
+            City: listing.City,
+            District: listing.District,
+            Ward: listing.Ward,
+            Address: listing.Address,
+            SubmittedAt: DateTimeOffset.UtcNow,
+            Images: imageUrls,
+            LegacyAddress: listing.LegacyAddress,
+            AdministrativeMode: listing.AdministrativeMode,
+            ProvinceCode: listing.ProvinceCode,
+            Floors: listing.Floors,
+            Bedrooms: listing.Bedrooms,
+            Bathrooms: listing.Bathrooms);
+
+        listingRepository.AddOutboxMessage(
+            new OutboxMessage("ListingSubmitted", JsonSerializer.Serialize(submittedEvent), correlationId));
+    }
+
+    private static void EnsureOwner(Listing listing, long userId, bool isAdmin)
+    {
+        if (!isAdmin && listing.OwnerUserId != userId)
         {
             throw new UnauthorizedAccessException("You do not have permission to manage images for this listing.");
         }
@@ -181,6 +299,11 @@ public sealed class ListingImageService(
         if (listing.Status == ListingStatus.Expired)
         {
             throw new InvalidOperationException("Cannot modify images for an expired listing.");
+        }
+
+        if (listing.Status == ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Cannot modify images while the listing is pending moderation.");
         }
     }
 
