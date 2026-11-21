@@ -28,11 +28,12 @@ public sealed partial class OutboxDispatcherWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var dispatched = 0;
             try
             {
                 using var scope = _scopeFactory.CreateScope();
                 var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatchService>();
-                var dispatched = await dispatcher.DispatchPendingAsync(stoppingToken);
+                dispatched = await dispatcher.DispatchPendingAsync(stoppingToken);
                 if (dispatched > 0)
                 {
                     LogProcessed(dispatched);
@@ -47,7 +48,8 @@ public sealed partial class OutboxDispatcherWorker : BackgroundService
                 LogDispatchFailed(exception);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            var delayMs = dispatched > 0 ? 1000 : 2000;
+            await Task.Delay(TimeSpan.FromMilliseconds(delayMs), stoppingToken);
         }
     }
 }

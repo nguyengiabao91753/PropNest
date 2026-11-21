@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
+using PropNest.Application.Listings.Search;
 using PropNest.Application.Wallets;
 using PropNest.Application.Workflows;
 using PropNest.Infrastructure.Consumers;
@@ -11,7 +12,10 @@ using PropNest.Infrastructure.Filters;
 using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
+using PropNest.Infrastructure.Services.Search;
 using PropNest.Infrastructure.Workflows;
+using Meilisearch;
+using Microsoft.Extensions.Options;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
@@ -65,6 +69,21 @@ public static class ServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(ameOptions.TimeoutSeconds > 0 ? ameOptions.TimeoutSeconds : 15);
         });
 
+        // Cấu hình Meilisearch & Index Initializer
+        services.Configure<MeilisearchOptions>(configuration.GetSection(MeilisearchOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MeilisearchOptions>>().Value;
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(options.Url),
+                Timeout = TimeSpan.FromMilliseconds(options.RequestTimeoutMs > 0 ? options.RequestTimeoutMs : 2000)
+            };
+            return new MeilisearchClient(httpClient, options.MasterKey);
+        });
+        services.AddHostedService<MeilisearchIndexInitializer>();
+        services.AddScoped<IMeilisearchListingSearchService, MeilisearchListingSearchService>();
+
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
         services.AddMassTransit(busConfig =>
         {
@@ -84,6 +103,7 @@ public static class ServiceCollectionExtensions
             busConfig.AddConsumer<UpgradeListingConsumer>();
             busConfig.AddConsumer<RefundWalletConsumer>();
             busConfig.AddConsumer<AmeModerationConsumer>();
+            busConfig.AddConsumer<SyncListingSearchConsumer>(typeof(SyncListingSearchConsumerDefinition));
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";

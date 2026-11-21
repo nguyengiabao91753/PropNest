@@ -1,6 +1,6 @@
 # Tài liệu Triển khai Meilisearch & Đồng bộ Tìm kiếm Chính xác (PropNest)
 
-> **Nhánh mục tiêu:** `bao/opimize-project-1`  
+> **Nhánh mục tiêu:** `phuc/meilisearch`  
 > **Mục tiêu:** Thay thế truy vấn `Contains()` trên SQL Server bằng **Meilisearch** cho trang tìm kiếm Client, bổ sung bộ lọc địa giới hành chính Việt Nam (trước & sau sáp nhập) + thông số bất động sản, đồng thời đảm bảo **đồng bộ dữ liệu chính xác tuyệt đối** qua mọi biến cố vòng đời tin đăng (hết hạn, sửa nội dung/ẩn/duyệt lại, hạ gói VIP, và đẩy tin trong tương lai).
 
 ---

@@ -226,7 +226,12 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                     .OrderBy(i => i.IsCover ? 0 : 1)
                     .ThenBy(i => i.SortOrder)
                     .Select(i => i.Url)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                x.ProvinceCode,
+                x.DistrictCode,
+                x.WardCode,
+                x.PackageEndDate,
+                x.EndDate))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);
