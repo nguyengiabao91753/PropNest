@@ -42,7 +42,7 @@ class RuleEngine:
                 violations.append(RuleViolation(
                     rule=rule_code,
                     severity=mapped_severity,
-                    message=f"Vi phạm quy tắc kiểm duyệt ({rule_code}).",
+                    message="Nội dung chứa từ ngữ hoặc thông tin vi phạm quy định đăng tin.",
                 ))
         return violations
 

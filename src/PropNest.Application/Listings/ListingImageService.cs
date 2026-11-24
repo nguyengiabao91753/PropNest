@@ -83,7 +83,7 @@ public sealed class ListingImageService(
                     listingId,
                     userId,
                     "UpdateImages",
-                    $"Tải lên {files.Count} hình ảnh mới - tự động chuyển AME kiểm duyệt lại."));
+                    $"Tải lên {files.Count} hình ảnh mới và gửi kiểm duyệt lại."));
 
                 EnqueueListingSubmittedOutbox(listing, allImageUrls);
             }
@@ -248,7 +248,7 @@ public sealed class ListingImageService(
                 listingId,
                 userId,
                 "DeleteImage",
-                "Xóa hình ảnh khỏi tin đăng - tự động chuyển AME kiểm duyệt lại."));
+                "Xóa hình ảnh khỏi tin đăng và gửi kiểm duyệt lại."));
 
             EnqueueListingSubmittedOutbox(listing, remainingUrls);
         }

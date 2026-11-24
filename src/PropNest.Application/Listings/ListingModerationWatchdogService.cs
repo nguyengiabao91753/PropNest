@@ -38,11 +38,7 @@ public sealed class ListingModerationWatchdogService(
             foreach (var listing in staleListings)
             {
                 listing.MarkForManualReview();
-                listingRepository.AddHistory(ListingHistory.CreateEvent(
-                    listing.ListingId,
-                    actorUserId: null,
-                    "EscalateManualReview",
-                    $"Quá thời gian chờ AME xử lý tự động ({(int)threshold.TotalMinutes} phút) - tự động chuyển sang hàng chờ kiểm duyệt thủ công của Admin."));
+                // Không ghi lịch sử nội bộ khi chuyển sang hàng chờ duyệt thủ công.
                 escalatedTotal++;
             }
 

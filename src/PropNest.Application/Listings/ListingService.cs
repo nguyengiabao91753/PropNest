@@ -2,6 +2,7 @@ using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
 using PropNest.Application.Listings.Search;
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 using PropNest.Domain.Workflows;
 
@@ -66,11 +67,11 @@ public sealed class ListingService(
         string? moderationWarning = null;
         if (listing.Status == ListingStatus.Rejected)
         {
-            rejectReason = await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken);
+            rejectReason = NormalizeOptionalReason(await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken));
         }
         else if (listing.ModerationDecision == ModerationDecision.Approved)
         {
-            moderationWarning = await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken);
+            moderationWarning = NormalizeOptionalReason(await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken));
         }
 
         return ToDto(listing, owner, rejectReason, moderationWarning);
@@ -107,7 +108,11 @@ public sealed class ListingService(
             {
                 rejectReasons.TryGetValue(l.ListingId, out var rejectReason);
                 moderationWarnings.TryGetValue(l.ListingId, out var moderationWarning);
-                return ToDto(l, null, rejectReason, moderationWarning);
+                return ToDto(
+                    l,
+                    null,
+                    NormalizeOptionalReason(rejectReason),
+                    NormalizeOptionalReason(moderationWarning));
             })
             .ToList();
 
@@ -371,7 +376,7 @@ public sealed class ListingService(
             ownerUserId,
             "Unhide",
             restoreSnapshot,
-            $"Khôi phục hiển thị về trạng thái {listing.Status}"));
+            "Khôi phục hiển thị tin đăng."));
         var unhidePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
         listingRepository.AddOutboxMessage(new OutboxMessage("ListingRestored", unhidePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -406,8 +411,8 @@ public sealed class ListingService(
             {
                 "Create" => ListingStatus.Draft,
                 "Submit" => ListingStatus.PendingModeration,
-                "Approve" => ListingStatus.Published,
-                "Reject" => ListingStatus.Rejected,
+                "Approve" or "AutoApprove" => ListingStatus.Published,
+                "Reject" or "AutoReject" => ListingStatus.Rejected,
                 "Expire" => ListingStatus.Expired,
                 "Hide" => ListingStatus.Hidden,
                 "Unhide" => TryParseStatusFromSnapshot(entry.SnapshotJson, "RestoredStatus", out var restored)
@@ -484,15 +489,11 @@ public sealed class ListingService(
             null,
             moderatorUserId));
 
-        var historyNote = listing.Status == ListingStatus.Published
-            ? "Duyệt nội dung cập nhật - tin tiếp tục hiển thị theo thời hạn gói đã thanh toán."
-            : "Duyệt nội dung thành công - chờ người bán thanh toán gói để hiển thị tin.";
-
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             moderatorUserId,
             "Approve",
-            historyNote));
+            ModerationTextFormatter.ApprovedHistoryNote));
 
         var outboxType = listing.Status == ListingStatus.Published
             ? "ListingPublished"
@@ -531,9 +532,14 @@ public sealed class ListingService(
             ModerationDecision.Rejected,
             reasonsJson,
             moderatorUserId));
-        var historyNote = reasonsJson.Length <= 480
-            ? reasonsJson
-            : string.Concat(reasonsJson.AsSpan(0, 477), "...");
+        var formattedReason = ModerationTextFormatter.FormatModerationReasonText(reasonsJson);
+        if (string.IsNullOrWhiteSpace(formattedReason))
+        {
+            formattedReason = "Tin đăng chưa đáp ứng tiêu chuẩn nội dung.";
+        }
+        var historyNote = formattedReason.Length <= 480
+            ? formattedReason
+            : string.Concat(formattedReason.AsSpan(0, 477), "...");
 
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
@@ -556,8 +562,73 @@ public sealed class ListingService(
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default)
     {
         var histories = await listingRepository.GetHistoriesByListingIdAsync(listingId, cancellationToken);
+        var normalized = new List<ListingHistoryDto>(histories.Count);
 
-        return histories;
+        foreach (var h in histories)
+        {
+            // Bỏ qua các bản ghi nội bộ khi kiểm duyệt tự động không thể duyệt và chuyển duyệt thủ công
+            if (ModerationTextFormatter.IsInternalFailureHistoryAction(h.ActionType))
+            {
+                continue;
+            }
+
+            if (ModerationTextFormatter.IsApprovalAction(h.ActionType))
+            {
+                var approvalNote = !string.IsNullOrWhiteSpace(h.Note)
+                    && h.Note.Contains("giá ảo", StringComparison.OrdinalIgnoreCase)
+                    ? ModerationTextFormatter.FormatModerationReasonText(h.Note)
+                    : ModerationTextFormatter.ApprovedHistoryNote;
+
+                var entry = h with
+                {
+                    ActionType = "Approve",
+                    ActorUserId = null,
+                    ActorName = null,
+                    ActorRole = null,
+                    Note = approvalNote
+                };
+
+                // Chỉ giữ 1 bản ghi duyệt cho mỗi chu kỳ phê duyệt (không trùng liên tiếp)
+                if (normalized.Count > 0 && string.Equals(normalized[^1].ActionType, "Approve", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalized[^1] = entry;
+                }
+                else
+                {
+                    normalized.Add(entry);
+                }
+
+                continue;
+            }
+
+            if (ModerationTextFormatter.IsRejectionAction(h.ActionType))
+            {
+                normalized.Add(h with
+                {
+                    ActionType = "Reject",
+                    ActorUserId = null,
+                    ActorName = null,
+                    ActorRole = null,
+                    Note = NormalizeOptionalReason(h.Note)
+                });
+                continue;
+            }
+
+            normalized.Add(h with
+            {
+                Note = string.IsNullOrWhiteSpace(h.Note)
+                    ? h.Note
+                    : ModerationTextFormatter.SanitizePlainText(h.Note)
+            });
+        }
+
+        return normalized;
+    }
+
+    private static string? NormalizeOptionalReason(string? raw)
+    {
+        var formatted = ModerationTextFormatter.FormatModerationReasonText(raw);
+        return string.IsNullOrWhiteSpace(formatted) ? null : formatted;
     }
 
     public async Task<PackageDto?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default)

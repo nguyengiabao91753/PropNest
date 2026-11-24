@@ -51,7 +51,7 @@ class OllamaAnalyzer:
             return LLMResult(
                 quality_score=0.5,
                 is_available=False,
-                explanation="LLM analysis is disabled"
+                explanation="Phân tích ngữ nghĩa tự động đang tắt."
             )
 
         unit_price = req.price / req.area if req.area > 0 else 0
@@ -104,19 +104,19 @@ class OllamaAnalyzer:
 
         except httpx.ConnectError:
             logger.warning("Ollama is not running at %s", self.base_url)
-            return self._fallback("Ollama service is not running")
+            return self._fallback("Dịch vụ phân tích ngữ nghĩa tạm thời không kết nối được.")
 
         except httpx.TimeoutException:
             logger.warning("Ollama request timed out after %ss", self.timeout)
-            return self._fallback("Ollama request timed out")
+            return self._fallback("Quá thời gian chờ phân tích ngữ nghĩa tự động.")
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning("Failed to parse Ollama response: %s", e)
-            return self._fallback(f"Failed to parse LLM response: {e}")
+            return self._fallback("Không thể đọc kết quả phân tích ngữ nghĩa tự động.")
 
         except Exception as e:
             logger.error("Unexpected Ollama error: %s", e)
-            return self._fallback(f"Unexpected error: {e}")
+            return self._fallback("Hệ thống phân tích ngữ nghĩa tạm thời gián đoạn.")
 
     @staticmethod
     def _fallback(reason: str) -> LLMResult:

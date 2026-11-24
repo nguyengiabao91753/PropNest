@@ -57,7 +57,7 @@ class ImageFilter:
                         severity="manual_review",
                         message=(
                             f"Ảnh ({source_label}) quá tối, lóa sáng hoặc thiếu tương phản — "
-                            "AME không thể xác thực rõ nội dung ảnh, chuyển Admin duyệt."
+                            "cần kiểm tra trực tiếp chất lượng hình ảnh."
                         ),
                     )
 
@@ -76,17 +76,17 @@ class ImageFilter:
                         rule="IMAGE_BLURRY",
                         severity="manual_review",
                         message=(
-                            f"Ảnh ({source_label}) bị mờ hoặc mất nét (độ nét={edge_variance:.1f} < "
-                            f"{settings.IMAGE_BLUR_VARIANCE_THRESHOLD:.1f}) — chuyển Admin kiểm duyệt thủ công."
+                            f"Ảnh ({source_label}) bị mờ hoặc thiếu độ sắc nét — "
+                            "cần kiểm tra trực tiếp."
                         ),
                     )
 
                 return None
-        except (UnidentifiedImageError, OSError, ValueError) as ex:
+        except (UnidentifiedImageError, OSError, ValueError):
             return RuleViolation(
                 rule="IMAGE_UNVERIFIABLE",
                 severity="manual_review",
-                message=f"Không đọc được định dạng ảnh ({source_label}): {ex}",
+                message=f"Không thể đọc định dạng ảnh ({source_label}) — cần kiểm tra trực tiếp.",
             )
 
     async def _inspect_single_url(self, client: httpx.AsyncClient, url: str, index: int) -> RuleViolation | None:
@@ -96,7 +96,7 @@ class ImageFilter:
             return RuleViolation(
                 rule="IMAGE_UNVERIFIABLE",
                 severity="manual_review",
-                message=f"URL ảnh {label} không phải địa chỉ HTTP/HTTPS công khai để AME kiểm tra.",
+                message=f"Đường dẫn ảnh {label} không thể truy cập để kiểm tra tự động — cần xem xét trực tiếp.",
             )
 
         try:
@@ -105,7 +105,7 @@ class ImageFilter:
                 return RuleViolation(
                     rule="IMAGE_UNVERIFIABLE",
                     severity="manual_review",
-                    message=f"Không tải được ảnh {label} (HTTP {response.status_code}) — chuyển Admin duyệt.",
+                    message=f"Không thể tải hình ảnh {label} để kiểm tra tự động — cần xem xét trực tiếp.",
                 )
 
             raw = response.content[:_MAX_IMAGE_BYTES]
@@ -113,7 +113,7 @@ class ImageFilter:
                 return RuleViolation(
                     rule="IMAGE_UNVERIFIABLE",
                     severity="manual_review",
-                    message=f"Dữ liệu ảnh {label} rỗng — chuyển Admin duyệt.",
+                    message=f"Hình ảnh {label} không có dữ liệu hợp lệ — cần xem xét trực tiếp.",
                 )
 
             return self.analyze_image_bytes(raw, label)
@@ -122,7 +122,7 @@ class ImageFilter:
             return RuleViolation(
                 rule="IMAGE_UNVERIFIABLE",
                 severity="manual_review",
-                message=f"Không thể kiểm tra ảnh {label} do lỗi kết nối/timeout — chuyển Admin duyệt.",
+                message=f"Không thể kiểm tra tự động hình ảnh {label} do gián đoạn kết nối — cần xem xét trực tiếp.",
             )
 
     async def check(self, images: list[str] | None) -> list[RuleViolation]:
@@ -135,7 +135,7 @@ class ImageFilter:
                 RuleViolation(
                     rule="IMAGE_MISSING",
                     severity="manual_review",
-                    message="Tin đăng chưa có hình ảnh để AI xác thực — chuyển Admin kiểm duyệt thủ công.",
+                    message="Tin đăng chưa có hình ảnh minh họa — cần xem xét trực tiếp.",
                 )
             ]
 
