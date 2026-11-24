@@ -59,15 +59,46 @@ public sealed partial class SearchReconciliationJob : IJob
 
             var sqlMap = sqlPublishedListings.ToDictionary(l => l.ListingId);
 
-            // 2. Lấy toàn bộ documents hiện có từ Meilisearch
-            var docQuery = new DocumentsQuery
+            // 2. Lấy toàn bộ documents hiện có từ Meilisearch theo từng trang (tránh giới hạn 10.000 doc)
+            const int batchLimit = 1000;
+            var meiliDocs = new Dictionary<long, ListingSearchDocument>();
+            var offset = 0;
+            while (!context.CancellationToken.IsCancellationRequested)
             {
-                Limit = 10000,
-                Fields = new List<string> { "listingId", "updatedAtUnix", "packageCode", "endDateUnix", "packageEndDateUnix" }
-            };
+                var docQuery = new DocumentsQuery
+                {
+                    Offset = offset,
+                    Limit = batchLimit,
+                    Fields = new List<string>
+                    {
+                        "listingId",
+                        "updatedAtUnix",
+                        "packageCode",
+                        "isVip",
+                        "endDateUnix",
+                        "packageEndDateUnix",
+                        "thumbnailUrl"
+                    }
+                };
 
-            var meiliResults = await index.GetDocumentsAsync<ListingSearchDocument>(docQuery, context.CancellationToken);
-            var meiliDocs = meiliResults.Results.ToDictionary(d => d.ListingId);
+                var batch = await index.GetDocumentsAsync<ListingSearchDocument>(docQuery, context.CancellationToken);
+                var results = batch.Results.ToList();
+                if (results.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var doc in results)
+                {
+                    meiliDocs[doc.ListingId] = doc;
+                }
+
+                offset += results.Count;
+                if (results.Count < batchLimit || offset >= batch.Total)
+                {
+                    break;
+                }
+            }
 
             // 3. Tìm và xóa tin rác (Orphan): Tồn tại trên Meilisearch nhưng SQL không còn Published
             var orphanIds = meiliDocs.Keys
@@ -81,26 +112,25 @@ public sealed partial class SearchReconciliationJob : IJob
                 LogOrphansPruned(_logger, orphanIds.Count);
             }
 
-            // 4. Tìm và bù tin thiếu hoặc sai lệch (Missing / Stale)
+            // 4. Tìm và bù tin thiếu hoặc sai lệch (Missing / Stale, bao gồm cả đổi ảnh bìa & hạ VIP)
             var docsToUpsert = new List<ListingSearchDocument>();
             foreach (var (id, sqlListing) in sqlMap)
             {
+                var expectedDoc = ListingSearchDocument.FromEntity(sqlListing, utcNow: now);
                 if (!meiliDocs.TryGetValue(id, out var meiliDoc))
                 {
-                    docsToUpsert.Add(ListingSearchDocument.FromEntity(sqlListing));
+                    docsToUpsert.Add(expectedDoc);
                 }
                 else
                 {
-                    var sqlUpdatedUnix = sqlListing.UpdatedAt.ToUnixTimeSeconds();
-                    var sqlEndUnix = sqlListing.EndDate?.ToUnixTimeSeconds();
-                    var sqlPkgEndUnix = sqlListing.PackageEndDate?.ToUnixTimeSeconds();
-
-                    if (meiliDoc.UpdatedAtUnix != sqlUpdatedUnix
-                        || meiliDoc.PackageCode != sqlListing.PackageCode
-                        || meiliDoc.EndDateUnix != sqlEndUnix
-                        || meiliDoc.PackageEndDateUnix != sqlPkgEndUnix)
+                    if (meiliDoc.UpdatedAtUnix != expectedDoc.UpdatedAtUnix
+                        || !string.Equals(meiliDoc.PackageCode, expectedDoc.PackageCode, StringComparison.Ordinal)
+                        || meiliDoc.IsVip != expectedDoc.IsVip
+                        || meiliDoc.EndDateUnix != expectedDoc.EndDateUnix
+                        || meiliDoc.PackageEndDateUnix != expectedDoc.PackageEndDateUnix
+                        || !string.Equals(meiliDoc.ThumbnailUrl, expectedDoc.ThumbnailUrl, StringComparison.Ordinal))
                     {
-                        docsToUpsert.Add(ListingSearchDocument.FromEntity(sqlListing));
+                        docsToUpsert.Add(expectedDoc);
                     }
                 }
             }

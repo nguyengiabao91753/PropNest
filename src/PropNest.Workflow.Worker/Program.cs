@@ -45,11 +45,17 @@ builder.Services.AddQuartz(q =>
     var reconcileJobKey = new JobKey(nameof(SearchReconciliationJob));
     q.AddJob<SearchReconciliationJob>(opts => opts.WithIdentity(reconcileJobKey));
 
-    // Chạy định kỳ mỗi 15 phút
+    var meiliOptions = builder.Configuration.GetSection(MeilisearchOptions.SectionName).Get<MeilisearchOptions>() ?? new MeilisearchOptions();
+    var reconcileIntervalMinutes = Math.Max(1, meiliOptions.ReconciliationIntervalMinutes);
+
+    // Chạy định kỳ theo cấu hình Meilisearch:ReconciliationIntervalMinutes (mặc định 15 phút)
     q.AddTrigger(opts => opts
         .ForJob(reconcileJobKey)
         .WithIdentity($"{nameof(SearchReconciliationJob)}-periodic-trigger")
-        .WithCronSchedule("0 0/15 * * * ?"));
+        .StartAt(DateTimeOffset.UtcNow.AddMinutes(reconcileIntervalMinutes))
+        .WithSimpleSchedule(x => x
+            .WithIntervalInMinutes(reconcileIntervalMinutes)
+            .RepeatForever()));
 
     // Chạy 1 lần sau khi khởi động 10 giây để đồng bộ ban đầu
     q.AddTrigger(opts => opts
