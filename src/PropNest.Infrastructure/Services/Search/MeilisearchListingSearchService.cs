@@ -45,16 +45,19 @@ public sealed partial class MeilisearchListingSearchService : IMeilisearchListin
             var timeoutMs = _options.RequestTimeoutMs > 0 ? _options.RequestTimeoutMs : 2000;
             timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
 
-            var page = query.Page ?? (query.PageNumber > 0 ? query.PageNumber : 1);
-            var pageSize = query.PageSize > 0 ? query.PageSize : 20;
-            var offset = (page - 1) * pageSize;
+            var rawPage = query.Page ?? query.PageNumber;
+            var page = rawPage > 0 ? rawPage : 1;
+            var pageSize = Math.Clamp(query.PageSize > 0 ? query.PageSize : 20, 1, 50);
+            var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-            var filter = BuildFilter(query);
+            var filter = BuildFilter(query, nowUnix);
             var sort = BuildSort(query.SortBy);
 
             var index = _client.Index(_options.ListingsIndexName);
 
-            // Normalize query truoc de dung trong AttributesToSearchOn
+            // Chuẩn hóa tiếng Việt (đ/Đ -> d/D, bỏ dấu) nhưng tìm trên toàn bộ SearchableAttributes
+            // (title > titleNormalized > address > ... > searchNormalizedText > descriptionPlainText > descriptionNormalizedText)
+            // để giữ nguyên thứ tự ưu tiên thuộc tính và không bỏ sót nội dung mô tả.
             var normalizedQ = string.IsNullOrWhiteSpace(query.Q)
                 ? null
                 : VietnameseSearchNormalizer.Normalize(query.Q);
@@ -63,13 +66,8 @@ public sealed partial class MeilisearchListingSearchService : IMeilisearchListin
             {
                 Filter = filter,
                 Sort = sort,
-                Offset = offset,
-                Limit = pageSize,
-                // Chi tim trong searchNormalizedText khi co query de tranh false positives
-                // do Meilisearch tu normalize Unicode cua cac field goc (title, city, v.v.)
-                AttributesToSearchOn = string.IsNullOrWhiteSpace(normalizedQ)
-                    ? null
-                    : ["searchNormalizedText"]
+                Page = page,
+                HitsPerPage = pageSize
             };
 
             var searchResult = await index.SearchAsync<ListingSearchDocument>(
@@ -77,39 +75,54 @@ public sealed partial class MeilisearchListingSearchService : IMeilisearchListin
                 searchQuery,
                 timeoutCts.Token);
 
-            var items = searchResult.Hits.Select(doc => new ListingSummaryDto(
-                doc.ListingId,
-                doc.Title,
-                doc.Price,
-                doc.Area,
-                doc.ListingType,
-                doc.PropertyType,
-                doc.City,
-                doc.District,
-                doc.Ward,
-                doc.PackageCode,
-                doc.Address,
-                ListingStatus.Published,
-                DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtUnix),
-                ModerationDecision.Approved,
-                doc.Floors,
-                doc.Bedrooms,
-                doc.Bathrooms,
-                doc.BalconyDirection,
-                doc.AdministrativeMode,
-                doc.LegacyAddress,
-                doc.ThumbnailUrl,
-                doc.ProvinceCode,
-                doc.DistrictCode,
-                doc.WardCode,
-                doc.PackageEndDateUnix.HasValue ? DateTimeOffset.FromUnixTimeSeconds(doc.PackageEndDateUnix.Value) : null,
-                doc.EndDateUnix.HasValue ? DateTimeOffset.FromUnixTimeSeconds(doc.EndDateUnix.Value) : null
-            )).ToList();
+            var items = searchResult.Hits.Select(doc =>
+            {
+                // Lớp 4 Zero-Drift: phòng thủ giao ngày lúc 00:00:00-00:00:05 nếu gói VIP vừa hết hạn trước khi Quartz kịp hạ
+                var isVipExpired = string.Equals(doc.PackageCode, ListingPackagePolicy.VipPackageCode, StringComparison.OrdinalIgnoreCase)
+                    && doc.PackageEndDateUnix.HasValue
+                    && doc.PackageEndDateUnix.Value <= nowUnix;
+
+                var effectivePackageCode = isVipExpired
+                    ? ListingPackagePolicy.StandardPackageCode
+                    : doc.PackageCode;
+
+                DateTimeOffset? effectivePackageEndDate = isVipExpired
+                    ? null
+                    : (doc.PackageEndDateUnix.HasValue ? DateTimeOffset.FromUnixTimeSeconds(doc.PackageEndDateUnix.Value) : null);
+
+                return new ListingSummaryDto(
+                    doc.ListingId,
+                    doc.Title,
+                    doc.Price,
+                    doc.Area,
+                    doc.ListingType,
+                    doc.PropertyType,
+                    doc.City,
+                    doc.District,
+                    doc.Ward,
+                    effectivePackageCode,
+                    doc.Address,
+                    ListingStatus.Published,
+                    DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtUnix),
+                    ModerationDecision.Approved,
+                    doc.Floors,
+                    doc.Bedrooms,
+                    doc.Bathrooms,
+                    doc.BalconyDirection,
+                    doc.AdministrativeMode,
+                    doc.LegacyAddress,
+                    doc.ThumbnailUrl,
+                    doc.ProvinceCode,
+                    doc.DistrictCode,
+                    doc.WardCode,
+                    effectivePackageEndDate,
+                    doc.EndDateUnix.HasValue ? DateTimeOffset.FromUnixTimeSeconds(doc.EndDateUnix.Value) : null);
+            }).ToList();
 
             var totalCount = searchResult switch
             {
-                SearchResult<ListingSearchDocument> sr => sr.EstimatedTotalHits,
                 PaginatedSearchResult<ListingSearchDocument> psr => psr.TotalHits,
+                SearchResult<ListingSearchDocument> sr => sr.EstimatedTotalHits,
                 _ => searchResult.Hits.Count
             };
             return new PagedResult<ListingSummaryDto>(items, totalCount, page, pageSize);
@@ -121,21 +134,26 @@ public sealed partial class MeilisearchListingSearchService : IMeilisearchListin
         }
     }
 
-    private static string BuildFilter(GetPublicListingsQuery query)
+    public static string BuildFilter(GetPublicListingsQuery query, long nowUnix)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var filters = new List<string>(8);
-        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         // 1. Hard filter bắt buộc cho mọi truy vấn công khai
         filters.Add("status = \"Published\"");
         filters.Add("moderationDecision = \"Approved\"");
         filters.Add($"endDateUnix > {nowUnix}");
 
-        // 2. Listing Type (Sale / Rent)
-        var rawType = query.Type ?? query.ListingType;
-        if (!string.IsNullOrWhiteSpace(rawType))
+        // 2. Listing Type (Sale / Rent; bỏ qua khi 'all')
+        var rawType = (query.ListingType ?? query.Type)?.Trim();
+        if (!string.IsNullOrWhiteSpace(rawType) && !string.Equals(rawType, "all", StringComparison.OrdinalIgnoreCase))
         {
-            var normalizedType = string.Equals(rawType, "rent", StringComparison.OrdinalIgnoreCase) ? "Rent" : "Sale";
+            var normalizedType = rawType.ToLowerInvariant() switch
+            {
+                "rent" => "Rent",
+                "sale" => "Sale",
+                _ => Escape(rawType)
+            };
             filters.Add($"listingType = \"{normalizedType}\"");
         }
 
@@ -195,24 +213,32 @@ public sealed partial class MeilisearchListingSearchService : IMeilisearchListin
             filters.Add(string.Create(CultureInfo.InvariantCulture, $"wardCode = {query.WardCode.Value}"));
         }
 
-        // 9. Lọc địa chỉ theo chuỗi text (City, District, Ward)
-        if (!string.IsNullOrWhiteSpace(query.City))
-        {
-            var escapedCity = Escape(query.City);
-            filters.Add($"(city = \"{escapedCity}\" OR locationTokens = \"{escapedCity}\")");
-        }
-        if (!string.IsNullOrWhiteSpace(query.District))
-        {
-            var escapedDistrict = Escape(query.District);
-            filters.Add($"(district = \"{escapedDistrict}\" OR locationTokens = \"{escapedDistrict}\")");
-        }
-        if (!string.IsNullOrWhiteSpace(query.Ward))
-        {
-            var escapedWard = Escape(query.Ward);
-            filters.Add($"(ward = \"{escapedWard}\" OR locationTokens = \"{escapedWard}\")");
-        }
+        // 9. Lọc địa chỉ theo chuỗi text (khớp cả gốc, không dấu, rút gọn tiền tố và LegacyAddress)
+        AddLocationFilter(filters, "city", query.City);
+        AddLocationFilter(filters, "district", query.District);
+        AddLocationFilter(filters, "ward", query.Ward);
 
         return string.Join(" AND ", filters);
+    }
+
+    private static void AddLocationFilter(List<string> filters, string fieldName, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return;
+        }
+
+        var escapedRaw = Escape(rawValue);
+        var normalized = VietnameseSearchNormalizer.NormalizeLocationToken(rawValue);
+        if (!string.IsNullOrWhiteSpace(normalized) && !string.Equals(normalized, escapedRaw, StringComparison.OrdinalIgnoreCase))
+        {
+            var escapedNorm = Escape(normalized);
+            filters.Add($"({fieldName} = \"{escapedRaw}\" OR locationTokens = \"{escapedRaw}\" OR locationTokens = \"{escapedNorm}\")");
+        }
+        else
+        {
+            filters.Add($"({fieldName} = \"{escapedRaw}\" OR locationTokens = \"{escapedRaw}\")");
+        }
     }
 
     private static string[] BuildSort(string? sortBy)

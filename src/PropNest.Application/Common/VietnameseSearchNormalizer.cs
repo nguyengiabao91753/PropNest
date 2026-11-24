@@ -76,6 +76,120 @@ public static partial class VietnameseSearchNormalizer
         return sb.ToString();
     }
 
+    private static readonly string[] AdminPrefixes =
+    [
+        "thanh pho ", "tp. ", "tp ", "tinh ", "thi xa ", "tx. ", "tx ",
+        "huyen ", "quan ", "q. ", "phuong ", "p. ", "xa ", "thi tran "
+    ];
+
+    /// <summary>
+    /// Chuẩn hóa tên địa danh hành chính về dạng rút gọn không dấu (vd: "Thành phố Hồ Chí Minh" -> "ho chi minh", "Quận 7" -> "quan 7").
+    /// </summary>
+    public static string NormalizeLocationToken(string? raw)
+    {
+        var normalized = Normalize(raw);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return string.Empty;
+        }
+
+        // Bỏ tiền tố hành chính nếu phần lõi phía sau không phải số thuần (giữ nguyên "quan 7", "phuong 5")
+        foreach (var prefix in AdminPrefixes)
+        {
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                var remainder = normalized[prefix.Length..].Trim();
+                if (!string.IsNullOrWhiteSpace(remainder) && !IsNumericOnly(remainder))
+                {
+                    normalized = remainder;
+                }
+                break;
+            }
+        }
+
+        return normalized switch
+        {
+            "tphcm" or "tp hcm" or "hcm" or "sai gon" or "saigon" => "ho chi minh",
+            "hn" or "thu do ha noi" => "ha noi",
+            "dn" => "da nang",
+            _ => normalized
+        };
+    }
+
+    /// <summary>
+    /// Trích xuất tập token địa chỉ đầy đủ phục vụ lọc chính xác trên Meilisearch (hỗ trợ cả địa chỉ gốc, không dấu, rút gọn và LegacyAddress phân cách dấu phẩy).
+    /// </summary>
+    public static IReadOnlyList<string> BuildLocationFilterTokens(params string?[] parts)
+    {
+        if (parts is null || parts.Length == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddSegment(string? segment)
+        {
+            if (string.IsNullOrWhiteSpace(segment))
+            {
+                return;
+            }
+
+            var trimmed = segment.Trim();
+            if (trimmed.Length == 0)
+            {
+                return;
+            }
+
+            tokens.Add(trimmed);
+
+            var normalizedFull = Normalize(trimmed);
+            if (!string.IsNullOrWhiteSpace(normalizedFull))
+            {
+                tokens.Add(normalizedFull);
+            }
+
+            var canonical = NormalizeLocationToken(trimmed);
+            if (!string.IsNullOrWhiteSpace(canonical))
+            {
+                tokens.Add(canonical);
+            }
+        }
+
+        foreach (var part in parts)
+        {
+            if (string.IsNullOrWhiteSpace(part))
+            {
+                continue;
+            }
+
+            AddSegment(part);
+
+            if (part.Contains(',', StringComparison.Ordinal) || part.Contains(';', StringComparison.Ordinal))
+            {
+                foreach (var sub in part.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    AddSegment(sub);
+                }
+            }
+        }
+
+        return tokens.ToArray();
+    }
+
+    private static bool IsNumericOnly(string value)
+    {
+        foreach (var ch in value)
+        {
+            if (!char.IsAsciiDigit(ch))
+            {
+                return false;
+            }
+        }
+
+        return value.Length > 0;
+    }
+
     /// <summary>
     /// Trích xuất danh sách token địa chỉ không trùng lặp (Tỉnh, Huyện, Xã, Địa chỉ cũ).
     /// </summary>

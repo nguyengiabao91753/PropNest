@@ -13,7 +13,9 @@ public sealed class ListingSearchDocument
     public long ListingId { get; set; }
     public long OwnerUserId { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string TitleNormalized { get; set; } = string.Empty;
     public string DescriptionPlainText { get; set; } = string.Empty;
+    public string DescriptionNormalizedText { get; set; } = string.Empty;
     public string PropertyType { get; set; } = string.Empty;
     public string ListingType { get; set; } = string.Empty;
     public decimal Price { get; set; }
@@ -50,11 +52,19 @@ public sealed class ListingSearchDocument
     /// <summary>
     /// Ánh xạ từ Domain Entity Listing sang Meilisearch Document.
     /// </summary>
-    public static ListingSearchDocument FromEntity(Listing listing, string? coverImageUrl = null)
+    public static ListingSearchDocument FromEntity(
+        Listing listing,
+        string? coverImageUrl = null,
+        DateTimeOffset? utcNow = null)
     {
         ArgumentNullException.ThrowIfNull(listing);
 
-        var isVip = string.Equals(listing.PackageCode, ListingPackagePolicy.VipPackageCode, StringComparison.OrdinalIgnoreCase);
+        var now = utcNow ?? DateTimeOffset.UtcNow;
+        var hasVipCode = string.Equals(listing.PackageCode, ListingPackagePolicy.VipPackageCode, StringComparison.OrdinalIgnoreCase);
+        var isVipExpired = hasVipCode && listing.PackageEndDate.HasValue && listing.PackageEndDate.Value <= now;
+        var isVip = hasVipCode && !isVipExpired;
+        var effectivePackageCode = isVipExpired ? ListingPackagePolicy.StandardPackageCode : listing.PackageCode;
+        var effectivePackageEndDate = isVipExpired ? null : listing.PackageEndDate;
         var tierWeight = isVip ? 200 : 100;
 
         var cover = coverImageUrl;
@@ -69,6 +79,8 @@ public sealed class ListingSearchDocument
         }
 
         var descriptionPlain = RichTextHtmlHelper.ToPlainTextPreview(listing.Description);
+        var titleNormalized = VietnameseSearchNormalizer.Normalize(listing.Title);
+        var descriptionNormalized = VietnameseSearchNormalizer.Normalize(descriptionPlain);
         var searchNormalized = VietnameseSearchNormalizer.BuildSearchNormalizedText(
             listing.Title,
             listing.City,
@@ -77,7 +89,7 @@ public sealed class ListingSearchDocument
             listing.Address,
             listing.LegacyAddress);
 
-        var locationTokens = VietnameseSearchNormalizer.TokenizeLocation(
+        var locationTokens = VietnameseSearchNormalizer.BuildLocationFilterTokens(
             listing.City,
             listing.District,
             listing.Ward,
@@ -90,7 +102,9 @@ public sealed class ListingSearchDocument
             ListingId = listing.ListingId,
             OwnerUserId = listing.OwnerUserId,
             Title = listing.Title,
+            TitleNormalized = titleNormalized,
             DescriptionPlainText = descriptionPlain,
+            DescriptionNormalizedText = descriptionNormalized,
             PropertyType = listing.PropertyType,
             ListingType = listing.ListingType,
             Price = listing.Price,
@@ -113,11 +127,11 @@ public sealed class ListingSearchDocument
             ThumbnailUrl = cover,
             Status = listing.Status.ToString(),
             ModerationDecision = listing.ModerationDecision.ToString(),
-            PackageCode = listing.PackageCode,
+            PackageCode = effectivePackageCode,
             IsVip = isVip,
             PackageTierWeight = tierWeight,
             StartDateUnix = listing.StartDate?.ToUnixTimeSeconds(),
-            PackageEndDateUnix = listing.PackageEndDate?.ToUnixTimeSeconds(),
+            PackageEndDateUnix = effectivePackageEndDate?.ToUnixTimeSeconds(),
             EndDateUnix = listing.EndDate?.ToUnixTimeSeconds(),
             LastBumpedAtUnix = null,
             RankTimestampUnix = rankTimestamp,

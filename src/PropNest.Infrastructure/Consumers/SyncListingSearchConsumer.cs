@@ -52,17 +52,18 @@ public sealed partial class SyncListingSearchConsumer : IConsumer<ListingSearchS
                 .AsNoTracking()
                 .FirstOrDefaultAsync(l => l.ListingId == listingId, context.CancellationToken);
 
+            var now = DateTimeOffset.UtcNow;
             var isEligible = listing is not null
                 && listing.Status == ListingStatus.Published
                 && listing.ModerationDecision == ModerationDecision.Approved
                 && listing.EndDate.HasValue
-                && listing.EndDate.Value > DateTimeOffset.UtcNow;
+                && listing.EndDate.Value > now;
 
             var index = _meilisearchClient.Index(_options.ListingsIndexName);
 
             if (isEligible)
             {
-                var document = ListingSearchDocument.FromEntity(listing!);
+                var document = ListingSearchDocument.FromEntity(listing!, utcNow: now);
                 var task = await index.AddDocumentsAsync(new[] { document }, primaryKey: "listingId", cancellationToken: context.CancellationToken);
                 LogUpserted(_logger, listingId, eventType, task.TaskUid);
             }
