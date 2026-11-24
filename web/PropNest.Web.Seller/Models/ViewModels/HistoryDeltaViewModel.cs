@@ -42,7 +42,10 @@ public sealed class HistoryDeltaViewModel
 
     public bool IsApprove =>
         (string.Equals(RawActionType, "Approve", StringComparison.OrdinalIgnoreCase) ||
-         ActionType.Contains("Duyệt", StringComparison.OrdinalIgnoreCase)) && !IsReject;
+         string.Equals(RawActionType, "AutoApprove", StringComparison.OrdinalIgnoreCase) ||
+         ActionType.Contains("được duyệt", StringComparison.OrdinalIgnoreCase))
+        && !IsReject
+        && !IsSubmit;
 
     public bool IsExpire =>
         string.Equals(RawActionType, "Expire", StringComparison.OrdinalIgnoreCase) ||

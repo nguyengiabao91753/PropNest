@@ -221,19 +221,51 @@ namespace PropNest.Web.Seller.Services
                     return new List<HistoryDeltaViewModel>();
                 }
                 var result = new List<HistoryDeltaViewModel>();
-                foreach (var h in histories)
+                foreach (var h in histories.OrderBy(x => x.ActionDate))
                 {
-                    result.Add(new HistoryDeltaViewModel
+                    if (ModerationTextFormatter.IsInternalFailureHistoryAction(h.ActionType))
+                    {
+                        continue;
+                    }
+
+                    var isApprove = ModerationTextFormatter.IsApprovalAction(h.ActionType);
+                    var isReject = ModerationTextFormatter.IsRejectionAction(h.ActionType);
+                    var rawAction = isApprove ? "Approve" : isReject ? "Reject" : h.ActionType;
+
+                    var formattedNote = FormatNote(rawAction, h.Note);
+                    if (isApprove)
+                    {
+                        formattedNote = !string.IsNullOrWhiteSpace(formattedNote)
+                            && formattedNote.Contains("giá ảo", StringComparison.OrdinalIgnoreCase)
+                            ? formattedNote
+                            : null;
+                    }
+
+                    var item = new HistoryDeltaViewModel
                     {
                         ListingId = id,
-                        ActionType = NormalizeActionType(h.ActionType),
-                        Actor = FormatActor(h.ActorName, h.ActorRole),
+                        RawActionType = rawAction,
+                        ActionType = NormalizeActionType(rawAction),
+                        Actor = (isApprove || isReject)
+                            ? string.Empty
+                            : FormatActor(h.ActorName, h.ActorRole),
                         ActionDate = h.ActionDate,
-                        Note = FormatNote(h.ActionType, h.Note),
+                        Note = formattedNote,
                         DeltaChanges = ParseDeltas(h.DeltasJson)
-                    });
+                    };
+
+                    if (isApprove
+                        && result.Count > 0
+                        && string.Equals(result[^1].RawActionType, "Approve", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result[^1] = item;
+                    }
+                    else
+                    {
+                        result.Add(item);
+                    }
                 }
-                return result.OrderBy(x => x.ActionDate).ToList();
+                return result;
             }
             catch (HttpRequestException ex)
             {
@@ -619,7 +651,7 @@ namespace PropNest.Web.Seller.Services
             CreatedAt = dto.StartDate ?? DateTimeOffset.UtcNow,
             RowVersion = dto.RowVersion != null ? Convert.ToBase64String(dto.RowVersion) : string.Empty,
             RejectReason = FormatRejectReason(dto.LatestRejectReason),
-            ModerationWarning = dto.LatestModerationWarning
+            ModerationWarning = FormatRejectReason(dto.LatestModerationWarning)
         };
 
         // ==========================================
@@ -729,89 +761,18 @@ namespace PropNest.Web.Seller.Services
 
         private static string? FormatRejectReason(string? reasonsJson)
         {
-            if (string.IsNullOrWhiteSpace(reasonsJson)) return null;
-
-            try
-            {
-                // ReasonsJson from AME: {"Summary":"...", "ReasonCodes":["..."]}
-                // ReasonsJson from manual moderator: plain text or JSON array ["reason1"]
-                using var doc = System.Text.Json.JsonDocument.Parse(reasonsJson);
-                var root = doc.RootElement;
-
-                // Case 1: AME format { "Summary": "...", "ReasonCodes": [...] }
-                if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
-                {
-                    var summary = root.TryGetProperty("Summary", out var s)
-                        ? s.GetString()
-                        : root.TryGetProperty("summary", out var s2)
-                            ? s2.GetString()
-                            : null;
-
-                    var codes = new List<string>();
-                    if (root.TryGetProperty("ReasonCodes", out var rc) || root.TryGetProperty("reasonCodes", out rc))
-                    {
-                        if (rc.ValueKind == System.Text.Json.JsonValueKind.Array)
-                        {
-                            foreach (var item in rc.EnumerateArray())
-                            {
-                                var val = item.GetString();
-                                if (!string.IsNullOrWhiteSpace(val)) codes.Add(val);
-                            }
-                        }
-                    }
-
-                    var parts = new List<string>();
-                    if (!string.IsNullOrWhiteSpace(summary)) parts.Add(summary);
-                    if (codes.Count > 0) parts.Add("Mã cảnh báo: " + string.Join(", ", codes));
-
-                    return parts.Count > 0 ? string.Join(" — ", parts) : reasonsJson;
-                }
-
-                // Case 2: JSON array ["reason1", "reason2"]
-                if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
-                {
-                    var reasons = new List<string>();
-                    foreach (var item in root.EnumerateArray())
-                    {
-                        var val = item.GetString();
-                        if (!string.IsNullOrWhiteSpace(val)) reasons.Add(val);
-                    }
-                    return reasons.Count > 0 ? string.Join("; ", reasons) : reasonsJson;
-                }
-
-                return reasonsJson;
-            }
-            catch
-            {
-                // Not valid JSON — return as-is (plain text reject reason from moderator)
-                return reasonsJson;
-            }
+            var cleaned = ModerationTextFormatter.FormatModerationReasonText(reasonsJson);
+            return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
         }
 
-        private static string NormalizeActionType(string actionType) => actionType switch
-        {
-            "Create" => "Tạo mới tin",
-            "UpdateContent" or "Update" => "Cập nhật thông tin",
-            "Submit" => "Gửi duyệt",
-            "Approve" => "Đã duyệt",
-            "AutoApprove" => "Hệ thống tự động duyệt",
-            "Reject" => "Từ chối duyệt",
-            "AutoReject" => "Hệ thống tự động từ chối",
-            "RouteManualReview" => "Chuyển kiểm duyệt viên",
-            "Expire" => "Hết hạn",
-            "Hide" => "Tạm ẩn",
-            "Unhide" => "Bật hiển thị lại",
-            "UpgradePackage" => "Thanh toán / Nâng cấp gói",
-            "DowngradePackage" => "Hết hạn VIP (chuyển về Standard)",
-            "Delete" => "Xóa tin",
-            _ => actionType
-        };
+        private static string NormalizeActionType(string actionType) =>
+            ModerationTextFormatter.GetActionDisplayName(actionType);
 
         private static string FormatActor(string? actorName, string? actorRole)
         {
             if (string.IsNullOrWhiteSpace(actorName))
             {
-                return "Hệ thống tự động";
+                return string.Empty;
             }
             var roleLabel = actorRole?.ToLowerInvariant() switch
             {
@@ -827,21 +788,9 @@ namespace PropNest.Web.Seller.Services
         private static string? FormatNote(string actionType, string? note)
         {
             if (string.IsNullOrWhiteSpace(note)) return null;
-            if (string.Equals(actionType, "Reject", StringComparison.OrdinalIgnoreCase) && note.TrimStart().StartsWith('['))
-            {
-                try
-                {
-                    var reasons = JsonSerializer.Deserialize<List<string>>(note, s_jsonOptions);
-                    if (reasons != null && reasons.Count > 0)
-                    {
-                        return string.Join("; ", reasons);
-                    }
-                }
-                catch
-                {
-                }
-            }
-            return note;
+            _ = actionType;
+            var cleaned = ModerationTextFormatter.FormatModerationReasonText(note);
+            return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
         }
 
         private static List<DeltaItemViewModel> ParseDeltas(string? deltasJson)
