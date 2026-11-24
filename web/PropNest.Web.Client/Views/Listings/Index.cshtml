@@ -8,11 +8,15 @@
                            !string.IsNullOrWhiteSpace(Model.City) ||
                            !string.IsNullOrWhiteSpace(Model.District) ||
                            !string.IsNullOrWhiteSpace(Model.Ward) ||
+                           Model.ProvinceCode.HasValue ||
+                           Model.DistrictCode.HasValue ||
+                           Model.WardCode.HasValue ||
                            Model.MinPrice.HasValue ||
                            Model.MaxPrice.HasValue ||
                            Model.MinArea.HasValue ||
                            Model.MaxArea.HasValue ||
                            Model.MinBedrooms.HasValue ||
+                           Model.MinBathrooms.HasValue ||
                            !string.IsNullOrWhiteSpace(Model.BalconyDirection) ||
                            (!string.IsNullOrWhiteSpace(Model.SortBy) && Model.SortBy != "default");
 }
@@ -51,9 +55,10 @@
                 <a asp-action="Index"
                    asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                    asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                   asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                    asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                    asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                    asp-route-sortBy="@Model.SortBy"
                    asp-route-page="@Model.PageNumber" asp-route-layout="grid"
                    class="rounded-lg p-1.5 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
@@ -63,9 +68,10 @@
                 <a asp-action="Index"
                    asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                    asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                   asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                    asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                    asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                    asp-route-sortBy="@Model.SortBy"
                    asp-route-page="@Model.PageNumber" asp-route-layout="list"
                    class="rounded-lg p-1.5 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
@@ -122,8 +128,10 @@
                         <option value="" selected="@(string.IsNullOrEmpty(Model.PropertyType))">Tất cả loại hình</option>
                         <option value="Apartment" selected="@(Model.PropertyType == "Apartment")">Căn hộ chung cư</option>
                         <option value="House" selected="@(Model.PropertyType == "House")">Nhà riêng / Nhà phố</option>
+                        <option value="Townhouse" selected="@(Model.PropertyType == "Townhouse")">Nhà liền kề KĐT</option>
                         <option value="Villa" selected="@(Model.PropertyType == "Villa")">Biệt thự (Villa)</option>
                         <option value="Land" selected="@(Model.PropertyType == "Land")">Đất nền</option>
+                        <option value="Commercial" selected="@(Model.PropertyType == "Commercial")">Mặt bằng kinh doanh</option>
                     </select>
                 </div>
 
@@ -253,9 +261,10 @@
                         <a asp-action="Index"
                            asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                            asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                           asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                            asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                            asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                            asp-route-sortBy="@Model.SortBy"
                            asp-route-page="@Model.PageNumber" asp-route-layout="grid"
                            class="rounded-lg p-2 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
@@ -265,9 +274,10 @@
                         <a asp-action="Index"
                            asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                            asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                           asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                            asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                            asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                            asp-route-sortBy="@Model.SortBy"
                            asp-route-page="@Model.PageNumber" asp-route-layout="list"
                            class="rounded-lg p-2 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
@@ -309,9 +319,10 @@
                             <a asp-action="Index"
                                asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                                asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                                asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                                asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                                asp-route-sortBy="@Model.SortBy"
                                asp-route-page="@(Model.PageNumber - 1)" asp-route-layout="@Model.Layout"
                                class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
@@ -327,9 +338,10 @@
                             <a asp-action="Index"
                                asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                                asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                                asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                                asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                                asp-route-sortBy="@Model.SortBy"
                                asp-route-page="@pageIndex" asp-route-layout="@Model.Layout"
                                class="size-9 rounded-xl border flex items-center justify-center transition-colors @(pageIndex == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
@@ -343,9 +355,10 @@
                             <a asp-action="Index"
                                asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                                asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
                                asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
                                asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                                asp-route-sortBy="@Model.SortBy"
                                asp-route-page="@(Model.PageNumber + 1)" asp-route-layout="@Model.Layout"
                                class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">

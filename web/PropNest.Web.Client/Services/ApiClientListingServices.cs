@@ -25,10 +25,73 @@ namespace PropNest.Web.Client.Services
             }
         }
 
-        public Task<HomeViewModel> GetHomeDataAsync(CancellationToken cancellationToken = default)
+        public async Task<HomeViewModel> GetHomeDataAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new HomeViewModel());
+            var model = new HomeViewModel();
+            const string url = "/api/v1/listings?pageNumber=1&pageSize=24";
+
+            try
+            {
+                var response = await _httpClient.GetFromJsonAsync<ApiPagedResult<ApiListingSummaryDto>>(url, _jsonOptions, cancellationToken);
+                if (response is null)
+                {
+                    return model;
+                }
+
+                model.TotalVerifiedCount = response.TotalCount;
+                var mapped = response.Items.Select(MapSummaryToViewModel).ToList();
+
+                var residential = mapped
+                    .Where(x => string.Equals(x.PropertyType, "House", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(x.PropertyType, "Villa", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(x.PropertyType, "Townhouse", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(x.PropertyType, "Land", StringComparison.OrdinalIgnoreCase))
+                    .Take(6)
+                    .ToList();
+
+                model.FeaturedResidential = residential.Count > 0 ? residential : mapped.Take(6).ToList();
+                model.FeaturedCommercial = mapped
+                    .Where(x => string.Equals(x.PropertyType, "Commercial", StringComparison.OrdinalIgnoreCase))
+                    .Take(6)
+                    .ToList();
+                model.FeaturedApartments = mapped
+                    .Where(x => string.Equals(x.PropertyType, "Apartment", StringComparison.OrdinalIgnoreCase))
+                    .Take(6)
+                    .ToList();
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+            }
+
+            return model;
         }
+
+        private static ClientPropertyItemViewModel MapSummaryToViewModel(ApiListingSummaryDto x) => new()
+        {
+            Id = x.ListingId,
+            Title = x.Title,
+            Price = x.Price,
+            Area = x.Area,
+            Floors = x.Floors,
+            Bedrooms = x.Bedrooms,
+            Bathrooms = x.Bathrooms,
+            BalconyDirection = x.BalconyDirection,
+            City = x.City,
+            District = x.District,
+            Ward = x.Ward,
+            Address = x.Address,
+            AdministrativeMode = x.AdministrativeMode ?? "PostMerger",
+            LegacyAddress = x.LegacyAddress,
+            PackageCode = x.PackageCode,
+            ListingType = x.ListingType,
+            PropertyType = x.PropertyType,
+            CreatedAt = x.CreatedDate,
+            ImageUrls = !string.IsNullOrWhiteSpace(x.ThumbnailUrl)
+                ? new List<string> { x.ThumbnailUrl }
+                : new List<string>(),
+            ThumbnailUrl = x.ThumbnailUrl
+        };
 
         public async Task<PropertyDetailViewModel?> GetPropertyDetailAsync(long id, CancellationToken cancellationToken = default)
         {
@@ -191,31 +254,7 @@ namespace PropNest.Web.Client.Services
                 if (response != null)
                 {
                     criteria.TotalCount = response.TotalCount;
-                    criteria.Properties = response.Items.Select(x => new ClientPropertyItemViewModel
-                    {
-                        Id = x.ListingId,
-                        Title = x.Title,
-                        Price = x.Price,
-                        Area = x.Area,
-                        Floors = x.Floors,
-                        Bedrooms = x.Bedrooms,
-                        Bathrooms = x.Bathrooms,
-                        BalconyDirection = x.BalconyDirection,
-                        City = x.City,
-                        District = x.District,
-                        Ward = x.Ward,
-                        Address = x.Address,
-                        AdministrativeMode = x.AdministrativeMode ?? "PostMerger",
-                        LegacyAddress = x.LegacyAddress,
-                        PackageCode = x.PackageCode,
-                        ListingType = x.ListingType,
-                        PropertyType = x.PropertyType,
-                        CreatedAt = x.CreatedDate,
-                        ImageUrls = !string.IsNullOrWhiteSpace(x.ThumbnailUrl)
-                            ? new List<string> { x.ThumbnailUrl }
-                            : new List<string>(),
-                        ThumbnailUrl = x.ThumbnailUrl
-                    }).ToList();
+                    criteria.Properties = response.Items.Select(MapSummaryToViewModel).ToList();
                 }
             }
             catch (HttpRequestException ex)
