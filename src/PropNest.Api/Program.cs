@@ -25,7 +25,7 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, registerConsumers: false);
 builder.Services.AddIdentityCore<PropNest.Domain.Users.ApplicationUser>(options =>
 {
     options.Password.RequireDigit = true;

@@ -60,13 +60,15 @@ public sealed partial class MeilisearchIndexInitializer : IHostedService
                 SearchableAttributes = new[]
                 {
                     "title",
+                    "titleNormalized",
                     "address",
                     "ward",
                     "district",
                     "city",
                     "legacyAddress",
                     "searchNormalizedText",
-                    "descriptionPlainText"
+                    "descriptionPlainText",
+                    "descriptionNormalizedText"
                 },
                 FilterableAttributes = new[]
                 {
@@ -174,7 +176,7 @@ public sealed partial class MeilisearchIndexInitializer : IHostedService
                 _logger,
                 _options.ListingsIndexName,
                 finishedTask.Uid,
-                finishedTask.Status.ToString());
+                finishedTask.Status);
         }
         catch (Exception ex)
         {
@@ -194,7 +196,7 @@ public sealed partial class MeilisearchIndexInitializer : IHostedService
     private static partial void LogCreatingIndex(ILogger logger, string indexName);
 
     [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Meilisearch index '{IndexName}' verified and settings synchronized (PrimaryKey: listingId, TaskUid: {TaskUid}, Status: {Status}).")]
-    private static partial void LogSettingsSynchronized(ILogger logger, string indexName, int taskUid, string status);
+    private static partial void LogSettingsSynchronized(ILogger logger, string indexName, int taskUid, TaskInfoStatus status);
 
     [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "Unable to synchronize Meilisearch index '{IndexName}' during startup. Meilisearch may be offline or initializing.")]
     private static partial void LogSyncWarning(ILogger logger, Exception exception, string indexName);

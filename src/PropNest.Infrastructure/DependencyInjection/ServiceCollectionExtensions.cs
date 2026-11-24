@@ -21,7 +21,10 @@ namespace PropNest.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool registerConsumers = true)
     {
         var connectionString = configuration.GetConnectionString("PropNest")
             ?? throw new InvalidOperationException("Connection string 'PropNest' is required.");
@@ -74,14 +77,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MeilisearchOptions>>().Value;
+            // Dùng timeout 30s cho các tác vụ quản trị/đồng bộ (IndexInitializer, SearchReconciliationJob);
+            // truy vấn tìm kiếm tự áp đặt RequestTimeoutMs (mặc định 2000ms) qua CancellationTokenSource riêng.
             var httpClient = new HttpClient
             {
                 BaseAddress = new Uri(options.Url),
-                Timeout = TimeSpan.FromMilliseconds(options.RequestTimeoutMs > 0 ? options.RequestTimeoutMs : 2000)
+                Timeout = TimeSpan.FromSeconds(30)
             };
             return new MeilisearchClient(httpClient, options.MasterKey);
         });
-        services.AddHostedService<MeilisearchIndexInitializer>();
+        if (registerConsumers)
+        {
+            services.AddHostedService<MeilisearchIndexInitializer>();
+        }
         services.AddScoped<IMeilisearchListingSearchService, MeilisearchListingSearchService>();
 
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
@@ -89,21 +97,25 @@ public static class ServiceCollectionExtensions
         {
             busConfig.SetKebabCaseEndpointNameFormatter();
 
-            // đăng ký saga
-            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
-                .EntityFrameworkRepository(r =>
-                {
-                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-                    r.ExistingDbContext<PropNestDbContext>();
-                    r.UseSqlServer();
-                });
+            if (registerConsumers)
+            {
+                // đăng ký saga (chỉ chạy trên Workflow.Worker để tránh tranh chấp consumer với API)
+                busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
+                    .EntityFrameworkRepository(r =>
+                    {
+                        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                        r.ExistingDbContext<PropNestDbContext>();
+                        r.UseSqlServer();
+                    });
 
-            // đăng ký consumers
-            busConfig.AddConsumer<DeductWalletConsumer>();
-            busConfig.AddConsumer<UpgradeListingConsumer>();
-            busConfig.AddConsumer<RefundWalletConsumer>();
-            busConfig.AddConsumer<AmeModerationConsumer>();
-            busConfig.AddConsumer<SyncListingSearchConsumer>(typeof(SyncListingSearchConsumerDefinition));
+                // đăng ký consumers
+                busConfig.AddConsumer<DeductWalletConsumer>();
+                busConfig.AddConsumer<UpgradeListingConsumer>();
+                busConfig.AddConsumer<RefundWalletConsumer>();
+                busConfig.AddConsumer<AmeModerationConsumer>();
+                busConfig.AddConsumer<SyncListingSearchConsumer>(typeof(SyncListingSearchConsumerDefinition));
+            }
+
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
@@ -116,8 +128,11 @@ public static class ServiceCollectionExtensions
                     h.Username(username);
                     h.Password(password);
                 });
-                cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
-                cfg.ConfigureEndpoints(context);
+                if (registerConsumers)
+                {
+                    cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
+                    cfg.ConfigureEndpoints(context);
+                }
             });
         });
 
