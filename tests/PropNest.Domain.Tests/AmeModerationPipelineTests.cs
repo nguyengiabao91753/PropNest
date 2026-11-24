@@ -181,7 +181,9 @@ public sealed class AmeModerationPipelineTests
         Assert.Equal(ModerationDecision.Approved, review.Decision);
         Assert.Null(review.ReviewerUserId);
 
-        Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoApprove"));
+        var approveHistory = await dbContext.ListingHistories.SingleAsync(h => h.ListingId == listing.ListingId && h.ActionType == "Approve");
+        Assert.Equal("Tin đăng đã được duyệt.", approveHistory.Note);
+        Assert.DoesNotContain("AME", approveHistory.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingApprovedPendingPayment"));
     }
 
@@ -290,7 +292,8 @@ public sealed class AmeModerationPipelineTests
         Assert.Equal("AME", review.Source);
         Assert.Equal(ModerationDecision.Rejected, review.Decision);
 
-        Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoReject"));
+        var rejectHistory = await dbContext.ListingHistories.SingleAsync(h => h.ListingId == listing.ListingId && h.ActionType == "Reject");
+        Assert.DoesNotContain("AME", rejectHistory.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.True(await dbContext.OutboxMessages.AnyAsync(o => o.Type == "ListingRejected"));
     }
 
@@ -326,8 +329,10 @@ public sealed class AmeModerationPipelineTests
 
         var ameResult = await dbContext.AmeModerationResults.SingleAsync(x => x.CorrelationId == correlationId);
         Assert.Equal(ModerationDecision.ManualReview, ameResult.Decision);
+        Assert.DoesNotContain("Connection refused", ameResult.ReasonsJson ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
-        Assert.True(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId && h.ActionType == "RouteManualReview"));
+        // AME không duyệt được và đẩy về Admin duyệt thủ công -> KHÔNG ghi ListingHistory
+        Assert.False(await dbContext.ListingHistories.AnyAsync(h => h.ListingId == listing.ListingId));
     }
 
     [Fact]
@@ -457,10 +462,11 @@ public sealed class AmeModerationPipelineTests
         Assert.Equal(ListingStatus.PendingPayment, updatedListing.Status);
         Assert.Equal(ModerationDecision.Approved, updatedListing.ModerationDecision);
 
-        // History phải ghi lại cảnh báo giá ảo
+        // History dùng ActionType thống nhất "Approve" và ghi chú giá ảo bằng văn bản thuần
         var history = await dbContext.ListingHistories
-            .SingleAsync(h => h.ListingId == listing.ListingId && h.ActionType == "AutoApprove");
+            .SingleAsync(h => h.ListingId == listing.ListingId && h.ActionType == "Approve");
         Assert.Contains("giá ảo", history.Note, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("[Cảnh báo", history.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         // ListingService phải trả về LatestModerationWarning cho Seller xem
         var listingService = new ListingService(repository, dbContext);
