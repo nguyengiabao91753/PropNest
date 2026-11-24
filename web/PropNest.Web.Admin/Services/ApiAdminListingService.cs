@@ -500,13 +500,12 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             {
                 vm.Status = (ListingStatus)statusInt;
             }
-            else if (Enum.TryParse<ListingStatus>(statusElem.GetString(), true, out var parsedStatus))
+            else if (statusElem.ValueKind == JsonValueKind.String && Enum.TryParse<ListingStatus>(statusElem.GetString(), true, out var parsedStatus))
             {
                 vm.Status = parsedStatus;
             }
         }
 
-        // Package Code
         // Package Code & Validity Dates
         vm.PackageCode = GetString(elem, "packageCode", "PackageCode") ?? "Standard";
         if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&

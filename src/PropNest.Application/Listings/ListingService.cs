@@ -1,12 +1,16 @@
 using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
+using PropNest.Application.Listings.Search;
 using PropNest.Domain.Listings;
 using PropNest.Domain.Workflows;
 
 namespace PropNest.Application.Listings;
 
-public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork) : IListingService
+public sealed class ListingService(
+    IListingRepository listingRepository,
+    IUnitOfWork unitOfWork,
+    IMeilisearchListingSearchService? searchService = null) : IListingService
 {
     public async Task<ListingDto> CreateAsync(CreateListingCommand command, CancellationToken cancellationToken = default)
     {
@@ -157,6 +161,9 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         }
 
         // Lưu toàn bộ thay đổi tin đăng + lịch sử Delta + Outbox AME trong 1 lần SaveChanges nguyên tử
+        var syncPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingSearchSyncRequested", syncPayload));
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToDto(listing);
@@ -312,6 +319,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             PageSize = pageSize
         };
 
+        if (searchService is not null)
+        {
+            return await searchService.SearchListingsAsync(normalizedQuery, cancellationToken);
+        }
+
         return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);
     }
 
@@ -336,6 +348,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var preHideSnapshot = JsonSerializer.Serialize(new { PreviousStatus = listing.Status.ToString() });
         listing.Hide();
         listingRepository.AddHistory(ListingHistory.CreateSnapshot(listingId, ownerUserId, "Hide", preHideSnapshot));
+        var hidePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingHidden", hidePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -358,6 +372,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             "Unhide",
             restoreSnapshot,
             $"Khôi phục hiển thị về trạng thái {listing.Status}"));
+        var unhidePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingRestored", unhidePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(listing);
     }
@@ -588,6 +604,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
 
         listing.Delete();
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Delete"));
+        var deletePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingDeleted", deletePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

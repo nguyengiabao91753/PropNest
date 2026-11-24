@@ -5,11 +5,13 @@ using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
 using PropNest.Application.Workflows;
 using PropNest.Domain.Listings;
+using PropNest.Domain.Workflows;
 using PropNest.Infrastructure.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace PropNest.Infrastructure.Consumers
@@ -115,6 +117,17 @@ namespace PropNest.Infrastructure.Consumers
                     noteDetail);
 
                 _listingRepository.AddHistory(history);
+
+                var outboxPayload = JsonSerializer.Serialize(new
+                {
+                    listing.ListingId,
+                    listing.PackageCode,
+                    listing.StartDate,
+                    listing.EndDate,
+                    listing.PackageEndDate
+                });
+                _listingRepository.AddOutboxMessage(new OutboxMessage("ListingPackageUpdated", outboxPayload, command.CorrelationId));
+
                 await _unitOfWork.SaveChangesAsync(context.CancellationToken);
             }
             catch (Exception ex)

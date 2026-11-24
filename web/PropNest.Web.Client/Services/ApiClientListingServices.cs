@@ -130,6 +130,56 @@ namespace PropNest.Web.Client.Services
                 queryParams.Add($"maxPrice={criteria.MaxPrice.Value}");
             }
 
+            if (criteria.MinArea.HasValue)
+            {
+                queryParams.Add($"minArea={criteria.MinArea.Value}");
+            }
+
+            if (criteria.MaxArea.HasValue)
+            {
+                queryParams.Add($"maxArea={criteria.MaxArea.Value}");
+            }
+
+            if (criteria.MinBedrooms.HasValue && criteria.MinBedrooms.Value > 0)
+            {
+                queryParams.Add($"minBedrooms={criteria.MinBedrooms.Value}");
+            }
+
+            if (criteria.MinBathrooms.HasValue && criteria.MinBathrooms.Value > 0)
+            {
+                queryParams.Add($"minBathrooms={criteria.MinBathrooms.Value}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(criteria.BalconyDirection))
+            {
+                queryParams.Add($"balconyDirection={Uri.EscapeDataString(criteria.BalconyDirection)}");
+            }
+
+            if (criteria.ProvinceCode.HasValue)
+            {
+                queryParams.Add($"provinceCode={criteria.ProvinceCode.Value}");
+            }
+
+            if (criteria.DistrictCode.HasValue)
+            {
+                queryParams.Add($"districtCode={criteria.DistrictCode.Value}");
+            }
+
+            if (criteria.WardCode.HasValue)
+            {
+                queryParams.Add($"wardCode={criteria.WardCode.Value}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(criteria.Ward))
+            {
+                queryParams.Add($"ward={Uri.EscapeDataString(criteria.Ward)}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(criteria.SortBy))
+            {
+                queryParams.Add($"sortBy={Uri.EscapeDataString(criteria.SortBy)}");
+            }
+
             queryParams.Add($"pageNumber={criteria.PageNumber}");
             queryParams.Add($"pageSize={criteria.PageSize}");
 
@@ -163,7 +213,8 @@ namespace PropNest.Web.Client.Services
                         CreatedAt = x.CreatedDate,
                         ImageUrls = !string.IsNullOrWhiteSpace(x.ThumbnailUrl)
                             ? new List<string> { x.ThumbnailUrl }
-                            : new List<string>()
+                            : new List<string>(),
+                        ThumbnailUrl = x.ThumbnailUrl
                     }).ToList();
                 }
             }
@@ -210,7 +261,12 @@ namespace PropNest.Web.Client.Services
             string? BalconyDirection = null,
             string? AdministrativeMode = null,
             string? LegacyAddress = null,
-            string? ThumbnailUrl = null
+            string? ThumbnailUrl = null,
+            int? ProvinceCode = null,
+            int? DistrictCode = null,
+            int? WardCode = null,
+            DateTimeOffset? PackageEndDate = null,
+            DateTimeOffset? EndDate = null
             );
 
         private sealed record ApiListingDetailDto(
