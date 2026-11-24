@@ -162,10 +162,14 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<PagedResult<ListingSummaryDto>> GetPublicListingsAsync(GetPublicListingsQuery query, CancellationToken cancellationToken = default)
     {
-        var targetType = query.ListingType ?? query.Type;
-        if (!string.IsNullOrWhiteSpace(targetType))
+        var targetType = (query.ListingType ?? query.Type)?.Trim();
+        if (string.IsNullOrWhiteSpace(targetType) || string.Equals(targetType, "all", StringComparison.OrdinalIgnoreCase))
         {
-            targetType = targetType.Trim().ToLowerInvariant() switch
+            targetType = null;
+        }
+        else
+        {
+            targetType = targetType.ToLowerInvariant() switch
             {
                 "rent" => "Rent",
                 "sale" => "Sale",
@@ -173,34 +177,75 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
             };
         }
 
+        var pageNumber = Math.Max(1, query.Page ?? query.PageNumber);
+        var pageSize = Math.Clamp(query.PageSize > 0 ? query.PageSize : 20, 1, 50);
+
         var now = DateTimeOffset.UtcNow;
+        var q = query.Q?.Trim();
+        var city = query.City?.Trim();
+        var district = query.District?.Trim();
+        var ward = query.Ward?.Trim();
+        var propertyType = query.PropertyType?.Trim();
+        var balconyDirection = query.BalconyDirection?.Trim();
+
         var queryable = dbContext.Listings.AsNoTracking()
-            .Where(x => x.Status == ListingStatus.Published && (x.EndDate == null || x.EndDate > now))
-            .Where(x => string.IsNullOrWhiteSpace(query.Q) ||
-                        x.Title.Contains(query.Q) ||
-                        x.Address.Contains(query.Q) ||
-                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.Q)))
-            .Where(x => query.District == null ||
-                        x.District == query.District ||
-                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.District)))
-            .Where(x => query.City == null ||
-                        x.City == query.City ||
-                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.City)))
-            .Where(x => query.Ward == null ||
-                        x.Ward == query.Ward ||
-                        (x.LegacyAddress != null && x.LegacyAddress.Contains(query.Ward)))
-            .Where(x => query.PropertyType == null || x.PropertyType == query.PropertyType)
+            .Where(x => x.Status == ListingStatus.Published
+                     && x.ModerationDecision == ModerationDecision.Approved
+                     && (x.EndDate == null || x.EndDate > now))
+            .Where(x => string.IsNullOrWhiteSpace(q) ||
+                        x.Title.Contains(q) ||
+                        x.Address.Contains(q) ||
+                        x.City.Contains(q) ||
+                        x.District.Contains(q) ||
+                        (x.Ward != null && x.Ward.Contains(q)) ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(q)) ||
+                        (x.Description != null && x.Description.Contains(q)))
+            .Where(x => string.IsNullOrWhiteSpace(district) ||
+                        x.District.Contains(district) ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(district)))
+            .Where(x => string.IsNullOrWhiteSpace(city) ||
+                        x.City.Contains(city) ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(city)))
+            .Where(x => string.IsNullOrWhiteSpace(ward) ||
+                        (x.Ward != null && x.Ward.Contains(ward)) ||
+                        (x.LegacyAddress != null && x.LegacyAddress.Contains(ward)))
+            .Where(x => string.IsNullOrWhiteSpace(propertyType) || x.PropertyType == propertyType)
             .Where(x => targetType == null || x.ListingType == targetType)
             .Where(x => query.MinPrice == null || x.Price >= query.MinPrice)
-            .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice);
+            .Where(x => query.MaxPrice == null || x.Price <= query.MaxPrice)
+            .Where(x => query.MinArea == null || x.Area >= query.MinArea)
+            .Where(x => query.MaxArea == null || x.Area <= query.MaxArea)
+            .Where(x => query.MinBedrooms == null || query.MinBedrooms <= 0 || (x.Bedrooms != null && x.Bedrooms >= query.MinBedrooms))
+            .Where(x => query.MinBathrooms == null || query.MinBathrooms <= 0 || (x.Bathrooms != null && x.Bathrooms >= query.MinBathrooms))
+            .Where(x => string.IsNullOrWhiteSpace(balconyDirection) || x.BalconyDirection == balconyDirection)
+            .Where(x => query.ProvinceCode == null || x.ProvinceCode == query.ProvinceCode)
+            .Where(x => query.DistrictCode == null || x.DistrictCode == query.DistrictCode)
+            .Where(x => query.WardCode == null || x.WardCode == query.WardCode);
 
         var totalCount = await queryable.CountAsync(cancellationToken);
 
-        var items = await queryable
-            .OrderBy(x => x.PackageCode == ListingPackagePolicy.VipPackageCode ? 0 : 1)
-            .ThenByDescending(x => x.StartDate ?? x.CreatedAt)
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
+        var isSqlite = dbContext.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
+        IOrderedQueryable<Listing> orderedQuery = (query.SortBy?.Trim().ToLowerInvariant()) switch
+        {
+            "price_asc" => isSqlite
+                ? queryable.OrderBy(x => (double)x.Price).ThenByDescending(x => x.ListingId)
+                : queryable.OrderBy(x => x.Price).ThenByDescending(x => x.ListingId),
+            "price_desc" => isSqlite
+                ? queryable.OrderByDescending(x => (double)x.Price).ThenByDescending(x => x.ListingId)
+                : queryable.OrderByDescending(x => x.Price).ThenByDescending(x => x.ListingId),
+            "area_desc" => isSqlite
+                ? queryable.OrderByDescending(x => (double)x.Area).ThenByDescending(x => x.ListingId)
+                : queryable.OrderByDescending(x => x.Area).ThenByDescending(x => x.ListingId),
+            "newest" => queryable.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.ListingId),
+            _ => queryable
+                .OrderBy(x => x.PackageCode == ListingPackagePolicy.VipPackageCode
+                              && (x.PackageEndDate == null || x.PackageEndDate > now) ? 0 : 1)
+                .ThenByDescending(x => x.StartDate ?? x.CreatedAt)
+        };
+
+        var rawItems = await orderedQuery
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new ListingSummaryDto(
                 x.ListingId,
                 x.Title,
@@ -234,7 +279,15 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                 x.EndDate))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<ListingSummaryDto>(items, totalCount, query.PageNumber, query.PageSize);
+        // Phòng thủ giao ngày: tự hạ badge về Standard nếu gói VIP vừa hết hạn trước khi Quartz chạy
+        var items = rawItems.Select(x =>
+            string.Equals(x.PackageCode, ListingPackagePolicy.VipPackageCode, StringComparison.OrdinalIgnoreCase)
+            && x.PackageEndDate.HasValue
+            && x.PackageEndDate.Value <= now
+                ? x with { PackageCode = ListingPackagePolicy.StandardPackageCode, PackageEndDate = null }
+                : x).ToList();
+
+        return new PagedResult<ListingSummaryDto>(items, totalCount, pageNumber, pageSize);
     }
 
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesByListingIdAsync(long listingId, CancellationToken cancellationToken = default)
