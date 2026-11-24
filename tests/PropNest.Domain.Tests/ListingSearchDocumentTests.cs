@@ -54,10 +54,14 @@ public class ListingSearchDocumentTests
         Assert.DoesNotContain("<li", doc.DescriptionPlainText);
         Assert.Contains("Chính chủ bán căn hộ đẹp tại Bắc Ninh", doc.DescriptionPlainText);
 
-        // Kiểm tra chuỗi chuẩn hóa tìm kiếm tiếng Việt
+        // Kiểm tra chuỗi chuẩn hóa tìm kiếm tiếng Việt (gồm cả tiêu đề & mô tả)
+        Assert.Equal("ban can ho evergreen nenh 2 phong ngu", doc.TitleNormalized);
+        Assert.Contains("chinh chu ban can ho dep tai bac ninh", doc.DescriptionNormalizedText);
         Assert.Contains("ban can ho evergreen nenh 2 phong ngu", doc.SearchNormalizedText);
         Assert.Contains("tinh bac ninh", doc.SearchNormalizedText);
         Assert.Contains("thi xa viet yen", doc.SearchNormalizedText);
+        Assert.Contains("bac ninh", doc.LocationTokens);
+        Assert.Contains("viet yen", doc.LocationTokens);
 
         // Kiểm tra trọng số gói Standard
         Assert.False(doc.IsVip);
@@ -88,5 +92,36 @@ public class ListingSearchDocumentTests
 
         Assert.True(doc.IsVip);
         Assert.Equal(200, doc.PackageTierWeight);
+    }
+
+    [Fact]
+    public void FromEntityExpiredVipPackageShouldDowngradeToStandardWeight100()
+    {
+        var listing = new Listing(
+            ownerUserId: 10,
+            title: "Nhà phố hết hạn VIP",
+            description: "Mô tả chi tiết nhà phố chính chủ",
+            propertyType: "House",
+            listingType: "Sale",
+            price: 5_000_000_000m,
+            area: 100m,
+            city: "Hà Nội",
+            district: "Quận Cầu Giấy",
+            ward: null,
+            address: "Số 1 Cầu Giấy");
+
+        var baseTime = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.FromHours(7));
+        listing.SubmitForModeration();
+        listing.Approve(baseTime);
+        listing.ApplyPackagePurchase("Standard", 15, baseTime);
+        listing.ApplyPackagePurchase("VIP", 3, baseTime);
+
+        var afterVipExpired = baseTime.AddDays(5);
+        var doc = ListingSearchDocument.FromEntity(listing, utcNow: afterVipExpired);
+
+        Assert.False(doc.IsVip);
+        Assert.Equal(100, doc.PackageTierWeight);
+        Assert.Equal("Standard", doc.PackageCode);
+        Assert.Null(doc.PackageEndDateUnix);
     }
 }

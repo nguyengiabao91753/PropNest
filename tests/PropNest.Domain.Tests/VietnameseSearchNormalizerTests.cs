@@ -60,4 +60,35 @@ public class VietnameseSearchNormalizerTests
         Assert.Contains("Thị xã Việt Yên", tokens);
         Assert.Contains("Phường Việt Yên", tokens);
     }
+
+    [Theory]
+    [InlineData("Thành phố Hồ Chí Minh", "ho chi minh")]
+    [InlineData("TP. Hồ Chí Minh", "ho chi minh")]
+    [InlineData("TPHCM", "ho chi minh")]
+    [InlineData("Sài Gòn", "ho chi minh")]
+    [InlineData("Quận 7", "quan 7")]
+    [InlineData("Quận Cầu Giấy", "cau giay")]
+    [InlineData("Phường Việt Yên", "viet yen")]
+    [InlineData("Thị xã Việt Yên", "viet yen")]
+    [InlineData("Tỉnh Bắc Ninh", "bac ninh")]
+    public void NormalizeLocationTokenShouldStripNonNumericPrefixesAndMapAliases(string input, string expected)
+    {
+        var result = VietnameseSearchNormalizer.NormalizeLocationToken(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void BuildLocationFilterTokensShouldSplitLegacyAddressAndIncludeCanonicalTokens()
+    {
+        var tokens = VietnameseSearchNormalizer.BuildLocationFilterTokens(
+            "Thành phố Hồ Chí Minh",
+            "",
+            "Phường Tân Phong",
+            "Quận 7, TP. Hồ Chí Minh");
+
+        Assert.Contains("ho chi minh", tokens);
+        Assert.Contains("quan 7", tokens);
+        Assert.Contains("tan phong", tokens);
+        Assert.Contains("Quận 7", tokens);
+    }
 }
