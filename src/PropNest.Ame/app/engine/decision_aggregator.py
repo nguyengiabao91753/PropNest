@@ -94,12 +94,12 @@ class DecisionAggregator:
                 llm_result=llm_result,
             )
 
-        # ─── 4. Ollama không khả dụng → Fallback ManualReview ───
+        # ─── 4. Dịch vụ phân tích ngữ nghĩa không khả dụng → Fallback ManualReview ───
         if llm_result is None or not llm_result.is_available:
             fallback_violation = RuleViolation(
                 rule="LLM_UNAVAILABLE_FALLBACK_MANUAL",
                 severity="manual_review",
-                message="Dịch vụ AI phân tích ngữ nghĩa tạm thời không khả dụng — chuyển sang kiểm duyệt thủ công.",
+                message="Hệ thống đánh giá tự động tạm thời bận — tin đăng được chuyển sang kiểm duyệt thủ công.",
             )
             all_violations.append(fallback_violation)
             return ModerationResponse(
@@ -120,12 +120,18 @@ class DecisionAggregator:
                 llm_result=llm_result,
             )
 
-        # ─── 5. LLM phát hiện lừa đảo → ManualReview ───
+        # ─── 5. Phát hiện dấu hiệu lừa đảo → ManualReview ───
         if llm_result.is_fraudulent:
+            fraud_detail = (llm_result.explanation or "").strip()
+            fraud_message = (
+                f"Phát hiện dấu hiệu nội dung bất thường: {fraud_detail}"
+                if fraud_detail
+                else "Phát hiện dấu hiệu nội dung bất thường — cần kiểm duyệt thủ công."
+            )
             fraud_violation = RuleViolation(
                 rule="LLM_FRAUD_DETECTED",
                 severity="manual_review",
-                message=f"AI phát hiện dấu hiệu lừa đảo: {llm_result.explanation}",
+                message=fraud_message,
             )
             all_violations.append(fraud_violation)
             return ModerationResponse(
@@ -146,12 +152,18 @@ class DecisionAggregator:
                 llm_result=llm_result,
             )
 
-        # ─── 6. LLM đánh giá nội dung quá sơ sài → ManualReview ───
+        # ─── 6. Đánh giá nội dung quá sơ sài → ManualReview ───
         if llm_result.quality_score < 0.5:
+            low_q_detail = (llm_result.explanation or "").strip()
+            low_q_message = (
+                f"Nội dung mô tả còn sơ sài: {low_q_detail}"
+                if low_q_detail
+                else "Nội dung mô tả còn sơ sài, thiếu thông tin chi tiết — cần kiểm duyệt thủ công."
+            )
             low_q_violation = RuleViolation(
                 rule="LLM_LOW_QUALITY",
                 severity="manual_review",
-                message=f"Chất lượng mô tả thấp ({llm_result.quality_score:.2f}): {llm_result.explanation}",
+                message=low_q_message,
             )
             all_violations.append(low_q_violation)
             combined_score = (rule_response.score * 0.4) + (llm_result.quality_score * 0.6)

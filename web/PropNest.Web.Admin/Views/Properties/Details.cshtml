@@ -91,7 +91,7 @@
                     </p>
                     @if (!string.IsNullOrWhiteSpace(Model.RejectReason))
                     {
-                        <p class="text-destructive"><strong>Lý do từ chối:</strong> @Model.RejectReason</p>
+                        <p class="text-destructive"><strong>Lý do từ chối:</strong> @FormatHelper.CleanRejectionReason(Model.RejectReason)</p>
                     }
                 </div>
             </div>

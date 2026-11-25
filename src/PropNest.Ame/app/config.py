@@ -29,7 +29,10 @@ class Settings(BaseSettings):
     # 🆕 Ollama settings
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:3b"
-    OLLAMA_TIMEOUT: float = 30.0       # Timeout (giây) cho mỗi request
+    OLLAMA_TIMEOUT: float = 60.0       # Timeout đọc (giây), đủ cho cả cold-load lẫn suy luận
+    OLLAMA_NUM_CTX: int = 2048         # Context window vừa đủ giúp nạp model & KV cache nhanh hơn
+    OLLAMA_KEEP_ALIVE: str = "30m"     # Giữ model nóng trong VRAM/RAM 30 phút tránh cold-start lặp lại
+    OLLAMA_WARMUP_ON_STARTUP: bool = True
     OLLAMA_ENABLED: bool = True        # Tắt/bật LLM analysis
 
     class Config:

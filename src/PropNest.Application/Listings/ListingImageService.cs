@@ -68,6 +68,7 @@ public sealed class ListingImageService(
                 addedImages.Add(image);
             }
 
+            var wasPublished = listing.Status == ListingStatus.Published;
             if (listing.MarkPendingModerationAfterMediaChange())
             {
                 var allImageUrls = existingImages
@@ -82,9 +83,15 @@ public sealed class ListingImageService(
                     listingId,
                     userId,
                     "UpdateImages",
-                    $"Tải lên {files.Count} hình ảnh mới - tự động chuyển AME kiểm duyệt lại."));
+                    $"Tải lên {files.Count} hình ảnh mới và gửi kiểm duyệt lại."));
 
                 EnqueueListingSubmittedOutbox(listing, allImageUrls);
+            }
+
+            if (wasPublished || listing.Status == ListingStatus.Published)
+            {
+                var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+                listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -178,6 +185,12 @@ public sealed class ListingImageService(
             image.SetCaption(request.Caption.Trim());
         }
 
+        if (listing.Status == ListingStatus.Published)
+        {
+            var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+            listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(image);
     }
@@ -221,6 +234,7 @@ public sealed class ListingImageService(
 
         listingRepository.RemoveImage(image);
 
+        var wasPublished = listing.Status == ListingStatus.Published;
         if (listing.MarkPendingModerationAfterMediaChange())
         {
             var remainingUrls = remainingImages
@@ -234,9 +248,15 @@ public sealed class ListingImageService(
                 listingId,
                 userId,
                 "DeleteImage",
-                "Xóa hình ảnh khỏi tin đăng - tự động chuyển AME kiểm duyệt lại."));
+                "Xóa hình ảnh khỏi tin đăng và gửi kiểm duyệt lại."));
 
             EnqueueListingSubmittedOutbox(listing, remainingUrls);
+        }
+
+        if (wasPublished || listing.Status == ListingStatus.Published)
+        {
+            var mediaPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+            listingRepository.AddOutboxMessage(new OutboxMessage("ListingMediaUpdated", mediaPayload));
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

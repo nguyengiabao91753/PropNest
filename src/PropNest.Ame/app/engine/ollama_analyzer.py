@@ -39,11 +39,45 @@ ANALYSIS_PROMPT = """Bạn là chuyên gia kiểm duyệt tin đăng bất độ
 
 
 class OllamaAnalyzer:
+    _MAX_PROMPT_DESCRIPTION_CHARS = 1500
+
     def __init__(self):
-        self.base_url = settings.OLLAMA_BASE_URL
+        self.base_url = settings.OLLAMA_BASE_URL.rstrip("/")
         self.model = settings.OLLAMA_MODEL
         self.timeout = settings.OLLAMA_TIMEOUT
+        self.num_ctx = settings.OLLAMA_NUM_CTX
+        self.keep_alive = settings.OLLAMA_KEEP_ALIVE
         self.enabled = settings.OLLAMA_ENABLED
+
+    async def warmup(self) -> bool:
+        """Nạp sẵn model vào VRAM/RAM khi AME khởi động để tránh cold-start timeout ở tin đầu tiên."""
+        if not self.enabled or not settings.OLLAMA_WARMUP_ON_STARTUP:
+            return False
+
+        try:
+            warmup_timeout = httpx.Timeout(connect=5.0, read=max(90.0, self.timeout), write=10.0, pool=5.0)
+            async with httpx.AsyncClient(timeout=warmup_timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": "ok",
+                        "stream": False,
+                        "keep_alive": self.keep_alive,
+                        "options": {
+                            "num_ctx": self.num_ctx,
+                            "num_predict": 1,
+                            "temperature": 0.0,
+                        },
+                    },
+                )
+                response.raise_for_status()
+            logger.info("Model %s warmed up successfully at %s (num_ctx=%s, keep_alive=%s)",
+                        self.model, self.base_url, self.num_ctx, self.keep_alive)
+            return True
+        except Exception as e:
+            logger.warning("Startup warmup skipped/failed for %s at %s: %s", self.model, self.base_url, e)
+            return False
 
     async def analyze(self, req: ModerationRequest) -> LLMResult:
         """Gọi Ollama để phân tích ngữ nghĩa. Trả fallback nếu lỗi."""
@@ -51,7 +85,7 @@ class OllamaAnalyzer:
             return LLMResult(
                 quality_score=0.5,
                 is_available=False,
-                explanation="LLM analysis is disabled"
+                explanation="Phân tích ngữ nghĩa tự động đang tắt."
             )
 
         unit_price = req.price / req.area if req.area > 0 else 0
@@ -59,9 +93,13 @@ class OllamaAnalyzer:
         if req.legacy_address:
             location_desc = f"{location_desc} (Trước sáp nhập: {req.legacy_address})"
 
+        plain_desc = strip_html(req.description)
+        if len(plain_desc) > self._MAX_PROMPT_DESCRIPTION_CHARS:
+            plain_desc = plain_desc[: self._MAX_PROMPT_DESCRIPTION_CHARS].rstrip() + "..."
+
         prompt = ANALYSIS_PROMPT.format(
             title=strip_html(req.title),
-            description=strip_html(req.description) or "(không có mô tả)",
+            description=plain_desc or "(không có mô tả)",
             property_type=req.property_type,
             listing_type=req.listing_type,
             price=req.price,
@@ -72,7 +110,8 @@ class OllamaAnalyzer:
         )
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            req_timeout = httpx.Timeout(connect=10.0, read=self.timeout, write=15.0, pool=10.0)
+            async with httpx.AsyncClient(timeout=req_timeout) as client:
                 response = await client.post(
                     f"{self.base_url}/api/generate",
                     json={
@@ -80,16 +119,25 @@ class OllamaAnalyzer:
                         "prompt": prompt,
                         "stream": False,
                         "format": "json",
+                        "keep_alive": self.keep_alive,
                         "options": {
+                            "num_ctx": self.num_ctx,
                             "temperature": 0.1,
-                            "num_predict": 256
+                            "num_predict": 220
                         }
                     }
                 )
                 response.raise_for_status()
 
             data = response.json()
-            raw_text = data.get("response", "")
+            raw_text = (data.get("response") or "").strip()
+            if raw_text.startswith("```"):
+                raw_text = raw_text.strip("`").removeprefix("json").strip()
+            if not raw_text.startswith("{"):
+                start = raw_text.find("{")
+                end = raw_text.rfind("}")
+                if start != -1 and end > start:
+                    raw_text = raw_text[start : end + 1]
 
             # Parse JSON từ response LLM
             result = json.loads(raw_text)
@@ -104,19 +152,19 @@ class OllamaAnalyzer:
 
         except httpx.ConnectError:
             logger.warning("Ollama is not running at %s", self.base_url)
-            return self._fallback("Ollama service is not running")
+            return self._fallback("Dịch vụ phân tích ngữ nghĩa tạm thời không kết nối được.")
 
         except httpx.TimeoutException:
             logger.warning("Ollama request timed out after %ss", self.timeout)
-            return self._fallback("Ollama request timed out")
+            return self._fallback("Quá thời gian chờ phân tích ngữ nghĩa tự động.")
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning("Failed to parse Ollama response: %s", e)
-            return self._fallback(f"Failed to parse LLM response: {e}")
+            return self._fallback("Không thể đọc kết quả phân tích ngữ nghĩa tự động.")
 
         except Exception as e:
             logger.error("Unexpected Ollama error: %s", e)
-            return self._fallback(f"Unexpected error: {e}")
+            return self._fallback("Hệ thống phân tích ngữ nghĩa tạm thời gián đoạn.")
 
     @staticmethod
     def _fallback(reason: str) -> LLMResult:

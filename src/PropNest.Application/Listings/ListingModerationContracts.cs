@@ -1,4 +1,5 @@
-﻿using PropNest.Domain.Listings;
+﻿using PropNest.Domain.Common;
+using PropNest.Domain.Listings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -126,9 +127,13 @@ public sealed record AmeModerationResponse(
 {
     public static AmeModerationResponse FallbackManualReview(string reasonCode, string? detail = null)
     {
-        var summary = string.IsNullOrWhiteSpace(detail)
-            ? "Hệ thống kiểm duyệt tự động tạm thời không khả dụng. Tin đăng được chuyển sang duyệt thủ công."
-            : $"Hệ thống kiểm duyệt tự động chuyển sang duyệt thủ công: {detail}";
+        // Không đưa thông điệp lỗi kỹ thuật (HTTP/exception/timeout) vào Summary hiển thị cho người dùng.
+        _ = detail;
+        var summary = ModerationTextFormatter.MapCodeToFriendlyMessage(reasonCode);
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            summary = ModerationTextFormatter.ManualFallbackSummary;
+        }
         return new AmeModerationResponse(
             Decision: ModerationDecision.ManualReview,
             TotalRiskScore: 50m,

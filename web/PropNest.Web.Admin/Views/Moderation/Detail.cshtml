@@ -19,7 +19,7 @@
             @if (hasPreviousReject)
             {
                 <span class="rounded-full bg-rose-500/15 text-rose-800 font-bold px-2 py-0.5 text-[10px] border border-rose-300">
-                    Gửi duyệt lại (Re-submission)
+                    Gửi duyệt lại
                 </span>
             }
         </div>
@@ -97,7 +97,7 @@
                             Cảnh báo kiểm duyệt
                         </span>
                         <h3 class="font-bold text-base text-rose-950">
-                            Tin đăng này đã từng bị TỪ CHỐI DUYỆT trước đó và vừa được Người bán gửi lại (Re-submission)
+                            Tin đăng này đã từng bị từ chối trước đó và vừa được người bán chỉnh sửa gửi duyệt lại
                         </h3>
                     </div>
                     <p class="text-xs text-rose-900/80 mt-1">
@@ -107,7 +107,7 @@
                     <!-- Quote Lý do từ chối lần trước -->
                     <div class="mt-3 rounded-xl border border-rose-200 bg-white/90 p-4 shadow-2xs">
                         <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-                            <i data-lucide="message-square-warning" class="size-3.5 text-destructive"></i> Lý do từ chối trước đó từ Moderator:
+                            <i data-lucide="message-square-warning" class="size-3.5 text-destructive"></i> Lý do từ chối lần trước:
                         </span>
                         <p class="text-xs sm:text-sm font-semibold text-neutral-900 italic leading-relaxed">
                             "@(!string.IsNullOrWhiteSpace(rejectReasonText) ? rejectReasonText : "Nội dung hình ảnh hoặc thông tin mô tả chưa đạt tiêu chuẩn quy định.")"
@@ -160,7 +160,6 @@
                             <tr class="hover:bg-surface/40 transition-colors">
                                 <td class="p-3.5 font-semibold text-neutral-900 align-top">
                                     <span>@delta.FieldDisplayName</span>
-                                    <span class="block font-mono text-[10px] text-muted-foreground">@delta.FieldName</span>
                                 </td>
                                 <td class="p-3.5 bg-rose-50/30 text-rose-900 align-top @(isDescriptionDelta ? "" : "line-through decoration-rose-400")">
                                     <div class="flex items-start gap-1.5">
@@ -196,7 +195,7 @@
                 <div class="flex items-center justify-between border-b border-border pb-3">
                     <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
                         <i data-lucide="images" class="size-4 text-primary"></i>
-                        <span>Thư viện hình ảnh thực tế (Gallery)</span>
+                        <span>Thư viện hình ảnh thực tế</span>
                     </h3>
                     <span id="galleryCounter" class="text-xs font-mono font-semibold bg-surface border border-border px-2.5 py-1 rounded-lg text-neutral-700">
                         1 / @(Model.Images.Count > 0 ? Model.Images.Count : 1) ảnh
@@ -212,10 +211,10 @@
                         <span class="bg-black/75 backdrop-blur-xs text-white text-xs px-3 py-1 rounded-full font-medium">
                             @(Model.ListingType == "sale" ? "Bán" : "Cho thuê") · @Model.PropertyType
                         </span>
-                        @if (Model.AmeRecommendation.ImageQualityPassed)
+                        @if (Model.AmeRecommendation.IsAvailable == true && Model.AmeRecommendation.ImageQualityPassed)
                         {
                             <span class="bg-emerald-600/90 backdrop-blur-xs text-white text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
-                                <i data-lucide="sparkles" class="size-3"></i> AI: Ảnh đạt chuẩn
+                                <i data-lucide="sparkles" class="size-3"></i> Ảnh đạt chuẩn
                             </span>
                         }
                     </div>
@@ -351,7 +350,7 @@
                 <div class="flex items-center justify-between border-b border-border pb-3">
                     <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
                         <i data-lucide="user-check" class="size-4 text-primary"></i>
-                        <span>Thông tin Người đăng (Seller)</span>
+                        <span>Thông tin Người đăng</span>
                     </h3>
                     <span class="rounded-full bg-emerald-500/10 text-emerald-700 text-[10px] font-bold px-2 py-0.5 border border-emerald-300">
                         Đã xác thực
@@ -382,12 +381,12 @@
                 </div>
             </section>
 
-            <!-- AME AI AUTO-MODERATION RECOMMENDATION -->
+            <!-- ĐÁNH GIÁ KIỂM DUYỆT TỰ ĐỘNG -->
             <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
                 <div class="flex items-center justify-between border-b border-border pb-3">
                     <div class="flex items-center gap-2.5">
                         <div class="size-7 rounded-lg bg-primary text-white grid place-items-center text-xs font-bold shadow-xs">
-                            AI
+                            <i data-lucide="shield-check" class="size-4"></i>
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
@@ -397,7 +396,7 @@
                                 </span>
                             </div>
                             <p class="text-[11px] text-muted-foreground">
-                                Quét lúc: @(Model.AmeRecommendation.CheckedAt?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                                Kiểm tra lúc: @(Model.AmeRecommendation.CheckedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa có")
                             </p>
                         </div>
                     </div>
@@ -414,167 +413,188 @@
                     </span>
                 </div>
 
-                <!-- Summary (Tóm tắt lý do từ ReasonsJson) -->
-                @if (!string.IsNullOrWhiteSpace(Model.AmeRecommendation.Summary))
+                @if (Model.AmeRecommendation.IsAvailable != true)
                 {
-                    <div class="rounded-xl bg-surface p-3 border border-border text-xs text-neutral-700 flex items-start gap-2.5">
-                        <i data-lucide="info" class="size-4 text-primary shrink-0 mt-0.5"></i>
-                        <div class="space-y-0.5">
-                            <span class="font-bold text-neutral-900 block">Tóm tắt đánh giá:</span>
-                            <p class="italic text-neutral-600 leading-relaxed">"@Model.AmeRecommendation.Summary"</p>
-                        </div>
-                    </div>
-                }
-
-                <!-- Score Breakdown: 5 thanh Risk Score -->
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between text-xs border-b border-border/60 pb-1.5">
-                        <span class="font-bold text-neutral-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                            <i data-lucide="bar-chart-2" class="size-3.5 text-primary"></i>
-                            Phân tích rủi ro (Risk Breakdown)
-                        </span>
-                        <span class="text-[11px] text-muted-foreground font-mono">Thang điểm 0 - 100</span>
-                    </div>
-
-                    <!-- 1. Total Risk Score -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-700 font-medium">1. Tổng điểm rủi ro (Total Risk)</span>
-                            @{
-                                var totalColor = Model.AmeRecommendation.TotalRiskScore >= 50 ? "text-rose-600"
-                                    : Model.AmeRecommendation.TotalRiskScore >= 25 ? "text-amber-600" : "text-emerald-600";
-                                var totalBar = Model.AmeRecommendation.TotalRiskScore >= 50 ? "bg-rose-500"
-                                    : Model.AmeRecommendation.TotalRiskScore >= 25 ? "bg-amber-500" : "bg-emerald-500";
-                            }
-                            <span class="font-bold font-mono text-xs @totalColor">
-                                @Model.AmeRecommendation.TotalRiskScore.ToString("0.0")
-                            </span>
-                        </div>
-                        <div class="w-full bg-neutral-200 h-2 rounded-full overflow-hidden">
-                            <div class="@totalBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.TotalRiskScore))%"></div>
-                        </div>
-                    </div>
-
-                    <!-- 2. Keyword Risk Score -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-700">2. Rủi ro từ cấm / SĐT (Keyword Risk)</span>
-                            @{
-                                var kwColor = Model.AmeRecommendation.KeywordRiskScore > 0 ? "text-rose-600 font-bold" : "text-emerald-600";
-                                var kwBar = Model.AmeRecommendation.KeywordRiskScore > 0 ? "bg-rose-500" : "bg-emerald-500";
-                            }
-                            <span class="font-mono text-xs @kwColor">
-                                @Model.AmeRecommendation.KeywordRiskScore.ToString("0.0")
-                            </span>
-                        </div>
-                        <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                            <div class="@kwBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.KeywordRiskScore))%"></div>
-                        </div>
-                    </div>
-
-                    <!-- 3. Price Anomaly Score -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-700">3. Bất thường về giá (Price Anomaly)</span>
-                            @{
-                                var priceColor = Model.AmeRecommendation.PriceAnomalyScore > 0 ? "text-amber-600 font-bold" : "text-emerald-600";
-                                var priceBar = Model.AmeRecommendation.PriceAnomalyScore > 0 ? "bg-amber-500" : "bg-emerald-500";
-                            }
-                            <span class="font-mono text-xs @priceColor">
-                                @Model.AmeRecommendation.PriceAnomalyScore.ToString("0.0")
-                            </span>
-                        </div>
-                        <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                            <div class="@priceBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.PriceAnomalyScore))%"></div>
-                        </div>
-                    </div>
-
-                    <!-- 4. Completeness Score -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-700">4. Độ hoàn thiện nội dung (Completeness)</span>
-                            <span class="font-mono text-xs text-neutral-800">
-                                @Model.AmeRecommendation.CompletenessScore.ToString("0.0")
-                            </span>
-                        </div>
-                        <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                            <div class="bg-blue-500 h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.CompletenessScore))%"></div>
-                        </div>
-                    </div>
-
-                    <!-- 5. AI Semantic Score -->
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-700">5. Ngữ nghĩa AI (AI Semantic Risk)</span>
-                            @{
-                                var aiColor = Model.AmeRecommendation.AiSemanticScore > 30 ? "text-amber-600 font-bold" : "text-indigo-600";
-                                var aiBar = Model.AmeRecommendation.AiSemanticScore > 30 ? "bg-amber-500" : "bg-indigo-500";
-                            }
-                            <span class="font-mono text-xs @aiColor">
-                                @Model.AmeRecommendation.AiSemanticScore.ToString("0.0")
-                            </span>
-                        </div>
-                        <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                            <div class="@aiBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.AiSemanticScore))%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Warnings List (Danh sách cảnh báo vi phạm) -->
-                @if (Model.AmeRecommendation.Violations.Count > 0)
-                {
-                    <div class="border-t border-border pt-3 space-y-2">
-                        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                            <i data-lucide="alert-triangle" class="size-3.5 text-amber-500"></i>
-                            Danh sách cảnh báo vi phạm (@Model.AmeRecommendation.Violations.Count)
-                        </h4>
-                        <div class="space-y-1.5">
-                            @foreach (var violation in Model.AmeRecommendation.Violations)
-                            {
-                                var vColor = violation.Severity == "critical" ? "border-rose-300 bg-rose-50 text-rose-900"
-                                    : violation.Severity == "warning" ? "border-amber-300 bg-amber-50 text-amber-900"
-                                    : "border-blue-300 bg-blue-50 text-blue-900";
-                                <div class="rounded-lg border p-2.5 text-xs @vColor">
-                                    <div class="flex items-center gap-1.5 font-bold">
-                                        <span class="font-mono text-[10px] bg-white/70 px-1.5 py-0.5 rounded">@violation.Rule</span>
-                                        <span class="uppercase text-[10px]">@violation.Severity</span>
-                                    </div>
-                                    @if (!string.IsNullOrWhiteSpace(violation.Message))
-                                    {
-                                        <p class="mt-1">@violation.Message</p>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-                else if (Model.AmeRecommendation.ReasonCodes.Count > 0)
-                {
-                    <div class="border-t border-border pt-3 space-y-2">
-                        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                            <i data-lucide="alert-triangle" class="size-3.5 text-amber-500"></i>
-                            Mã lý do cảnh báo (@Model.AmeRecommendation.ReasonCodes.Count)
-                        </h4>
-                        <div class="flex flex-wrap gap-1.5">
-                            @foreach (var code in Model.AmeRecommendation.ReasonCodes)
-                            {
-                                <span class="rounded bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono px-2 py-0.5">
-                                    @code
-                                </span>
-                            }
-                        </div>
+                    <div class="rounded-xl bg-amber-50/80 p-3.5 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                        <i data-lucide="info" class="size-4 text-amber-600 shrink-0 mt-0.5"></i>
+                        <p class="leading-relaxed">
+                            Hệ thống chưa ghi nhận kết quả đánh giá tự động cho tin đăng này. Vui lòng kiểm tra trực tiếp nội dung và hình ảnh trước khi quyết định.
+                        </p>
                     </div>
                 }
                 else
                 {
-                    <div class="border-t border-border pt-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/60 p-2.5 rounded-lg border border-emerald-200">
-                        <i data-lucide="check-circle" class="size-4 text-emerald-600 shrink-0"></i>
-                        <span>Không phát hiện cảnh báo vi phạm nào.</span>
+                    <!-- Tóm tắt lý do bằng văn bản tiếng Việt thuần -->
+                    @if (!string.IsNullOrWhiteSpace(Model.AmeRecommendation.Summary))
+                    {
+                        <div class="rounded-xl bg-surface p-3 border border-border text-xs text-neutral-700 flex items-start gap-2.5">
+                            <i data-lucide="info" class="size-4 text-primary shrink-0 mt-0.5"></i>
+                            <div class="space-y-0.5">
+                                <span class="font-bold text-neutral-900 block">Tóm tắt đánh giá:</span>
+                                <p class="text-neutral-700 leading-relaxed">@Model.AmeRecommendation.Summary</p>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Phân tích điểm đánh giá -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-xs border-b border-border/60 pb-1.5">
+                            <span class="font-bold text-neutral-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                                <i data-lucide="bar-chart-2" class="size-3.5 text-primary"></i>
+                                Phân tích mức độ rủi ro
+                            </span>
+                            <span class="text-[11px] text-muted-foreground font-mono">Thang điểm 0 - 100</span>
+                        </div>
+
+                        <!-- 1. Tổng điểm rủi ro -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-neutral-700 font-medium">1. Tổng điểm rủi ro</span>
+                                @{
+                                    var totalColor = Model.AmeRecommendation.TotalRiskScore >= 50 ? "text-rose-600"
+                                        : Model.AmeRecommendation.TotalRiskScore >= 25 ? "text-amber-600" : "text-emerald-600";
+                                    var totalBar = Model.AmeRecommendation.TotalRiskScore >= 50 ? "bg-rose-500"
+                                        : Model.AmeRecommendation.TotalRiskScore >= 25 ? "bg-amber-500" : "bg-emerald-500";
+                                }
+                                <span class="font-bold font-mono text-xs @totalColor">
+                                    @Model.AmeRecommendation.TotalRiskScore.ToString("0.0")
+                                </span>
+                            </div>
+                            <div class="w-full bg-neutral-200 h-2 rounded-full overflow-hidden">
+                                <div class="@totalBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.TotalRiskScore))%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Từ ngữ vi phạm / Số điện thoại -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-neutral-700">2. Từ ngữ vi phạm / Số điện thoại</span>
+                                @{
+                                    var kwColor = Model.AmeRecommendation.KeywordRiskScore > 0 ? "text-rose-600 font-bold" : "text-emerald-600";
+                                    var kwBar = Model.AmeRecommendation.KeywordRiskScore > 0 ? "bg-rose-500" : "bg-emerald-500";
+                                }
+                                <span class="font-mono text-xs @kwColor">
+                                    @Model.AmeRecommendation.KeywordRiskScore.ToString("0.0")
+                                </span>
+                            </div>
+                            <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
+                                <div class="@kwBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.KeywordRiskScore))%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Chênh lệch khung giá khu vực -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-neutral-700">3. Chênh lệch khung giá khu vực</span>
+                                @{
+                                    var priceColor = Model.AmeRecommendation.PriceAnomalyScore > 0 ? "text-amber-600 font-bold" : "text-emerald-600";
+                                    var priceBar = Model.AmeRecommendation.PriceAnomalyScore > 0 ? "bg-amber-500" : "bg-emerald-500";
+                                }
+                                <span class="font-mono text-xs @priceColor">
+                                    @Model.AmeRecommendation.PriceAnomalyScore.ToString("0.0")
+                                </span>
+                            </div>
+                            <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
+                                <div class="@priceBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.PriceAnomalyScore))%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Mức độ đầy đủ nội dung -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-neutral-700">4. Mức độ đầy đủ nội dung</span>
+                                <span class="font-mono text-xs text-neutral-800">
+                                    @Model.AmeRecommendation.CompletenessScore.ToString("0.0")
+                                </span>
+                            </div>
+                            <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-blue-500 h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.CompletenessScore))%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Đánh giá chất lượng mô tả -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-neutral-700">5. Rủi ro nội dung mô tả</span>
+                                @{
+                                    var aiColor = Model.AmeRecommendation.AiSemanticScore > 30 ? "text-amber-600 font-bold" : "text-indigo-600";
+                                    var aiBar = Model.AmeRecommendation.AiSemanticScore > 30 ? "bg-amber-500" : "bg-indigo-500";
+                                }
+                                <span class="font-mono text-xs @aiColor">
+                                    @Model.AmeRecommendation.AiSemanticScore.ToString("0.0")
+                                </span>
+                            </div>
+                            <div class="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
+                                <div class="@aiBar h-full rounded-full transition-all" style="width: @Math.Min(100, Math.Max(0, (double)Model.AmeRecommendation.AiSemanticScore))%"></div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Danh sách lưu ý / lý do cần kiểm tra (tiếng Việt thuần, không hiện mã code) -->
+                    @if (Model.AmeRecommendation.Violations.Count > 0)
+                    {
+                        <div class="border-t border-border pt-3 space-y-2">
+                            <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="alert-triangle" class="size-3.5 text-amber-500"></i>
+                                Chi tiết các điểm cần lưu ý (@Model.AmeRecommendation.Violations.Count)
+                            </h4>
+                            <div class="space-y-1.5">
+                                @foreach (var violation in Model.AmeRecommendation.Violations)
+                                {
+                                    var sevLower = (violation.Severity ?? string.Empty).ToLowerInvariant();
+                                    var vColor = sevLower is "critical" or "reject" or "block"
+                                        ? "border-rose-300 bg-rose-50 text-rose-900"
+                                        : sevLower is "warning" or "price_warning" or "manual_review" or "manualreview"
+                                            ? "border-amber-300 bg-amber-50 text-amber-900"
+                                            : "border-blue-300 bg-blue-50 text-blue-900";
+                                    var titleText = !string.IsNullOrWhiteSpace(violation.DisplayTitle)
+                                        ? violation.DisplayTitle
+                                        : PropNest.Domain.Common.ModerationTextFormatter.GetRuleDisplayTitle(violation.Rule);
+                                    var severityLabel = !string.IsNullOrWhiteSpace(violation.SeverityLabel)
+                                        ? violation.SeverityLabel
+                                        : PropNest.Domain.Common.ModerationTextFormatter.GetSeverityDisplayLabel(violation.Severity);
+                                    <div class="rounded-lg border p-2.5 text-xs @vColor">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <span class="font-bold">@titleText</span>
+                                            <span class="rounded bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold">@severityLabel</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(violation.Message))
+                                        {
+                                            <p class="mt-1 leading-relaxed">@violation.Message</p>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else if (Model.AmeRecommendation.FriendlyReasons.Count > 0)
+                    {
+                        <div class="border-t border-border pt-3 space-y-2">
+                            <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="alert-triangle" class="size-3.5 text-amber-500"></i>
+                                Lý do cần kiểm duyệt thủ công (@Model.AmeRecommendation.FriendlyReasons.Count)
+                            </h4>
+                            <div class="space-y-1.5">
+                                @foreach (var friendlyReason in Model.AmeRecommendation.FriendlyReasons)
+                                {
+                                    <div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs px-3 py-2 leading-relaxed">
+                                        @friendlyReason
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border-t border-border pt-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/60 p-2.5 rounded-lg border border-emerald-200">
+                            <i data-lucide="check-circle" class="size-4 text-emerald-600 shrink-0"></i>
+                            <span>Không phát hiện cảnh báo vi phạm nào.</span>
+                        </div>
+                    }
                 }
             </section>
 
-            <!-- AUDIT & HISTORY TIMELINE (Lịch sử tin đăng đầy đủ) -->
+            <!-- LỊCH SỬ HOẠT ĐỘNG TIN ĐĂNG -->
             <section class="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
                 <div class="flex items-center justify-between border-b border-border pb-3">
                     <h3 class="font-bold text-sm text-neutral-900 flex items-center gap-2">
@@ -591,10 +611,9 @@
                     {
                         @foreach (var h in Model.Histories)
                         {
-                            var isReject = h.ActionType == "Reject";
-                            var isApprove = h.ActionType == "Approve";
-                            var isSubmit = h.ActionType == "Submit";
-                            var isUpdate = h.ActionType == "UpdateContent";
+                            var isReject = PropNest.Domain.Common.ModerationTextFormatter.IsRejectionAction(h.ActionType);
+                            var isApprove = PropNest.Domain.Common.ModerationTextFormatter.IsApprovalAction(h.ActionType);
+                            var isSubmit = string.Equals(h.ActionType, "Submit", StringComparison.OrdinalIgnoreCase);
 
                             <div class="relative pl-3 text-xs space-y-1">
                                 <!-- Dot -->
@@ -602,25 +621,24 @@
                                 
                                 <div class="flex items-center justify-between gap-2 flex-wrap">
                                     <span class="font-bold @(isReject ? "text-destructive" : isApprove ? "text-emerald-700" : "text-neutral-900")">
-                                        @if (isReject) { <span>Từ chối duyệt (Reject)</span> }
-                                        else if (isApprove) { <span>Phê duyệt xuất bản (Approve)</span> }
-                                        else if (isSubmit) { <span>Gửi duyệt tin đăng (Submit)</span> }
-                                        else if (isUpdate) { <span>Cập nhật nội dung (Update)</span> }
-                                        else { <span>@h.ActionType</span> }
+                                        @h.ActionDisplayName
                                     </span>
                                     <span class="text-[10px] text-muted-foreground font-mono">
                                         @h.ActionDate.ToString("HH:mm dd/MM/yyyy")
                                     </span>
                                 </div>
 
-                                <p class="text-[11px] text-muted-foreground">
-                                    Bởi: <strong class="text-neutral-800">@h.Actor</strong>
-                                </p>
+                                @if (!string.IsNullOrWhiteSpace(h.Actor))
+                                {
+                                    <p class="text-[11px] text-muted-foreground">
+                                        Bởi: <strong class="text-neutral-800">@h.Actor</strong>
+                                    </p>
+                                }
 
                                 @if (!string.IsNullOrWhiteSpace(h.Note))
                                 {
-                                    <p class="text-[11px] p-2 rounded-lg @(isReject ? "bg-rose-50 text-rose-900 border border-rose-200 font-medium" : "bg-surface text-neutral-700 italic")">
-                                        "@h.Note"
+                                    <p class="text-[11px] p-2 rounded-lg @(isReject ? "bg-rose-50 text-rose-900 border border-rose-200 font-medium" : "bg-surface text-neutral-700")">
+                                        @h.Note
                                     </p>
                                 }
                             </div>
@@ -776,7 +794,7 @@
                 }
             } catch (err) {
                 console.error('Approve error:', err);
-                showToast('Có lỗi xảy ra khi gọi API duyệt tin.', 'error');
+                showToast('Không thể kết nối máy chủ để phê duyệt tin.', 'error');
                 if (btn) {
                     btn.disabled = false;
                     btn.classList.remove('opacity-75', 'cursor-not-allowed');
@@ -856,7 +874,7 @@
                 }
             } catch (err) {
                 console.error('Reject error:', err);
-                showToast('Có lỗi xảy ra khi gọi API từ chối.', 'error');
+                showToast('Không thể kết nối máy chủ để từ chối tin.', 'error');
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = `<i data-lucide="x-circle" class="size-4"></i><span>Xác nhận từ chối & Quay lại hàng đợi</span>`;

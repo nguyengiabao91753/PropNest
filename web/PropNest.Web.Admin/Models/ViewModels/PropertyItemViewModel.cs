@@ -8,7 +8,7 @@ public sealed class AmeRecommendationViewModel
     public string Decision { get; set; } = "Pending";         
     public int? ConfidenceScore { get; set; } = 0;             
     public string RecommendationText { get; set; } = "Đang phân tích...";  
-    public string Source { get; set; } = "AI-RuleEngine";     
+    public string Source { get; set; } = "Hệ thống tự động";     
     public bool BadwordsPassed { get; set; } = true;
     public string PriceBenchmarkText { get; set; } = "Chưa có dữ liệu";   
     public bool ImageQualityPassed { get; set; } = true;
@@ -24,12 +24,15 @@ public sealed class AmeRecommendationViewModel
     public decimal AiSemanticScore { get; set; }
     public string? Summary { get; set; }
     public List<string> ReasonCodes { get; set; } = new();
+    public List<string> FriendlyReasons { get; set; } = new();
 }
 
 public sealed class AmeViolationViewModel                      
 {
     public string Rule { get; set; } = string.Empty;
+    public string DisplayTitle { get; set; } = string.Empty;
     public string Severity { get; set; } = "info";
+    public string SeverityLabel { get; set; } = "Thông tin";
     public string Message { get; set; } = string.Empty;
 }
 
@@ -53,8 +56,9 @@ public sealed class ListingDeltaViewModel
 public sealed class PropertyHistoryItemViewModel
 {
     public string ActionType { get; set; } = "Submit";
+    public string ActionDisplayName => ModerationTextFormatter.GetActionDisplayName(ActionType);
     public DateTimeOffset ActionDate { get; set; } = DateTimeOffset.UtcNow;
-    public string Actor { get; set; } = "Người bán";
+    public string Actor { get; set; } = string.Empty;
     public string? Note { get; set; }
     public string? DeltasJson { get; set; }
 }

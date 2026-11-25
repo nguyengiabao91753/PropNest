@@ -206,11 +206,11 @@
 
                 <!-- Owner Information Box -->
                 <div class="rounded-xl border border-border bg-surface/60 p-4 space-y-2">
-                    <p class="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Thông tin Người đăng (Owner)</p>
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Thông tin Người đăng</p>
                     <div class="flex items-center justify-between gap-4 flex-wrap">
                         <div class="flex items-center gap-3">
                             <div class="size-10 rounded-full bg-primary/10 text-primary grid place-items-center font-bold text-sm">
-                                @(string.IsNullOrWhiteSpace(selected.SellerName) ? "O" : selected.SellerName.Substring(0, 1).ToUpper())
+                                @(string.IsNullOrWhiteSpace(selected.SellerName) ? "N" : selected.SellerName.Substring(0, 1).ToUpper())
                             </div>
                             <div>
                                 <p id="detailOwnerName" class="font-semibold text-xs text-neutral-900">@selected.SellerName</p>
@@ -221,6 +221,40 @@
                             <p id="detailOwnerPhone" class="text-[11px] text-neutral-700">📞 @selected.SellerPhone</p>
                             <p id="detailOwnerEmail" class="text-[11px] text-muted-foreground">✉️ @selected.SellerEmail</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Moderation Plain-Text Diagnostic Box -->
+                var ameSummary = selected.AmeRecommendation?.Summary;
+                var ameIssues = selected.AmeRecommendation?.Violations?
+                    .Select(v => !string.IsNullOrWhiteSpace(v.Message) ? v.Message : v.DisplayTitle)
+                    .Where(m => !string.IsNullOrWhiteSpace(m))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
+                if (ameIssues.Count == 0 && selected.AmeRecommendation?.FriendlyReasons is { Count: > 0 })
+                {
+                    ameIssues = selected.AmeRecommendation.FriendlyReasons;
+                }
+                var hasAutoNote = !string.IsNullOrWhiteSpace(ameSummary) || ameIssues.Count > 0;
+                <div id="detailAutoModerationBox" class="rounded-xl border border-amber-200 bg-amber-50/80 p-4 space-y-2 @(hasAutoNote ? "" : "hidden")">
+                    <div class="flex items-center gap-2 text-xs font-bold text-amber-900">
+                        <i data-lucide="alert-triangle" class="size-4 text-amber-600 shrink-0"></i>
+                        <span>Lý do chuyển kiểm duyệt thủ công</span>
+                    </div>
+                    <div id="detailAutoModerationContent" class="text-xs text-amber-950 space-y-1 leading-relaxed">
+                        @if (ameIssues.Count > 0)
+                        {
+                            <ul class="list-disc pl-4 space-y-1">
+                                @foreach (var issue in ameIssues)
+                                {
+                                    <li>@issue</li>
+                                }
+                            </ul>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(ameSummary))
+                        {
+                            <p>@ameSummary</p>
+                        }
                     </div>
                 </div>
 
@@ -274,13 +308,16 @@
                                     <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center justify-between gap-2">
-                                            <span class="font-semibold text-neutral-900">@h.ActionType</span>
+                                            <span class="font-semibold text-neutral-900">@h.ActionDisplayName</span>
                                             <span class="text-[10px] text-muted-foreground">@h.ActionDate.ToString("HH:mm dd/MM/yyyy")</span>
                                         </div>
-                                        <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">@h.Actor</span></p>
+                                        @if (!string.IsNullOrWhiteSpace(h.Actor))
+                                        {
+                                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">@h.Actor</span></p>
+                                        }
                                         @if (!string.IsNullOrWhiteSpace(h.Note))
                                         {
-                                            <p class="text-[11px] text-neutral-600 italic mt-0.5">"@h.Note"</p>
+                                            <p class="text-[11px] text-neutral-600 mt-0.5">@h.Note</p>
                                         }
                                     </div>
                                 </div>
@@ -436,6 +473,7 @@
             images.push(primaryImage);
         }
         const histories = p.Histories || p.histories || [];
+        const ameRecommendation = p.AmeRecommendation || p.ameRecommendation || null;
 
         return {
             ...p,
@@ -468,7 +506,8 @@
             IsResubmission: isResubmission, isResubmission: isResubmission,
             PrimaryImage: primaryImage, primaryImage: primaryImage,
             Images: images, images: images,
-            Histories: histories, histories: histories
+            Histories: histories, histories: histories,
+            AmeRecommendation: ameRecommendation, ameRecommendation: ameRecommendation
         };
     }
 
@@ -680,8 +719,13 @@
         const listing = currentQueue.find(p => String(p.Id) === String(id) || String(p.id) === String(id));
         if (listing) {
             renderDetailPanel(listing);
+            const ame = listing.AmeRecommendation || listing.ameRecommendation;
+            const hasHydratedAme = Boolean(ame && (ame.IsAvailable || ame.isAvailable));
+            const hasHistories = Array.isArray(listing.Histories) && listing.Histories.length > 0;
+            if (!hasHydratedAme || !hasHistories) {
+                fetchDetailFromApi(id);
+            }
         } else {
-            // Fetch single detail from API if not in memory
             fetchDetailFromApi(id);
         }
     }
@@ -690,8 +734,14 @@
         try {
             const res = await fetch("/api/v1/moderation/listings/" + id);
             if (res.ok) {
-                const data = await res.json();
-                renderDetailPanel(normalizeListing(data));
+                const data = normalizeListing(await res.json());
+                const idx = currentQueue.findIndex(p => String(p.Id) === String(id));
+                if (idx >= 0) {
+                    currentQueue[idx] = data;
+                }
+                if (String(selectedId) === String(id)) {
+                    renderDetailPanel(data);
+                }
             }
         } catch (e) {
             console.error("Fetch detail error:", e);
@@ -788,30 +838,96 @@
                 || '<span class="text-muted-foreground italic">Không có mô tả chi tiết.</span>';
         }
 
+        // Auto-Moderation Plain-Text Diagnostic Box
+        const autoBox = document.getElementById("detailAutoModerationBox");
+        const autoContent = document.getElementById("detailAutoModerationContent");
+        if (autoBox && autoContent) {
+            const ame = item.AmeRecommendation || item.ameRecommendation || null;
+            const violations = (ame && (ame.Violations || ame.violations)) || [];
+            const friendlyReasons = (ame && (ame.FriendlyReasons || ame.friendlyReasons)) || [];
+            const summary = (ame && (ame.Summary || ame.summary)) || "";
+
+            const issues = [];
+            violations.forEach(v => {
+                const text = (v.Message || v.message || v.DisplayTitle || v.displayTitle || "").trim();
+                if (text && !issues.includes(text)) issues.push(text);
+            });
+            if (issues.length === 0) {
+                friendlyReasons.forEach(r => {
+                    const text = String(r || "").trim();
+                    if (text && !issues.includes(text)) issues.push(text);
+                });
+            }
+
+            if (issues.length > 0) {
+                autoContent.innerHTML = `<ul class="list-disc pl-4 space-y-1">${issues.map(t => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
+                autoBox.classList.remove("hidden");
+            } else if (summary.trim()) {
+                autoContent.innerHTML = `<p>${escapeHtml(summary.trim())}</p>`;
+                autoBox.classList.remove("hidden");
+            } else {
+                autoContent.innerHTML = "";
+                autoBox.classList.add("hidden");
+            }
+        }
+
         // History Timeline
         const historyContainer = document.getElementById("detailHistoryContainer");
         if (historyContainer) {
-            const histories = item.Histories || [];
+            const rawHistories = item.Histories || [];
+            const histories = rawHistories.filter(h => {
+                const t = String(h.ActionType || h.actionType || "").toLowerCase();
+                return t !== "routemanualreview" && t !== "escalatemanualreview";
+            });
             if (histories.length > 0) {
-                historyContainer.innerHTML = histories.map(h => `
+                historyContainer.innerHTML = histories.map(h => {
+                    const rawType = String(h.ActionType || h.actionType || "");
+                    const label = h.ActionDisplayName || h.actionDisplayName || formatHistoryAction(rawType);
+                    const isModDecision = ["approve", "autoapprove", "reject", "autoreject"].includes(rawType.toLowerCase());
+                    const actor = isModDecision ? "" : String(h.Actor || h.actor || "").trim();
+                    const note = String(h.Note || h.note || "").trim();
+                    return `
                     <div class="flex items-start gap-2.5 text-xs">
                         <div class="size-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-semibold text-neutral-900">${h.ActionType || h.actionType || "Update"}</span>
+                                <span class="font-semibold text-neutral-900">${escapeHtml(label)}</span>
                                 <span class="text-[10px] text-muted-foreground">${formatDate(h.ActionDate || h.actionDate)}</span>
                             </div>
-                            <p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${h.Actor || h.actor || "Hệ thống"}</span></p>
-                            ${(h.Note || h.note) ? `<p class="text-[11px] text-neutral-600 italic mt-0.5">"${escapeHtml(h.Note || h.note)}"</p>` : ""}
+                            ${actor ? `<p class="text-[11px] text-muted-foreground">Thực hiện bởi: <span class="font-medium text-neutral-800">${escapeHtml(actor)}</span></p>` : ""}
+                            ${note ? `<p class="text-[11px] text-neutral-600 mt-0.5">${escapeHtml(note)}</p>` : ""}
                         </div>
                     </div>
-                `).join("");
+                `;
+                }).join("");
             } else {
                 historyContainer.innerHTML = `<p class="text-xs text-muted-foreground italic">Chưa có lịch sử thay đổi.</p>`;
             }
         }
 
         if (window.lucide) lucide.createIcons();
+    }
+
+    function formatHistoryAction(rawType) {
+        switch (String(rawType || "").trim().toLowerCase()) {
+            case "create": return "Tạo mới tin đăng";
+            case "updatecontent":
+            case "update": return "Cập nhật thông tin";
+            case "updateimages": return "Cập nhật hình ảnh";
+            case "deleteimage": return "Xóa hình ảnh";
+            case "submit": return "Gửi duyệt tin đăng";
+            case "approve":
+            case "autoapprove": return "Tin đăng đã được duyệt";
+            case "reject":
+            case "autoreject": return "Từ chối duyệt tin";
+            case "upgradepackage": return "Thanh toán / Nâng cấp gói";
+            case "downgradepackage": return "Hết hạn gói VIP (chuyển về Tiêu chuẩn)";
+            case "hide": return "Tạm ẩn tin đăng";
+            case "unhide": return "Hiển thị lại tin đăng";
+            case "expire": return "Hết hạn hiển thị";
+            case "delete": return "Xóa tin đăng";
+            default: return "Cập nhật tin đăng";
+        }
     }
 
     function formatRichDescriptionHtml(raw) {

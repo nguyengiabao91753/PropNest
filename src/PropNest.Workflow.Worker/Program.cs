@@ -22,14 +22,48 @@ builder.Services.AddHostedService<OutboxDispatcherWorker>();
 
 builder.Services.AddQuartz(q =>
 {
-    var jobKey = new JobKey(nameof(ListingExpirationJob));
-    q.AddJob<ListingExpirationJob>(opts => opts.WithIdentity(jobKey));
+    var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+        OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Bangkok");
 
+    // 1. Job quét hết hạn tin & hạ gói VIP
+    var expirationJobKey = new JobKey(nameof(ListingExpirationJob));
+    q.AddJob<ListingExpirationJob>(opts => opts.WithIdentity(expirationJobKey));
+
+    // Quét định kỳ mỗi 1 phút
     q.AddTrigger(opts => opts
-        .ForJob(jobKey)
-        .WithIdentity($"{nameof(ListingExpirationJob)}-trigger")
-        .WithCronSchedule("0 0/5 * * * ?"));
+        .ForJob(expirationJobKey)
+        .WithIdentity($"{nameof(ListingExpirationJob)}-minutely-trigger")
+        .WithCronSchedule("0 * * * * ?"));
 
+    // Quét chính xác lúc 00:00:05 (giờ Việt Nam) đầu ngày mới
+    q.AddTrigger(opts => opts
+        .ForJob(expirationJobKey)
+        .WithIdentity($"{nameof(ListingExpirationJob)}-midnight-trigger")
+        .WithCronSchedule("5 0 0 * * ?", x => x.InTimeZone(vnTimeZone)));
+
+    // 2. Job đối soát & tự chữa lành dữ liệu giữa SQL Server và Meilisearch
+    var reconcileJobKey = new JobKey(nameof(SearchReconciliationJob));
+    q.AddJob<SearchReconciliationJob>(opts => opts.WithIdentity(reconcileJobKey));
+
+    var meiliOptions = builder.Configuration.GetSection(MeilisearchOptions.SectionName).Get<MeilisearchOptions>() ?? new MeilisearchOptions();
+    var reconcileIntervalMinutes = Math.Max(1, meiliOptions.ReconciliationIntervalMinutes);
+
+    // Chạy định kỳ theo cấu hình Meilisearch:ReconciliationIntervalMinutes (mặc định 15 phút)
+    q.AddTrigger(opts => opts
+        .ForJob(reconcileJobKey)
+        .WithIdentity($"{nameof(SearchReconciliationJob)}-periodic-trigger")
+        .StartAt(DateTimeOffset.UtcNow.AddMinutes(reconcileIntervalMinutes))
+        .WithSimpleSchedule(x => x
+            .WithIntervalInMinutes(reconcileIntervalMinutes)
+            .RepeatForever()));
+
+    // Chạy 1 lần sau khi khởi động 10 giây để đồng bộ ban đầu
+    q.AddTrigger(opts => opts
+        .ForJob(reconcileJobKey)
+        .WithIdentity($"{nameof(SearchReconciliationJob)}-startup-trigger")
+        .StartAt(DateTimeOffset.UtcNow.AddSeconds(10)));
+
+    // 3. Job leo thang kiểm duyệt thủ công cho tin chờ duyệt quá lâu
     var staleJobKey = new JobKey(nameof(StaleModerationEscalationJob));
     q.AddJob<StaleModerationEscalationJob>(opts => opts.WithIdentity(staleJobKey));
     q.AddTrigger(opts => opts

@@ -26,6 +26,14 @@ public sealed class ClientPropertyItemViewModel
     public string OwnerPhone { get; set; } = string.Empty;
 
     public List<string> ImageUrls { get; set; } = new();
+    public string? ThumbnailUrl { get; set; }
+    public string PrimaryImageUrl =>
+        !string.IsNullOrWhiteSpace(ThumbnailUrl)
+            ? ThumbnailUrl
+            : (ImageUrls.Count > 0 && !string.IsNullOrWhiteSpace(ImageUrls[0])
+                ? ImageUrls[0]
+                : "/images/p1.png");
+
     public string FormattedLocation =>
         string.Join(", ", new[] { Ward, District, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
     public string FullAddress =>

@@ -14,5 +14,7 @@
 **/*.docx
 **/*.png
 **/*.svg
+!web/**/wwwroot/**/*.png
+!web/**/wwwroot/**/*.svg
 **/*.md
 !README.md

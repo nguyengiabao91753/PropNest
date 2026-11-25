@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 using PropNest.Web.Admin.Models.ViewModels;
 using PropNest.Web.Admin.Services.IServices;
@@ -100,10 +101,11 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 model.SelectedProperty = model.PendingProperties[0];
             }
 
-            // Hydrate histories for selected property
+            // Hydrate histories and auto-moderation summary for selected property
             if (model.SelectedProperty != null)
             {
                 await HydrateHistoriesAsync(model.SelectedProperty);
+                model.SelectedProperty.AmeRecommendation = await GetAmeResultAsync(model.SelectedProperty.Id);
             }
         }
 
@@ -377,26 +379,59 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                     vm.Histories.Clear();
                     foreach (var h in doc.RootElement.EnumerateArray())
                     {
-                        var actionType = h.TryGetProperty("actionType", out var at) ? at.GetString() ?? "Update" : "Update";
-                        var note = h.TryGetProperty("note", out var n) ? n.GetString() : null;
-                        var deltasJson = h.TryGetProperty("deltasJson", out var dj) ? dj.GetString() : null;
-                        var actionDate = h.TryGetProperty("actionDate", out var ad) && TryReadDateTimeOffset(ad, out var dto)
+                        var rawActionType = GetString(h, "actionType", "ActionType") ?? "Update";
+                        if (ModerationTextFormatter.IsInternalFailureHistoryAction(rawActionType))
+                        {
+                            continue;
+                        }
+
+                        var note = GetString(h, "note", "Note");
+                        var deltasJson = GetString(h, "deltasJson", "DeltasJson");
+                        var actorName = GetString(h, "actorName", "ActorName");
+                        var actionDate = (TryGetProp(h, "actionDate", out var ad) || TryGetProp(h, "ActionDate", out ad))
+                            && TryReadDateTimeOffset(ad, out var dto)
                             ? dto
                             : DateTimeOffset.UtcNow;
 
-                        var cleanNote = !string.IsNullOrWhiteSpace(note) ? Helpers.FormatHelper.CleanRejectionReason(note) : note;
+                        var isApprove = ModerationTextFormatter.IsApprovalAction(rawActionType);
+                        var isReject = ModerationTextFormatter.IsRejectionAction(rawActionType);
+                        var normalizedActionType = isApprove ? "Approve" : isReject ? "Reject" : rawActionType;
 
-                        vm.Histories.Add(new PropertyHistoryItemViewModel
+                        var cleanNote = !string.IsNullOrWhiteSpace(note)
+                            ? ModerationTextFormatter.FormatModerationReasonText(note)
+                            : null;
+
+                        if (isApprove)
                         {
-                            ActionType = actionType,
+                            cleanNote = !string.IsNullOrWhiteSpace(cleanNote)
+                                && cleanNote.Contains("giá ảo", StringComparison.OrdinalIgnoreCase)
+                                ? cleanNote
+                                : null;
+                        }
+
+                        var historyItem = new PropertyHistoryItemViewModel
+                        {
+                            ActionType = normalizedActionType,
                             ActionDate = actionDate,
-                            Actor = string.Equals(actionType, "Reject", StringComparison.OrdinalIgnoreCase) ||
-                                    string.Equals(actionType, "Approve", StringComparison.OrdinalIgnoreCase) ? "Moderator" : "Người bán",
+                            Actor = (isApprove || isReject)
+                                ? string.Empty
+                                : (!string.IsNullOrWhiteSpace(actorName) ? actorName : "Người bán"),
                             Note = cleanNote,
                             DeltasJson = deltasJson
-                        });
+                        };
 
-                        if (string.Equals(actionType, "Reject", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(cleanNote))
+                        if (isApprove
+                            && vm.Histories.Count > 0
+                            && string.Equals(vm.Histories[^1].ActionType, "Approve", StringComparison.OrdinalIgnoreCase))
+                        {
+                            vm.Histories[^1] = historyItem;
+                        }
+                        else
+                        {
+                            vm.Histories.Add(historyItem);
+                        }
+
+                        if (isReject && !string.IsNullOrWhiteSpace(cleanNote))
                         {
                             vm.RejectReason = cleanNote;
                         }
@@ -500,13 +535,12 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             {
                 vm.Status = (ListingStatus)statusInt;
             }
-            else if (Enum.TryParse<ListingStatus>(statusElem.GetString(), true, out var parsedStatus))
+            else if (statusElem.ValueKind == JsonValueKind.String && Enum.TryParse<ListingStatus>(statusElem.GetString(), true, out var parsedStatus))
             {
                 vm.Status = parsedStatus;
             }
         }
 
-        // Package Code
         // Package Code & Validity Dates
         vm.PackageCode = GetString(elem, "packageCode", "PackageCode") ?? "Standard";
         if ((TryGetProp(elem, "startDate", out var startElem) || TryGetProp(elem, "StartDate", out startElem)) &&
@@ -540,8 +574,13 @@ public sealed partial class ApiAdminListingService : IAdminListingService
             vm.CreatedAt = createdDate;
         }
 
-        // RowVersion
+        // RowVersion & latest reject reason
         vm.RowVersion = GetString(elem, "rowVersion", "RowVersion") ?? string.Empty;
+        var latestRejectReason = GetString(elem, "latestRejectReason", "LatestRejectReason");
+        if (!string.IsNullOrWhiteSpace(latestRejectReason))
+        {
+            vm.RejectReason = ModerationTextFormatter.FormatModerationReasonText(latestRejectReason);
+        }
 
         // Images
         if ((TryGetProp(elem, "images", out var imagesElem) || TryGetProp(elem, "Images", out imagesElem)) &&
@@ -576,7 +615,7 @@ public sealed partial class ApiAdminListingService : IAdminListingService
 
             var decision = GetString(root, "decision") ?? "ManualReview";
             result.Decision = decision;
-            result.Source = "AME";
+            result.Source = "Hệ thống tự động";
             result.IsAvailable = true;
 
             result.RecommendationText = decision switch
@@ -584,10 +623,10 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 "Approved" => "Khuyên duyệt",
                 "Rejected" => "Khuyên từ chối",
                 "ManualReview" => "Cần xem xét thủ công",
-                _ => decision
+                _ => "Cần xem xét thủ công"
             };
 
-            result.ModelInfo = GetString(root, "modelInfo") ?? "Unknown";
+            result.ModelInfo = GetString(root, "modelInfo") ?? string.Empty;
             if (TryGetProp(root, "checkedAt", out var checkedElem) &&
                 TryReadDateTimeOffset(checkedElem, out var checkedAt))
             {
@@ -604,52 +643,74 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 result.PriceAnomalyScore = GetDecimal(s, "PriceAnomalyScore");
                 result.CompletenessScore = GetDecimal(s, "CompletenessScore");
                 result.AiSemanticScore = GetDecimal(s, "AiSemanticScore");
-                // ConfidenceScore = 100 - TotalRiskScore (đảo thang risk → confidence)
-                result.ConfidenceScore = Math.Max(0,
-                    (int)(100m - result.TotalRiskScore));
+                result.ConfidenceScore = Math.Max(0, (int)(100m - result.TotalRiskScore));
             }
 
             var reasonsJsonStr = GetString(root, "reasonsJson");
             if (!string.IsNullOrWhiteSpace(reasonsJsonStr))
             {
-                using var reasonsDoc = JsonDocument.Parse(reasonsJsonStr);
-                var r = reasonsDoc.RootElement;
-                result.Summary = GetString(r, "Summary", "summary");
-                var priceWarning = GetString(r, "PriceWarningMessage", "priceWarningMessage");
-                if (!string.IsNullOrWhiteSpace(priceWarning))
+                try
                 {
-                    result.PriceBenchmarkText = priceWarning;
-                }
-
-                if (TryGetProp(r, "ReasonCodes", out var codesElem) &&
-                    codesElem.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var code in codesElem.EnumerateArray())
+                    using var reasonsDoc = JsonDocument.Parse(reasonsJsonStr);
+                    var r = reasonsDoc.RootElement;
+                    if (r.ValueKind == JsonValueKind.Object)
                     {
-                        var codeStr = code.GetString();
-                        if (!string.IsNullOrEmpty(codeStr))
-                            result.ReasonCodes.Add(codeStr);
-                    }
-                }
+                        var rawSummary = GetString(r, "Summary", "summary");
+                        result.Summary = ModerationTextFormatter.FormatModerationReasonText(rawSummary);
 
-                if (TryGetProp(r, "Violations", out var violationsElem) &&
-                    violationsElem.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var v in violationsElem.EnumerateArray())
-                    {
-                        var rule = GetString(v, "Rule", "rule") ?? string.Empty;
-                        var severity = GetString(v, "Severity", "severity") ?? "info";
-                        var message = GetString(v, "Message", "message") ?? MapWarningMessage(rule);
-                        if (!string.IsNullOrWhiteSpace(rule))
+                        var priceWarning = GetString(r, "PriceWarningMessage", "priceWarningMessage");
+                        if (!string.IsNullOrWhiteSpace(priceWarning))
                         {
-                            result.Violations.Add(new AmeViolationViewModel
+                            result.PriceBenchmarkText = ModerationTextFormatter.FormatModerationReasonText(priceWarning);
+                        }
+
+                        if (TryGetProp(r, "ReasonCodes", out var codesElem) &&
+                            codesElem.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var code in codesElem.EnumerateArray())
                             {
-                                Rule = rule,
-                                Severity = severity,
-                                Message = message
-                            });
+                                var codeStr = code.GetString();
+                                if (!string.IsNullOrWhiteSpace(codeStr))
+                                {
+                                    result.ReasonCodes.Add(codeStr);
+                                }
+                            }
+                        }
+
+                        if (TryGetProp(r, "Violations", out var violationsElem) &&
+                            violationsElem.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var v in violationsElem.EnumerateArray())
+                            {
+                                var rule = GetString(v, "Rule", "rule") ?? string.Empty;
+                                var severity = GetString(v, "Severity", "severity") ?? "info";
+                                var rawMessage = GetString(v, "Message", "message");
+                                var cleanMessage = !string.IsNullOrWhiteSpace(rawMessage)
+                                    ? ModerationTextFormatter.FormatModerationReasonText(rawMessage)
+                                    : ModerationTextFormatter.MapCodeToFriendlyMessage(rule);
+
+                                if (!string.IsNullOrWhiteSpace(rule) || !string.IsNullOrWhiteSpace(cleanMessage))
+                                {
+                                    result.Violations.Add(new AmeViolationViewModel
+                                    {
+                                        Rule = rule,
+                                        DisplayTitle = ModerationTextFormatter.GetRuleDisplayTitle(rule),
+                                        Severity = severity,
+                                        SeverityLabel = ModerationTextFormatter.GetSeverityDisplayLabel(severity),
+                                        Message = cleanMessage
+                                    });
+                                }
+                            }
                         }
                     }
+                    else
+                    {
+                        result.Summary = ModerationTextFormatter.FormatModerationReasonText(reasonsJsonStr);
+                    }
+                }
+                catch (JsonException)
+                {
+                    result.Summary = ModerationTextFormatter.FormatModerationReasonText(reasonsJsonStr);
                 }
             }
 
@@ -669,6 +730,16 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 {
                     result.PriceBenchmarkText = "Có dấu hiệu giá ảo (chênh lệch khu vực)";
                 }
+
+                if (!ModerationTextFormatter.IsPassOnlyCode(code))
+                {
+                    var friendly = ModerationTextFormatter.MapCodeToFriendlyMessage(code);
+                    if (!string.IsNullOrWhiteSpace(friendly) &&
+                        !result.FriendlyReasons.Contains(friendly, StringComparer.OrdinalIgnoreCase))
+                    {
+                        result.FriendlyReasons.Add(friendly);
+                    }
+                }
             }
 
             if (result.Violations.Any(v => v.Rule.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)))
@@ -687,21 +758,55 @@ public sealed partial class ApiAdminListingService : IAdminListingService
                 var warningsJsonStr = GetString(root, "warningsJson");
                 if (!string.IsNullOrWhiteSpace(warningsJsonStr))
                 {
-                    using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
-                    if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                    try
                     {
-                        foreach (var w in warningsDoc.RootElement.EnumerateArray())
+                        using var warningsDoc = JsonDocument.Parse(warningsJsonStr);
+                        if (warningsDoc.RootElement.ValueKind == JsonValueKind.Array)
                         {
-                            var warnCode = w.GetString() ?? "";
-                            if (string.IsNullOrWhiteSpace(warnCode)) continue;
-                            result.Violations.Add(new AmeViolationViewModel
+                            foreach (var w in warningsDoc.RootElement.EnumerateArray())
                             {
-                                Rule = warnCode,
-                                Severity = ClassifyWarningSeverity(warnCode),
-                                Message = MapWarningMessage(warnCode)
-                            });
+                                var warnCode = w.GetString() ?? string.Empty;
+                                if (string.IsNullOrWhiteSpace(warnCode) || ModerationTextFormatter.IsPassOnlyCode(warnCode))
+                                {
+                                    continue;
+                                }
+
+                                var severity = ClassifyWarningSeverity(warnCode);
+                                result.Violations.Add(new AmeViolationViewModel
+                                {
+                                    Rule = warnCode,
+                                    DisplayTitle = ModerationTextFormatter.GetRuleDisplayTitle(warnCode),
+                                    Severity = severity,
+                                    SeverityLabel = ModerationTextFormatter.GetSeverityDisplayLabel(severity),
+                                    Message = ModerationTextFormatter.MapCodeToFriendlyMessage(warnCode)
+                                });
+                            }
                         }
                     }
+                    catch (JsonException)
+                    {
+                        // Ignore malformed legacy warningsJson
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(result.Summary))
+            {
+                if (result.Violations.Count > 0)
+                {
+                    result.Summary = string.Join("; ",
+                        result.Violations
+                            .Select(v => v.Message)
+                            .Where(m => !string.IsNullOrWhiteSpace(m))
+                            .Distinct(StringComparer.OrdinalIgnoreCase));
+                }
+                else if (result.FriendlyReasons.Count > 0)
+                {
+                    result.Summary = string.Join("; ", result.FriendlyReasons);
+                }
+                else if (string.Equals(decision, "ManualReview", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Summary = ModerationTextFormatter.ManualFallbackSummary;
                 }
             }
 
@@ -797,38 +902,20 @@ public sealed partial class ApiAdminListingService : IAdminListingService
     private static string ClassifyWarningSeverity(string code) => code switch
     {
         _ when code.Contains("REJECT", StringComparison.OrdinalIgnoreCase) ||
-               code.Contains("BLOCK", StringComparison.OrdinalIgnoreCase) => "critical",
-        _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase) ||
-               code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase) => "warning",
-        _ => "info"
-    };
-
-    private static string MapWarningMessage(string code) => code switch
-    {
-        _ when code.Contains("BADWORD", StringComparison.OrdinalIgnoreCase)
-            => "Phát hiện từ khóa nhạy cảm hoặc vi phạm",
-        _ when code.Contains("PHONE", StringComparison.OrdinalIgnoreCase)
-            => "Phát hiện số điện thoại trong nội dung",
-        _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase)
-            => "Giá bất thường so với khung giá khu vực (có thể là giá ảo)",
-        _ when code.Contains("IMAGE_BLURRY", StringComparison.OrdinalIgnoreCase)
-            => "Ảnh bị mờ hoặc mất nét — cần Admin duyệt tay",
-        _ when code.Contains("IMAGE_LOW_RESOLUTION", StringComparison.OrdinalIgnoreCase)
-            => "Ảnh có độ phân giải quá thấp — cần Admin duyệt tay",
-        _ when code.Contains("IMAGE_MISSING", StringComparison.OrdinalIgnoreCase)
-            => "Tin đăng chưa có ảnh để AI đánh giá — cần Admin duyệt tay",
-        _ when code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase)
-            => "Không đánh giá được chất lượng ảnh — cần Admin duyệt tay",
-        _ when code.Contains("FORMAT", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("BLOCK", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("BADWORD", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("PHONE", StringComparison.OrdinalIgnoreCase) => "critical",
+        _ when code.Contains("PRICE", StringComparison.OrdinalIgnoreCase) => "price_warning",
+        _ when code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("FALLBACK", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("IMAGE", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("CAPS", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("SHORT", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("REPETITION", StringComparison.OrdinalIgnoreCase) ||
-               code.Contains("SPECS", StringComparison.OrdinalIgnoreCase)
-            => "Định dạng nội dung hoặc thông số chưa đạt chuẩn",
-        _ when code.Contains("FALLBACK", StringComparison.OrdinalIgnoreCase) ||
-               code.Contains("MANUAL", StringComparison.OrdinalIgnoreCase)
-            => "Chuyển sang kiểm duyệt thủ công",
-        _ => code
+               code.Contains("SPECS", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("FRAUD", StringComparison.OrdinalIgnoreCase) ||
+               code.Contains("LOW_QUALITY", StringComparison.OrdinalIgnoreCase) => "manual_review",
+        _ => "info"
     };
 
     private static string GetFieldDisplayName(string fieldName)

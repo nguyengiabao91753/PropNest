@@ -374,7 +374,7 @@ public sealed class ModerationController(
     {
         var result = await listingService.GetAmeResultAsync(listingId, cancellationToken);
         return result is null
-            ? NotFound(new { message = $"Chưa có kết quả AME cho listing {listingId}" })
+            ? NotFound(new { message = $"Chưa có kết quả đánh giá tự động cho tin đăng #{listingId}." })
             : Ok(result);
     }
 }

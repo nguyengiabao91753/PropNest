@@ -88,22 +88,31 @@
                             <span>Danh mục</span>
                             <i data-lucide="chevron-down" class="size-4"></i>
                         </button>
-                        <div id="categoryDropdownMenu" class="absolute left-0 mt-2 w-52 hidden rounded-xl border border-border bg-card p-1.5 shadow-lg z-50">
+                        <div id="categoryDropdownMenu" class="absolute left-0 mt-2 w-56 hidden rounded-xl border border-border bg-card p-1.5 shadow-lg z-50">
                             <a asp-controller="Listings" asp-action="Index" asp-route-type="sale" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
-                                BĐS Cần bán (For Sale)
+                                Nhà đất bán
                             </a>
                             <a asp-controller="Listings" asp-action="Index" asp-route-type="rent" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
-                                BĐS Cho thuê (For Rent)
+                                Nhà đất cho thuê
                             </a>
                             <div class="border-t border-border/60 my-1"></div>
-                            <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Villa" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
-                                Biệt thự (Villa)
-                            </a>
-                            <a asp-controller="Listings" asp-action="Index" asp-route-homeType="Apartment" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="Apartment" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
                                 Căn hộ chung cư
                             </a>
-                            <a asp-controller="Listings" asp-action="Index" asp-route-homeType="House" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="House" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
                                 Nhà riêng / Nhà phố
+                            </a>
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="Townhouse" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                                Nhà liền kề khu đô thị
+                            </a>
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="Villa" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                                Biệt thự
+                            </a>
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="Land" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                                Đất nền
+                            </a>
+                            <a asp-controller="Listings" asp-action="Index" asp-route-propertyType="Commercial" class="block px-3 py-2 text-xs rounded-lg text-neutral-800 hover:bg-surface hover:text-primary transition-colors">
+                                Mặt bằng kinh doanh
                             </a>
                         </div>
                     </div>

@@ -2,6 +2,7 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using PropNest.Application.Listings;
+using PropNest.Application.Listings.Search;
 using PropNest.Application.Workflows;
 using PropNest.Domain.Workflows;
 
@@ -40,18 +41,33 @@ namespace PropNest.Infrastructure.Services
 
                 case "ListingPublished":
                     await PublishDeserializedAsync<ListingPublishedEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingApprovedPendingPayment":
                     await PublishDeserializedAsync<ListingApprovedPendingPaymentEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingRejected":
                     await PublishDeserializedAsync<ListingRejectedEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 case "ListingExpired":
                     await PublishDeserializedAsync<ListingExpiredEvent>(message, cancellationToken);
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
+                    break;
+
+                case "ListingPackageDowngraded":
+                case "ListingPackageUpdated":
+                case "ListingSearchSyncRequested":
+                case "ListingHidden":
+                case "ListingRestored":
+                case "ListingDeleted":
+                case "ListingMediaUpdated":
+                case "ListingBumped":
+                    await PublishSearchSyncIfPresentAsync(message, cancellationToken);
                     break;
 
                 default:
@@ -62,6 +78,15 @@ namespace PropNest.Infrastructure.Services
             LogPublished(_logger, message.Type, message.OutboxId, message.CorrelationId);
         }
 
+        private async Task PublishSearchSyncIfPresentAsync(OutboxMessage message, CancellationToken cancellationToken)
+        {
+            var syncRequested = TryCreateSearchSyncEvent(message);
+            if (syncRequested is not null)
+            {
+                await _publishEndpoint.Publish(syncRequested, cancellationToken);
+            }
+        }
+
         private async Task PublishDeserializedAsync<TEvent>(OutboxMessage message, CancellationToken cancellationToken)
             where TEvent : class
         {
@@ -70,6 +95,42 @@ namespace PropNest.Infrastructure.Services
                     $"Không thể deserialize payload cho sự kiện {message.Type} (OutboxId: {message.OutboxId}).");
 
             await _publishEndpoint.Publish(payload, cancellationToken);
+        }
+
+        private static ListingSearchSyncRequested? TryCreateSearchSyncEvent(OutboxMessage message)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(message.PayloadJson);
+                long listingId = 0;
+                if (doc.RootElement.TryGetProperty("listingId", out var idElem) ||
+                    doc.RootElement.TryGetProperty("ListingId", out idElem))
+                {
+                    if (idElem.ValueKind == JsonValueKind.Number && idElem.TryGetInt64(out var id))
+                    {
+                        listingId = id;
+                    }
+                    else if (idElem.ValueKind == JsonValueKind.String && long.TryParse(idElem.GetString(), out var parsedId))
+                    {
+                        listingId = parsedId;
+                    }
+                }
+
+                if (listingId > 0)
+                {
+                    return new ListingSearchSyncRequested(
+                        listingId,
+                        message.Type,
+                        message.OccurredOn,
+                        message.CorrelationId);
+                }
+            }
+            catch (JsonException)
+            {
+                // Bỏ qua payload lỗi cấu trúc JSON
+            }
+
+            return null;
         }
 
         [LoggerMessage(Level = LogLevel.Information, Message = "MassTransitOutboxPublisher: Dispatching outbox event '{EventType}' (OutboxId: {OutboxId}, CorrelationId: {CorrelationId}) to RabbitMQ.")]

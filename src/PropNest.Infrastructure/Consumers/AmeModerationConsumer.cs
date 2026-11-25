@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 using PropNest.Domain.Workflows;
 using PropNest.Infrastructure.Persistence;
@@ -159,17 +160,40 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             ameResponse.ProcessingTimeMs
         }, JsonOptions);
 
-        var priceWarningMessage = !string.IsNullOrWhiteSpace(ameResponse.PriceWarningMessage)
-            ? ameResponse.PriceWarningMessage
-            : ameResponse.Violations?.FirstOrDefault(v =>
-                v.Rule.Contains("PRICE", StringComparison.OrdinalIgnoreCase))?.Message;
+        var cleanPriceWarning = !string.IsNullOrWhiteSpace(ameResponse.PriceWarningMessage)
+            ? ModerationTextFormatter.FormatModerationReasonText(ameResponse.PriceWarningMessage)
+            : ModerationTextFormatter.FormatModerationReasonText(
+                ameResponse.Violations?.FirstOrDefault(v =>
+                    v.Rule.Contains("PRICE", StringComparison.OrdinalIgnoreCase))?.Message);
+
+        var priceWarningMessage = string.IsNullOrWhiteSpace(cleanPriceWarning) ? null : cleanPriceWarning;
+
+        var cleanViolations = ameResponse.Violations?
+            .Select(v => new AmeRuleViolationDto(
+                v.Rule,
+                v.Severity,
+                string.IsNullOrWhiteSpace(v.Message)
+                    ? ModerationTextFormatter.MapCodeToFriendlyMessage(v.Rule)
+                    : ModerationTextFormatter.FormatModerationReasonText(v.Message)))
+            .ToList();
+
+        var cleanSummary = ModerationTextFormatter.FormatModerationReasonText(ameResponse.Summary);
+        if (string.IsNullOrWhiteSpace(cleanSummary))
+        {
+            cleanSummary = ameResponse.Decision switch
+            {
+                ModerationDecision.Approved => ModerationTextFormatter.ApprovedHistoryNote,
+                ModerationDecision.Rejected => "Tin đăng chưa đáp ứng tiêu chuẩn nội dung.",
+                _ => ModerationTextFormatter.ManualFallbackSummary
+            };
+        }
 
         var reasonsJson = JsonSerializer.Serialize(new
         {
-            ameResponse.Summary,
+            Summary = cleanSummary,
             ameResponse.ReasonCodes,
             PriceWarningMessage = priceWarningMessage,
-            ameResponse.Violations
+            Violations = cleanViolations
         }, JsonOptions);
 
         var warningsJson = ameResponse.ReasonCodes.Count > 0
@@ -191,15 +215,15 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         switch (ameResponse.Decision)
         {
             case ModerationDecision.Approved:
-                ApplyAutoApprove(listing, reasonsJson, ameResponse.Summary, priceWarningMessage);
+                ApplyAutoApprove(listing, reasonsJson, priceWarningMessage);
                 break;
 
             case ModerationDecision.Rejected:
-                ApplyAutoReject(listing, reasonsJson, ameResponse.Summary);
+                ApplyAutoReject(listing, reasonsJson, cleanSummary);
                 break;
 
             default:
-                ApplyManualReviewFallback(listing, reasonsJson, ameResponse.Summary);
+                ApplyManualReviewFallback(listing, reasonsJson);
                 break;
         }
 
@@ -371,7 +395,6 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
     private void ApplyAutoApprove(
         Listing listing,
         string reasonsJson,
-        string summary,
         string? priceWarningMessage)
     {
         listing.Approve(DateTimeOffset.UtcNow);
@@ -384,17 +407,14 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reviewerUserId: null));
 
         var historyNote = !string.IsNullOrWhiteSpace(priceWarningMessage)
-            ? $"[Cảnh báo giá ảo] {priceWarningMessage}"
-            : string.IsNullOrWhiteSpace(summary)
-                ? (listing.Status == ListingStatus.Published
-                    ? "AME duyệt tự động nội dung cập nhật - tin tiếp tục hiển thị theo thời hạn gói đã thanh toán."
-                    : "AME duyệt tự động thành công - chờ người bán thanh toán gói để hiển thị tin.")
-                : summary;
+            ? $"{ModerationTextFormatter.ApprovedHistoryNote} Lưu ý giá: {priceWarningMessage}"
+            : ModerationTextFormatter.ApprovedHistoryNote;
 
+        // Thống nhất 1 bản ghi lịch sử "Approve" trung lập, không lộ nguồn duyệt nội bộ
         _listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             actorUserId: null,
-            "AutoApprove",
+            "Approve",
             TruncateHistoryNote(historyNote)));
 
         var outboxType = listing.Status == ListingStatus.Published
@@ -426,15 +446,17 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reasonsJson,
             reviewerUserId: null));
 
-        var note = string.IsNullOrWhiteSpace(summary)
-            ? "AME tự động từ chối do vi phạm quy định nội dung."
-            : summary;
+        var cleanNote = ModerationTextFormatter.FormatModerationReasonText(summary);
+        if (string.IsNullOrWhiteSpace(cleanNote))
+        {
+            cleanNote = "Tin đăng chưa đáp ứng tiêu chuẩn nội dung.";
+        }
 
         _listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             actorUserId: null,
-            "AutoReject",
-            TruncateHistoryNote(note)));
+            "Reject",
+            TruncateHistoryNote(cleanNote)));
 
         var rejectedPayload = JsonSerializer.Serialize(new
         {
@@ -445,7 +467,7 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
         _listingRepository.AddOutboxMessage(new OutboxMessage("ListingRejected", rejectedPayload));
     }
 
-    private void ApplyManualReviewFallback(Listing listing, string reasonsJson, string summary)
+    private void ApplyManualReviewFallback(Listing listing, string reasonsJson)
     {
         listing.MarkForManualReview();
 
@@ -456,15 +478,8 @@ public sealed partial class AmeModerationConsumer : IConsumer<ListingSubmitted>
             reasonsJson,
             reviewerUserId: null));
 
-        var note = string.IsNullOrWhiteSpace(summary)
-            ? "AME chuyển sang hàng chờ kiểm duyệt thủ công của Admin."
-            : summary;
-
-        _listingRepository.AddHistory(ListingHistory.CreateEvent(
-            listing.ListingId,
-            actorUserId: null,
-            "RouteManualReview",
-            TruncateHistoryNote(note)));
+        // Không ghi ListingHistory khi hệ thống tự động chưa thể duyệt và chuyển sang duyệt thủ công
+        // để giữ lịch sử tin đăng gọn gàng, tránh lộ luồng nội bộ cho người dùng.
     }
 
     private static string TruncateHistoryNote(string? note)

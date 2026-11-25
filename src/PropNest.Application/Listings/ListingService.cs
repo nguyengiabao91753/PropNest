@@ -1,12 +1,17 @@
 using System.Text.Json;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Common;
+using PropNest.Application.Listings.Search;
+using PropNest.Domain.Common;
 using PropNest.Domain.Listings;
 using PropNest.Domain.Workflows;
 
 namespace PropNest.Application.Listings;
 
-public sealed class ListingService(IListingRepository listingRepository, IUnitOfWork unitOfWork) : IListingService
+public sealed class ListingService(
+    IListingRepository listingRepository,
+    IUnitOfWork unitOfWork,
+    IMeilisearchListingSearchService? searchService = null) : IListingService
 {
     public async Task<ListingDto> CreateAsync(CreateListingCommand command, CancellationToken cancellationToken = default)
     {
@@ -62,11 +67,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         string? moderationWarning = null;
         if (listing.Status == ListingStatus.Rejected)
         {
-            rejectReason = await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken);
+            rejectReason = NormalizeOptionalReason(await listingRepository.GetLatestRejectReasonAsync(listingId, cancellationToken));
         }
         else if (listing.ModerationDecision == ModerationDecision.Approved)
         {
-            moderationWarning = await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken);
+            moderationWarning = NormalizeOptionalReason(await listingRepository.GetLatestModerationWarningAsync(listingId, cancellationToken));
         }
 
         return ToDto(listing, owner, rejectReason, moderationWarning);
@@ -90,20 +95,30 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             .Select(l => l.ListingId)
             .ToArray();
 
-        var rejectReasons = rejectedIds.Length > 0
-            ? await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken)
-            : new Dictionary<long, string>();
+        IReadOnlyDictionary<long, string>? rejectReasons = null;
+        if (rejectedIds.Length > 0)
+        {
+            rejectReasons = await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken);
+        }
 
-        var moderationWarnings = approvedIds.Length > 0
-            ? await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken)
-            : new Dictionary<long, string>();
+        IReadOnlyDictionary<long, string>? moderationWarnings = null;
+        if (approvedIds.Length > 0)
+        {
+            moderationWarnings = await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken);
+        }
 
         var items = listings
             .Select(l =>
             {
-                rejectReasons.TryGetValue(l.ListingId, out var rejectReason);
-                moderationWarnings.TryGetValue(l.ListingId, out var moderationWarning);
-                return ToDto(l, null, rejectReason, moderationWarning);
+                string? rejectReason = null;
+                rejectReasons?.TryGetValue(l.ListingId, out rejectReason);
+                string? moderationWarning = null;
+                moderationWarnings?.TryGetValue(l.ListingId, out moderationWarning);
+                return ToDto(
+                    l,
+                    null,
+                    NormalizeOptionalReason(rejectReason),
+                    NormalizeOptionalReason(moderationWarning));
             })
             .ToList();
 
@@ -157,6 +172,9 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         }
 
         // Lưu toàn bộ thay đổi tin đăng + lịch sử Delta + Outbox AME trong 1 lần SaveChanges nguyên tử
+        var syncPayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingSearchSyncRequested", syncPayload));
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToDto(listing);
@@ -312,6 +330,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             PageSize = pageSize
         };
 
+        if (searchService is not null)
+        {
+            return await searchService.SearchListingsAsync(normalizedQuery, cancellationToken);
+        }
+
         return await listingRepository.GetPublicListingsAsync(normalizedQuery, cancellationToken);
     }
 
@@ -336,6 +359,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
         var preHideSnapshot = JsonSerializer.Serialize(new { PreviousStatus = listing.Status.ToString() });
         listing.Hide();
         listingRepository.AddHistory(ListingHistory.CreateSnapshot(listingId, ownerUserId, "Hide", preHideSnapshot));
+        var hidePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingHidden", hidePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -357,7 +382,9 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             ownerUserId,
             "Unhide",
             restoreSnapshot,
-            $"Khôi phục hiển thị về trạng thái {listing.Status}"));
+            "Khôi phục hiển thị tin đăng."));
+        var unhidePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingRestored", unhidePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(listing);
     }
@@ -390,8 +417,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             {
                 "Create" => ListingStatus.Draft,
                 "Submit" => ListingStatus.PendingModeration,
-                "Approve" => ListingStatus.Published,
-                "Reject" => ListingStatus.Rejected,
+                "Approve" or "AutoApprove" => ListingStatus.Published,
+                "Reject" or "AutoReject" => ListingStatus.Rejected,
                 "Expire" => ListingStatus.Expired,
                 "Hide" => ListingStatus.Hidden,
                 "Unhide" => TryParseStatusFromSnapshot(entry.SnapshotJson, "RestoredStatus", out var restored)
@@ -468,15 +495,11 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             null,
             moderatorUserId));
 
-        var historyNote = listing.Status == ListingStatus.Published
-            ? "Duyệt nội dung cập nhật - tin tiếp tục hiển thị theo thời hạn gói đã thanh toán."
-            : "Duyệt nội dung thành công - chờ người bán thanh toán gói để hiển thị tin.";
-
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
             moderatorUserId,
             "Approve",
-            historyNote));
+            ModerationTextFormatter.ApprovedHistoryNote));
 
         var outboxType = listing.Status == ListingStatus.Published
             ? "ListingPublished"
@@ -515,9 +538,14 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
             ModerationDecision.Rejected,
             reasonsJson,
             moderatorUserId));
-        var historyNote = reasonsJson.Length <= 480
-            ? reasonsJson
-            : string.Concat(reasonsJson.AsSpan(0, 477), "...");
+        var formattedReason = ModerationTextFormatter.FormatModerationReasonText(reasonsJson);
+        if (string.IsNullOrWhiteSpace(formattedReason))
+        {
+            formattedReason = "Tin đăng chưa đáp ứng tiêu chuẩn nội dung.";
+        }
+        var historyNote = formattedReason.Length <= 480
+            ? formattedReason
+            : string.Concat(formattedReason.AsSpan(0, 477), "...");
 
         listingRepository.AddHistory(ListingHistory.CreateEvent(
             listing.ListingId,
@@ -540,8 +568,73 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
     public async Task<IReadOnlyList<ListingHistoryDto>> GetHistoriesAsync(long listingId, CancellationToken cancellationToken = default)
     {
         var histories = await listingRepository.GetHistoriesByListingIdAsync(listingId, cancellationToken);
+        var normalized = new List<ListingHistoryDto>(histories.Count);
 
-        return histories;
+        foreach (var h in histories)
+        {
+            // Bỏ qua các bản ghi nội bộ khi kiểm duyệt tự động không thể duyệt và chuyển duyệt thủ công
+            if (ModerationTextFormatter.IsInternalFailureHistoryAction(h.ActionType))
+            {
+                continue;
+            }
+
+            if (ModerationTextFormatter.IsApprovalAction(h.ActionType))
+            {
+                var approvalNote = !string.IsNullOrWhiteSpace(h.Note)
+                    && h.Note.Contains("giá ảo", StringComparison.OrdinalIgnoreCase)
+                    ? ModerationTextFormatter.FormatModerationReasonText(h.Note)
+                    : ModerationTextFormatter.ApprovedHistoryNote;
+
+                var entry = h with
+                {
+                    ActionType = "Approve",
+                    ActorUserId = null,
+                    ActorName = null,
+                    ActorRole = null,
+                    Note = approvalNote
+                };
+
+                // Chỉ giữ 1 bản ghi duyệt cho mỗi chu kỳ phê duyệt (không trùng liên tiếp)
+                if (normalized.Count > 0 && string.Equals(normalized[^1].ActionType, "Approve", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalized[^1] = entry;
+                }
+                else
+                {
+                    normalized.Add(entry);
+                }
+
+                continue;
+            }
+
+            if (ModerationTextFormatter.IsRejectionAction(h.ActionType))
+            {
+                normalized.Add(h with
+                {
+                    ActionType = "Reject",
+                    ActorUserId = null,
+                    ActorName = null,
+                    ActorRole = null,
+                    Note = NormalizeOptionalReason(h.Note)
+                });
+                continue;
+            }
+
+            normalized.Add(h with
+            {
+                Note = string.IsNullOrWhiteSpace(h.Note)
+                    ? h.Note
+                    : ModerationTextFormatter.SanitizePlainText(h.Note)
+            });
+        }
+
+        return normalized;
+    }
+
+    private static string? NormalizeOptionalReason(string? raw)
+    {
+        var formatted = ModerationTextFormatter.FormatModerationReasonText(raw);
+        return string.IsNullOrWhiteSpace(formatted) ? null : formatted;
     }
 
     public async Task<PackageDto?> GetPackageByCodeAsync(string packageCode, CancellationToken cancellationToken = default)
@@ -588,6 +681,8 @@ public sealed class ListingService(IListingRepository listingRepository, IUnitOf
 
         listing.Delete();
         listingRepository.AddHistory(ListingHistory.CreateEvent(listingId, ownerUserId, "Delete"));
+        var deletePayload = JsonSerializer.Serialize(new { listing.ListingId, listing.OwnerUserId });
+        listingRepository.AddOutboxMessage(new OutboxMessage("ListingDeleted", deletePayload));
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

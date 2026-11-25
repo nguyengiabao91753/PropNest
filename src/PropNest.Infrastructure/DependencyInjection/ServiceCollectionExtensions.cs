@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PropNest.Application.Abstractions;
 using PropNest.Application.Listings;
+using PropNest.Application.Listings.Search;
 using PropNest.Application.Wallets;
 using PropNest.Application.Workflows;
 using PropNest.Infrastructure.Consumers;
@@ -11,13 +12,19 @@ using PropNest.Infrastructure.Filters;
 using PropNest.Infrastructure.Persistence;
 using PropNest.Infrastructure.Persistence.Repositories;
 using PropNest.Infrastructure.Services;
+using PropNest.Infrastructure.Services.Search;
 using PropNest.Infrastructure.Workflows;
+using Meilisearch;
+using Microsoft.Extensions.Options;
 
 namespace PropNest.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool registerConsumers = true)
     {
         var connectionString = configuration.GetConnectionString("PropNest")
             ?? throw new InvalidOperationException("Connection string 'PropNest' is required.");
@@ -65,25 +72,50 @@ public static class ServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(ameOptions.TimeoutSeconds > 0 ? ameOptions.TimeoutSeconds : 15);
         });
 
+        // Cấu hình Meilisearch & Index Initializer
+        services.Configure<MeilisearchOptions>(configuration.GetSection(MeilisearchOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MeilisearchOptions>>().Value;
+            // Dùng timeout 30s cho các tác vụ quản trị/đồng bộ (IndexInitializer, SearchReconciliationJob);
+            // truy vấn tìm kiếm tự áp đặt RequestTimeoutMs (mặc định 2000ms) qua CancellationTokenSource riêng.
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(options.Url),
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+            return new MeilisearchClient(httpClient, options.MasterKey);
+        });
+        if (registerConsumers)
+        {
+            services.AddHostedService<MeilisearchIndexInitializer>();
+        }
+        services.AddScoped<IMeilisearchListingSearchService, MeilisearchListingSearchService>();
+
         // CẤU HÌNH MASSTRANSIT + RABBITMQ
         services.AddMassTransit(busConfig =>
         {
             busConfig.SetKebabCaseEndpointNameFormatter();
 
-            // đăng ký saga
-            busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
-                .EntityFrameworkRepository(r =>
-                {
-                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-                    r.ExistingDbContext<PropNestDbContext>();
-                    r.UseSqlServer();
-                });
+            if (registerConsumers)
+            {
+                // đăng ký saga (chỉ chạy trên Workflow.Worker để tránh tranh chấp consumer với API)
+                busConfig.AddSagaStateMachine<PurchasePackageSaga, PurchasePackageSagaState>()
+                    .EntityFrameworkRepository(r =>
+                    {
+                        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                        r.ExistingDbContext<PropNestDbContext>();
+                        r.UseSqlServer();
+                    });
 
-            // đăng ký consumers
-            busConfig.AddConsumer<DeductWalletConsumer>();
-            busConfig.AddConsumer<UpgradeListingConsumer>();
-            busConfig.AddConsumer<RefundWalletConsumer>();
-            busConfig.AddConsumer<AmeModerationConsumer>();
+                // đăng ký consumers
+                busConfig.AddConsumer<DeductWalletConsumer>();
+                busConfig.AddConsumer<UpgradeListingConsumer>();
+                busConfig.AddConsumer<RefundWalletConsumer>();
+                busConfig.AddConsumer<AmeModerationConsumer>();
+                busConfig.AddConsumer<SyncListingSearchConsumer>(typeof(SyncListingSearchConsumerDefinition));
+            }
+
             busConfig.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration["RabbitMq:Host"] ?? "localhost";
@@ -96,8 +128,11 @@ public static class ServiceCollectionExtensions
                     h.Username(username);
                     h.Password(password);
                 });
-                cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
-                cfg.ConfigureEndpoints(context);
+                if (registerConsumers)
+                {
+                    cfg.UseConsumeFilter(typeof(InboxDeduplicationFilter<>), context);
+                    cfg.ConfigureEndpoints(context);
+                }
             });
         });
 

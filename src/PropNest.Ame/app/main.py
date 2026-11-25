@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 import time
 from typing import Optional
@@ -16,18 +17,30 @@ from app.engine.rule_engine import RuleEngine
 from app.models.requests import ModerationRequest
 from app.models.responses import Decision, LLMResult, ModerationResponse, RuleViolation
 
-app = FastAPI(
-    title="PropNest AME - AI Moderation Engine",
-    version="2.3.0",
-    docs_url="/docs",
-)
-
 rule_engine = RuleEngine()
 image_filter = ImageFilter()
 ollama_analyzer = OllamaAnalyzer()
 decision_aggregator = DecisionAggregator()
 external_price_client = ExternalPriceClient()
 pipeline_tracker = PipelineTracker(max_history=150)
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    warmup_task = asyncio.create_task(ollama_analyzer.warmup())
+    try:
+        yield
+    finally:
+        if not warmup_task.done():
+            warmup_task.cancel()
+
+
+app = FastAPI(
+    title="PropNest AME - AI Moderation Engine",
+    version="2.3.0",
+    docs_url="/docs",
+    lifespan=_lifespan,
+)
 
 _DASHBOARD_HTML_PATH = Path(__file__).resolve().parent / "ui" / "dashboard.html"
 
