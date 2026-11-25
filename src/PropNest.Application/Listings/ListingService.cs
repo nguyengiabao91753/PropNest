@@ -95,19 +95,25 @@ public sealed class ListingService(
             .Select(l => l.ListingId)
             .ToArray();
 
-        var rejectReasons = rejectedIds.Length > 0
-            ? await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken)
-            : new Dictionary<long, string>();
+        IReadOnlyDictionary<long, string>? rejectReasons = null;
+        if (rejectedIds.Length > 0)
+        {
+            rejectReasons = await listingRepository.GetLatestRejectReasonsAsync(rejectedIds, cancellationToken);
+        }
 
-        var moderationWarnings = approvedIds.Length > 0
-            ? await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken)
-            : new Dictionary<long, string>();
+        IReadOnlyDictionary<long, string>? moderationWarnings = null;
+        if (approvedIds.Length > 0)
+        {
+            moderationWarnings = await listingRepository.GetLatestModerationWarningsAsync(approvedIds, cancellationToken);
+        }
 
         var items = listings
             .Select(l =>
             {
-                rejectReasons.TryGetValue(l.ListingId, out var rejectReason);
-                moderationWarnings.TryGetValue(l.ListingId, out var moderationWarning);
+                string? rejectReason = null;
+                rejectReasons?.TryGetValue(l.ListingId, out rejectReason);
+                string? moderationWarning = null;
+                moderationWarnings?.TryGetValue(l.ListingId, out moderationWarning);
                 return ToDto(
                     l,
                     null,
