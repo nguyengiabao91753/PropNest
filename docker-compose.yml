@@ -99,6 +99,7 @@ services:
       Meilisearch__Enabled: "true"
       Meilisearch__RequestTimeoutMs: "2000"
       Ame__BaseUrl: "http://ame:8001"
+      Ame__TimeoutSeconds: "75"
     ports:
       - "65148:8080"
       - "5000:8080"
@@ -137,6 +138,7 @@ services:
       Meilisearch__Enabled: "true"
       Meilisearch__RequestTimeoutMs: "2000"
       Ame__BaseUrl: "http://ame:8001"
+      Ame__TimeoutSeconds: "75"
     networks:
       - propnest-network
 
@@ -214,6 +216,8 @@ services:
       dockerfile: Dockerfile
     container_name: propnest-ame
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8001:8001"
     environment:
@@ -221,6 +225,11 @@ services:
       - MIN_DESCRIPTION_LENGTH=30
       - PRICE_DEVIATION_PERCENT=50
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_TIMEOUT=60
+      - OLLAMA_NUM_CTX=2048
+      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_WARMUP_ON_STARTUP=true
     networks:
       - propnest-network
 
