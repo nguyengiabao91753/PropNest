@@ -272,6 +272,31 @@ namespace PropNest.Web.Client.Services
             return Task.FromResult(true);
         }
 
+        public Task<IReadOnlyList<ClientLocationItem>> GetProvincesAsync(string mode = "post", CancellationToken cancellationToken = default) =>
+            FetchLocationsAsync($"/api/v1/locations/provinces?mode={Uri.EscapeDataString(mode)}", cancellationToken);
+
+        public Task<IReadOnlyList<ClientLocationItem>> GetDistrictsByProvinceAsync(int provinceCode, CancellationToken cancellationToken = default) =>
+            FetchLocationsAsync($"/api/v1/locations/provinces/{provinceCode}/districts", cancellationToken);
+
+        public Task<IReadOnlyList<ClientLocationItem>> GetWardsByProvinceAsync(int provinceCode, CancellationToken cancellationToken = default) =>
+            FetchLocationsAsync($"/api/v1/locations/provinces/{provinceCode}/wards", cancellationToken);
+
+        public Task<IReadOnlyList<ClientLocationItem>> GetWardsByDistrictAsync(int districtCode, CancellationToken cancellationToken = default) =>
+            FetchLocationsAsync($"/api/v1/locations/districts/{districtCode}/wards", cancellationToken);
+
+        private async Task<IReadOnlyList<ClientLocationItem>> FetchLocationsAsync(string url, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<ClientLocationItem>>(url, _jsonOptions, cancellationToken) ?? [];
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return [];
+            }
+        }
+
         private sealed record ApiPagedResult<T>(
             List<T> Items,
             int TotalCount,

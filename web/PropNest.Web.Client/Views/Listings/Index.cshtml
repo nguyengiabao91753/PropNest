@@ -1,57 +1,617 @@
 @model PropNest.Web.Client.Models.ViewModels.ListingsViewModel
+@using System.Globalization
+@using System.Text.Json
 
 @{
-    ViewData["Title"] = "Danh sách Bất động sản";
-    var hasActiveFilters = !string.IsNullOrWhiteSpace(Model.Query) ||
-                           (Model.Type != "all" && !string.IsNullOrWhiteSpace(Model.Type)) ||
-                           !string.IsNullOrWhiteSpace(Model.PropertyType) ||
-                           !string.IsNullOrWhiteSpace(Model.City) ||
-                           !string.IsNullOrWhiteSpace(Model.District) ||
-                           !string.IsNullOrWhiteSpace(Model.Ward) ||
-                           Model.ProvinceCode.HasValue ||
-                           Model.DistrictCode.HasValue ||
-                           Model.WardCode.HasValue ||
-                           Model.MinPrice.HasValue ||
-                           Model.MaxPrice.HasValue ||
-                           Model.MinArea.HasValue ||
-                           Model.MaxArea.HasValue ||
-                           Model.MinBedrooms.HasValue ||
-                           Model.MinBathrooms.HasValue ||
-                           !string.IsNullOrWhiteSpace(Model.BalconyDirection) ||
-                           (!string.IsNullOrWhiteSpace(Model.SortBy) && Model.SortBy != "default");
+    ViewData["Title"] = "Khám phá Bất động sản";
+
+    var viCulture = CultureInfo.GetCultureInfo("vi-VN");
+    var isSale = string.Equals(Model.Type, "sale", StringComparison.OrdinalIgnoreCase);
+    var isRent = string.Equals(Model.Type, "rent", StringComparison.OrdinalIgnoreCase);
+    var isAllType = !isSale && !isRent;
+
+    string FormatShortPrice(decimal value)
+    {
+        if (value >= 1_000_000_000m)
+        {
+            var b = value / 1_000_000_000m;
+            return $"{b.ToString("0.##", viCulture)} tỷ";
+        }
+        if (value >= 1_000_000m)
+        {
+            var m = value / 1_000_000m;
+            return $"{m.ToString("0.##", viCulture)} triệu";
+        }
+        return $"{value.ToString("N0", viCulture)} đ";
+    }
+
+    string PropertyTypeLabel(string? propType) => (propType ?? string.Empty).Trim() switch
+    {
+        "Apartment" => "Căn hộ chung cư",
+        "House" => "Nhà riêng / Nhà phố",
+        "Townhouse" => "Nhà liền kề khu đô thị",
+        "Villa" => "Biệt thự",
+        "Land" => "Đất nền",
+        "Commercial" => "Mặt bằng kinh doanh",
+        _ => string.Empty
+    };
+
+    var propertyTypeDisplay = PropertyTypeLabel(Model.PropertyType);
+
+    var locationParts = new[] { Model.Ward, Model.District, Model.City }
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+    var hasLocationFilter = locationParts.Count > 0 || Model.ProvinceCode.HasValue || Model.DistrictCode.HasValue || Model.WardCode.HasValue;
+    var locationLabel = locationParts.Count > 0
+        ? string.Join(", ", locationParts)
+        : "Toàn quốc";
+
+    var hasPriceFilter = Model.MinPrice.HasValue || Model.MaxPrice.HasValue;
+    var priceLabel = (Model.MinPrice, Model.MaxPrice) switch
+    {
+        (decimal min, decimal max) => $"{FormatShortPrice(min)} – {FormatShortPrice(max)}",
+        (decimal min, null) => $"Từ {FormatShortPrice(min)}",
+        (null, decimal max) => $"Dưới {FormatShortPrice(max)}",
+        _ => "Mức giá"
+    };
+
+    var hasAreaFilter = Model.MinArea.HasValue || Model.MaxArea.HasValue;
+    var areaLabel = (Model.MinArea, Model.MaxArea) switch
+    {
+        (decimal min, decimal max) => $"{min:0.#} – {max:0.#} m²",
+        (decimal min, null) => $"Trên {min:0.#} m²",
+        (null, decimal max) => $"Dưới {max:0.#} m²",
+        _ => "Diện tích"
+    };
+
+    var hasBedroomFilter = Model.MinBedrooms.HasValue && Model.MinBedrooms.Value > 0;
+    var bedroomLabel = hasBedroomFilter ? $"{Model.MinBedrooms}+ phòng ngủ" : "Phòng ngủ";
+
+    var hasBathroomFilter = Model.MinBathrooms.HasValue && Model.MinBathrooms.Value > 0;
+    var hasBalconyFilter = !string.IsNullOrWhiteSpace(Model.BalconyDirection);
+
+    var activeFilterCount = 0;
+    if (!string.IsNullOrWhiteSpace(Model.Query)) activeFilterCount++;
+    if (!isAllType) activeFilterCount++;
+    if (!string.IsNullOrWhiteSpace(propertyTypeDisplay)) activeFilterCount++;
+    if (hasLocationFilter) activeFilterCount++;
+    if (hasPriceFilter) activeFilterCount++;
+    if (hasAreaFilter) activeFilterCount++;
+    if (hasBedroomFilter) activeFilterCount++;
+    if (hasBathroomFilter) activeFilterCount++;
+    if (hasBalconyFilter) activeFilterCount++;
+
+    var extraModalFilterCount = 0;
+    if (hasBathroomFilter) extraModalFilterCount++;
+    if (hasBalconyFilter) extraModalFilterCount++;
+
+    var hasAnyFilter = activeFilterCount > 0 || (!string.IsNullOrWhiteSpace(Model.SortBy) && Model.SortBy != "default");
+
+    // Dynamic contextual page title
+    var typeHeading = isSale ? "Nhà đất bán" : isRent ? "Nhà đất cho thuê" : "Khám phá Bất động sản";
+    if (!string.IsNullOrWhiteSpace(propertyTypeDisplay))
+    {
+        typeHeading = isSale
+            ? $"Mua bán {propertyTypeDisplay.ToLower(viCulture)}"
+            : isRent
+                ? $"Cho thuê {propertyTypeDisplay.ToLower(viCulture)}"
+                : propertyTypeDisplay;
+    }
+    var contextHeading = locationParts.Count > 0
+        ? $"{typeHeading} tại {locationLabel}"
+        : typeHeading;
+
+    var propertyTypeOptions = new (string Value, string Label, string Icon)[]
+    {
+        ("", "Tất cả nhà đất", "layout-grid"),
+        ("Apartment", "Căn hộ chung cư", "building-2"),
+        ("House", "Nhà riêng / Nhà phố", "home"),
+        ("Townhouse", "Nhà liền kề KĐT", "rows-3"),
+        ("Villa", "Biệt thự", "castle"),
+        ("Land", "Đất nền", "map"),
+        ("Commercial", "Mặt bằng kinh doanh", "store")
+    };
+
+    var balconyOptions = new[] { "Đông", "Tây", "Nam", "Bắc", "Đông Nam", "Đông Bắc", "Tây Nam", "Tây Bắc" };
+
+    var initialFilterStateJson = JsonSerializer.Serialize(new
+    {
+        q = Model.Query ?? "",
+        type = isSale ? "sale" : isRent ? "rent" : "all",
+        propertyType = Model.PropertyType ?? "",
+        city = Model.City ?? "",
+        district = Model.District ?? "",
+        ward = Model.Ward ?? "",
+        provinceCode = Model.ProvinceCode,
+        districtCode = Model.DistrictCode,
+        wardCode = Model.WardCode,
+        minPrice = Model.MinPrice,
+        maxPrice = Model.MaxPrice,
+        minArea = Model.MinArea,
+        maxArea = Model.MaxArea,
+        minBedrooms = Model.MinBedrooms,
+        minBathrooms = Model.MinBathrooms,
+        balconyDirection = Model.BalconyDirection ?? "",
+        sortBy = string.IsNullOrWhiteSpace(Model.SortBy) ? "default" : Model.SortBy,
+        layout = string.IsNullOrWhiteSpace(Model.Layout) ? "grid" : Model.Layout
+    });
 }
 
-<div class="mx-auto max-w-7xl px-4 py-6 md:px-8">
-    <!-- ================= MOBILE HEADER & TOOLBAR (chỉ hiện trên màn hình nhỏ < lg) ================= -->
-    <div class="lg:hidden mb-5">
-        <!-- 1. Thông báo số lượng tin đăng -->
-        <div class="mb-3">
-            <h1 class="font-display text-xl font-bold text-neutral-900">
-                @Model.TotalCount tin đăng phù hợp
+<!-- ================= STICKY HORIZONTAL FILTER BAR (BATDONGSAN STYLE) ================= -->
+<section class="sticky top-16 z-30 border-b border-border bg-card/95 backdrop-blur-md shadow-xs">
+    <div class="mx-auto max-w-7xl px-4 py-3 md:px-8">
+        <form method="get" asp-action="Index" id="listingsFilterForm" class="space-y-2.5">
+            <!-- Authoritative hidden inputs synced with popovers & modal -->
+            <input type="hidden" name="type" id="hfType" value="@(isSale ? "sale" : isRent ? "rent" : "all")" />
+            <input type="hidden" name="propertyType" id="hfPropertyType" value="@Model.PropertyType" />
+            <input type="hidden" name="city" id="hfCity" value="@Model.City" />
+            <input type="hidden" name="district" id="hfDistrict" value="@Model.District" />
+            <input type="hidden" name="ward" id="hfWard" value="@Model.Ward" />
+            <input type="hidden" name="provinceCode" id="hfProvinceCode" value="@Model.ProvinceCode" />
+            <input type="hidden" name="districtCode" id="hfDistrictCode" value="@Model.DistrictCode" />
+            <input type="hidden" name="wardCode" id="hfWardCode" value="@Model.WardCode" />
+            <input type="hidden" name="minPrice" id="hfMinPrice" value="@Model.MinPrice" />
+            <input type="hidden" name="maxPrice" id="hfMaxPrice" value="@Model.MaxPrice" />
+            <input type="hidden" name="minArea" id="hfMinArea" value="@Model.MinArea" />
+            <input type="hidden" name="maxArea" id="hfMaxArea" value="@Model.MaxArea" />
+            <input type="hidden" name="minBedrooms" id="hfMinBedrooms" value="@Model.MinBedrooms" />
+            <input type="hidden" name="minBathrooms" id="hfMinBathrooms" value="@Model.MinBathrooms" />
+            <input type="hidden" name="balconyDirection" id="hfBalconyDirection" value="@Model.BalconyDirection" />
+            <input type="hidden" name="sortBy" id="hfSortBy" value="@Model.SortBy" />
+            <input type="hidden" name="layout" id="hfLayout" value="@Model.Layout" />
+
+            <!-- HÀNG 1: HÌNH THỨC GIAO DỊCH + Ô TÌM KIẾM TỪ KHÓA -->
+            <div class="flex flex-col md:flex-row md:items-center gap-2.5">
+                <!-- Segmented Transaction Tabs -->
+                <div class="inline-flex items-center rounded-xl border border-border bg-surface p-1 shrink-0 self-start md:self-auto" role="tablist" aria-label="Hình thức giao dịch">
+                    <button type="button" onclick="quickSetType('all')"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer @(isAllType ? "bg-neutral-900 text-white shadow-2xs" : "text-neutral-700 hover:text-primary")">
+                        Tất cả
+                    </button>
+                    <button type="button" onclick="quickSetType('sale')"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer @(isSale ? "bg-primary text-white shadow-2xs" : "text-neutral-700 hover:text-primary")">
+                        Nhà đất bán
+                    </button>
+                    <button type="button" onclick="quickSetType('rent')"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer @(isRent ? "bg-primary text-white shadow-2xs" : "text-neutral-700 hover:text-primary")">
+                        Nhà đất cho thuê
+                    </button>
+                </div>
+
+                <!-- Search Input Bar -->
+                <div class="flex flex-1 items-center gap-2 rounded-xl border border-border bg-surface pl-3.5 pr-1.5 py-1 focus-within:border-primary focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/15 transition-all">
+                    <i data-lucide="search" class="size-4 text-muted-foreground shrink-0"></i>
+                    <input type="text" name="q" id="searchKeywordInput" value="@Model.Query"
+                           placeholder="Tìm theo tên dự án, đường phố, phường xã, quận huyện..."
+                           class="w-full h-8 bg-transparent text-xs sm:text-sm text-neutral-900 placeholder:text-muted-foreground/80 outline-none" />
+                    @if (!string.IsNullOrWhiteSpace(Model.Query))
+                    {
+                        <button type="button" onclick="clearKeywordAndSubmit()" title="Xóa từ khóa"
+                                class="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-neutral-200/70 hover:text-neutral-900 transition-colors shrink-0 cursor-pointer">
+                            <i data-lucide="x" class="size-3.5"></i>
+                        </button>
+                    }
+                    <button type="submit"
+                            class="h-8 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer">
+                        <span>Tìm kiếm</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HÀNG 2: THANH LỌC NGANG LOGIC + POPOVER CHỌN NHANH + MODAL BỘ LỌC -->
+            <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                <!-- 1. KHU VỰC (Location Popover) -->
+                <div class="relative filter-popover-group" data-popover-root="location">
+                    <button type="button" onclick="toggleFilterPopover('location', 'modalSectionLocation')"
+                            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs transition-all cursor-pointer max-w-[230px] @(hasLocationFilter ? "border-primary bg-brand-soft/45 text-primary font-semibold shadow-2xs" : "border-border bg-card text-neutral-800 hover:border-primary/60 hover:bg-surface font-medium")">
+                        <i data-lucide="map-pin" class="size-3.5 shrink-0 @(hasLocationFilter ? "text-primary" : "text-muted-foreground")"></i>
+                        <span class="truncate">@locationLabel</span>
+                        <i data-lucide="chevron-down" class="size-3.5 shrink-0 opacity-70 popover-chevron transition-transform duration-150"></i>
+                    </button>
+
+                    <!-- Location Dropdown Popover (Desktop) -->
+                    <div id="popover-location" class="filter-popover hidden absolute left-0 top-full mt-2 w-[430px] max-w-[92vw] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-border/80 bg-surface/60 flex items-center justify-between">
+                            <span class="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="size-3.5 text-primary"></i> Chọn khu vực tìm kiếm
+                            </span>
+                            <div class="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[10px] font-semibold">
+                                <button type="button" id="popLocModePost" onclick="switchLocationMode('post')"
+                                        class="px-2 py-1 rounded-md bg-primary text-white transition-colors cursor-pointer">
+                                    34 tỉnh mới
+                                </button>
+                                <button type="button" id="popLocModePre" onclick="switchLocationMode('pre')"
+                                        class="px-2 py-1 rounded-md text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer">
+                                    63 tỉnh cũ
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-4 space-y-3.5">
+                            <!-- Popular Quick Cities -->
+                            <div>
+                                <p class="text-[11px] font-semibold text-muted-foreground mb-2">Khu vực nổi bật</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <button type="button" onclick="quickPickCity('')"
+                                            class="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer @(!hasLocationFilter ? "border-primary bg-brand-soft/60 text-primary font-semibold" : "border-border bg-surface text-neutral-700 hover:border-primary/60")">
+                                        Toàn quốc
+                                    </button>
+                                    @foreach (var quickCity in new[] { "Thành phố Hồ Chí Minh", "Thành phố Hà Nội", "Thành phố Đà Nẵng", "Thành phố Hải Phòng", "Thành phố Cần Thơ", "Tỉnh Đồng Nai", "Tỉnh Khánh Hòa" })
+                                    {
+                                        var shortCity = quickCity.Replace("Thành phố ", "TP. ").Replace("Tỉnh ", "");
+                                        var isCityActive = string.Equals(Model.City, quickCity, StringComparison.OrdinalIgnoreCase);
+                                        <button type="button" onclick="quickPickCity('@quickCity')"
+                                                class="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer @(isCityActive ? "border-primary bg-brand-soft/60 text-primary font-semibold" : "border-border bg-surface text-neutral-700 hover:border-primary/60")">
+                                            @shortCity
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Cascading Province / District / Ward -->
+                            <div class="space-y-2.5 pt-1 border-t border-border/70">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Tỉnh / Thành phố</label>
+                                    <select id="popProvinceSelect"
+                                            class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                                        <option value="">Toàn quốc</option>
+                                    </select>
+                                </div>
+
+                                <div id="popDistrictWrap" class="hidden">
+                                    <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Quận / Huyện</label>
+                                    <select id="popDistrictSelect"
+                                            class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                                        <option value="">Tất cả quận / huyện</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Phường / Xã</label>
+                                    <select id="popWardSelect"
+                                            class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                                        <option value="">Tất cả phường / xã</option>
+                                    </select>
+                                </div>
+
+                                <!-- Manual text fallback for quick typing -->
+                                <div class="grid grid-cols-2 gap-2 pt-0.5">
+                                    <input type="text" id="popCityManual" value="@Model.City" placeholder="Hoặc gõ Tỉnh/TP..."
+                                           class="h-8 rounded-lg border border-border/80 bg-card px-2.5 text-[11px] outline-none focus:border-primary" />
+                                    <input type="text" id="popDistrictManual" value="@Model.District" placeholder="Quận/Huyện..."
+                                           class="h-8 rounded-lg border border-border/80 bg-card px-2.5 text-[11px] outline-none focus:border-primary" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-2.5 border-t border-border/80 bg-surface/60 flex items-center justify-between gap-2">
+                            <button type="button" onclick="resetLocationPopover()"
+                                    class="text-xs font-semibold text-muted-foreground hover:text-neutral-900 px-2 py-1 cursor-pointer">
+                                Đặt lại
+                            </button>
+                            <button type="button" onclick="applyLocationPopover()"
+                                    class="h-8 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. LOẠI NHÀ ĐẤT (PropertyType Popover) -->
+                <div class="relative filter-popover-group" data-popover-root="propertyType">
+                    <button type="button" onclick="toggleFilterPopover('propertyType', 'modalSectionPropertyType')"
+                            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs transition-all cursor-pointer max-w-[210px] @(!string.IsNullOrWhiteSpace(propertyTypeDisplay) ? "border-primary bg-brand-soft/45 text-primary font-semibold shadow-2xs" : "border-border bg-card text-neutral-800 hover:border-primary/60 hover:bg-surface font-medium")">
+                        <i data-lucide="home" class="size-3.5 shrink-0 @(!string.IsNullOrWhiteSpace(propertyTypeDisplay) ? "text-primary" : "text-muted-foreground")"></i>
+                        <span class="truncate">@(string.IsNullOrWhiteSpace(propertyTypeDisplay) ? "Loại nhà đất" : propertyTypeDisplay)</span>
+                        <i data-lucide="chevron-down" class="size-3.5 shrink-0 opacity-70 popover-chevron transition-transform duration-150"></i>
+                    </button>
+
+                    <div id="popover-propertyType" class="filter-popover hidden absolute left-0 top-full mt-2 w-72 rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-2.5 border-b border-border/80 bg-surface/60">
+                            <span class="text-xs font-bold text-neutral-900">Chọn loại hình bất động sản</span>
+                        </div>
+                        <div class="p-2 space-y-0.5">
+                            @foreach (var opt in propertyTypeOptions)
+                            {
+                                var isSelected = string.Equals(Model.PropertyType ?? "", opt.Value, StringComparison.OrdinalIgnoreCase);
+                                <button type="button" onclick="quickPickPropertyType('@opt.Value')"
+                                        class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer @(isSelected ? "bg-brand-soft/60 text-primary font-bold" : "text-neutral-800 hover:bg-surface font-medium")">
+                                    <span class="flex items-center gap-2.5">
+                                        <i data-lucide="@opt.Icon" class="size-4 @(isSelected ? "text-primary" : "text-muted-foreground")"></i>
+                                        <span>@opt.Label</span>
+                                    </span>
+                                    @if (isSelected)
+                                    {
+                                        <i data-lucide="check" class="size-4 text-primary"></i>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. MỨC GIÁ (Price Popover) -->
+                <div class="relative filter-popover-group" data-popover-root="price">
+                    <button type="button" onclick="toggleFilterPopover('price', 'modalSectionPrice')"
+                            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs transition-all cursor-pointer max-w-[210px] @(hasPriceFilter ? "border-primary bg-brand-soft/45 text-primary font-semibold shadow-2xs" : "border-border bg-card text-neutral-800 hover:border-primary/60 hover:bg-surface font-medium")">
+                        <i data-lucide="banknote" class="size-3.5 shrink-0 @(hasPriceFilter ? "text-primary" : "text-muted-foreground")"></i>
+                        <span class="truncate">@priceLabel</span>
+                        <i data-lucide="chevron-down" class="size-3.5 shrink-0 opacity-70 popover-chevron transition-transform duration-150"></i>
+                    </button>
+
+                    <div id="popover-price" class="filter-popover hidden absolute left-0 top-full mt-2 w-[360px] max-w-[92vw] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-2.5 border-b border-border/80 bg-surface/60 flex items-center justify-between">
+                            <span class="text-xs font-bold text-neutral-900">Khoảng giá (@(isRent ? "Cho thuê / tháng" : "Mua bán"))</span>
+                            <span class="text-[10px] text-muted-foreground">Đơn vị: VNĐ</span>
+                        </div>
+
+                        <div class="p-4 space-y-3.5">
+                            <!-- Custom Min/Max Inputs -->
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Giá từ</label>
+                                    <input type="number" id="popMinPrice" value="@Model.MinPrice" min="0" step="1000000" placeholder="VD: 1000000000"
+                                           oninput="updatePricePreview('popMinPrice', 'popMinPriceHint')"
+                                           class="w-full h-9 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary" />
+                                    <p id="popMinPriceHint" class="text-[10px] text-primary font-semibold mt-1 min-h-[14px]"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Giá đến</label>
+                                    <input type="number" id="popMaxPrice" value="@Model.MaxPrice" min="0" step="1000000" placeholder="VD: 5000000000"
+                                           oninput="updatePricePreview('popMaxPrice', 'popMaxPriceHint')"
+                                           class="w-full h-9 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary" />
+                                    <p id="popMaxPriceHint" class="text-[10px] text-primary font-semibold mt-1 min-h-[14px]"></p>
+                                </div>
+                            </div>
+
+                            <!-- Quick Price Presets -->
+                            <div>
+                                <p class="text-[11px] font-semibold text-muted-foreground mb-2">Chọn nhanh mức giá</p>
+                                <div id="popPricePresets" class="grid grid-cols-2 gap-1.5 max-h-52 overflow-y-auto pr-0.5">
+                                    <!-- Populated dynamically for Sale vs Rent -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-2.5 border-t border-border/80 bg-surface/60 flex items-center justify-between gap-2">
+                            <button type="button" onclick="resetPricePopover()"
+                                    class="text-xs font-semibold text-muted-foreground hover:text-neutral-900 px-2 py-1 cursor-pointer">
+                                Đặt lại
+                            </button>
+                            <button type="button" onclick="applyPricePopover()"
+                                    class="h-8 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. DIỆN TÍCH (Area Popover) -->
+                <div class="relative filter-popover-group" data-popover-root="area">
+                    <button type="button" onclick="toggleFilterPopover('area', 'modalSectionArea')"
+                            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs transition-all cursor-pointer max-w-[180px] @(hasAreaFilter ? "border-primary bg-brand-soft/45 text-primary font-semibold shadow-2xs" : "border-border bg-card text-neutral-800 hover:border-primary/60 hover:bg-surface font-medium")">
+                        <i data-lucide="maximize-2" class="size-3.5 shrink-0 @(hasAreaFilter ? "text-primary" : "text-muted-foreground")"></i>
+                        <span class="truncate">@areaLabel</span>
+                        <i data-lucide="chevron-down" class="size-3.5 shrink-0 opacity-70 popover-chevron transition-transform duration-150"></i>
+                    </button>
+
+                    <div id="popover-area" class="filter-popover hidden absolute left-0 top-full mt-2 w-[330px] max-w-[92vw] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-2.5 border-b border-border/80 bg-surface/60 flex items-center justify-between">
+                            <span class="text-xs font-bold text-neutral-900">Khoảng diện tích</span>
+                            <span class="text-[10px] text-muted-foreground">Đơn vị: m²</span>
+                        </div>
+
+                        <div class="p-4 space-y-3.5">
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Từ (m²)</label>
+                                    <input type="number" id="popMinArea" value="@Model.MinArea" min="0" placeholder="VD: 50"
+                                           class="w-full h-9 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary" />
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Đến (m²)</label>
+                                    <input type="number" id="popMaxArea" value="@Model.MaxArea" min="0" placeholder="VD: 100"
+                                           class="w-full h-9 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="text-[11px] font-semibold text-muted-foreground mb-2">Chọn nhanh diện tích</p>
+                                <div id="popAreaPresets" class="grid grid-cols-2 gap-1.5">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-2.5 border-t border-border/80 bg-surface/60 flex items-center justify-between gap-2">
+                            <button type="button" onclick="resetAreaPopover()"
+                                    class="text-xs font-semibold text-muted-foreground hover:text-neutral-900 px-2 py-1 cursor-pointer">
+                                Đặt lại
+                            </button>
+                            <button type="button" onclick="applyAreaPopover()"
+                                    class="h-8 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SỐ PHÒNG NGỦ (Quick Popover on md+) -->
+                <div class="relative filter-popover-group hidden sm:block" data-popover-root="bedrooms">
+                    <button type="button" onclick="toggleFilterPopover('bedrooms', 'modalSectionSpecs')"
+                            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs transition-all cursor-pointer @(hasBedroomFilter ? "border-primary bg-brand-soft/45 text-primary font-semibold shadow-2xs" : "border-border bg-card text-neutral-800 hover:border-primary/60 hover:bg-surface font-medium")">
+                        <i data-lucide="bed-double" class="size-3.5 shrink-0 @(hasBedroomFilter ? "text-primary" : "text-muted-foreground")"></i>
+                        <span>@bedroomLabel</span>
+                        <i data-lucide="chevron-down" class="size-3.5 shrink-0 opacity-70 popover-chevron transition-transform duration-150"></i>
+                    </button>
+
+                    <div id="popover-bedrooms" class="filter-popover hidden absolute right-0 sm:left-0 top-full mt-2 w-64 rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-2.5 border-b border-border/80 bg-surface/60">
+                            <span class="text-xs font-bold text-neutral-900">Số phòng ngủ tối thiểu</span>
+                        </div>
+                        <div class="p-3 grid grid-cols-3 gap-1.5">
+                            <button type="button" onclick="quickPickBedrooms('')"
+                                    class="py-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer @(!hasBedroomFilter ? "border-primary bg-primary text-white" : "border-border bg-surface text-neutral-800 hover:border-primary")">
+                                Tất cả
+                            </button>
+                            @foreach (var bedCount in new[] { 1, 2, 3, 4, 5 })
+                            {
+                                var isBedActive = Model.MinBedrooms == bedCount;
+                                <button type="button" onclick="quickPickBedrooms('@bedCount')"
+                                        class="py-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer @(isBedActive ? "border-primary bg-primary text-white" : "border-border bg-surface text-neutral-800 hover:border-primary")">
+                                    @(bedCount)+ PN
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. NÚT MỞ MODAL BỘ LỌC ĐẦY ĐỦ (LỌC THÊM) -->
+                <button type="button" id="openAdvancedFilterModalBtn" onclick="openAdvancedFilterModal()"
+                        class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer @(extraModalFilterCount > 0 ? "border-primary bg-primary text-white shadow-xs" : "border-neutral-900/20 bg-surface text-neutral-900 hover:border-primary hover:text-primary")">
+                    <i data-lucide="sliders-horizontal" class="size-3.5"></i>
+                    <span>Lọc thêm</span>
+                    @if (activeFilterCount > 0)
+                    {
+                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold @(extraModalFilterCount > 0 ? "bg-white text-primary" : "bg-primary text-white")">
+                            @activeFilterCount
+                        </span>
+                    }
+                </button>
+
+                <!-- 7. ĐẶT LẠI TẤT CẢ (chỉ hiện khi có bộ lọc) -->
+                @if (hasAnyFilter)
+                {
+                    <a asp-action="Index" asp-route-layout="@Model.Layout"
+                       class="inline-flex items-center gap-1 h-9 px-2.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-rose-50 transition-colors ml-auto sm:ml-0">
+                        <i data-lucide="rotate-ccw" class="size-3.5"></i>
+                        <span>Đặt lại</span>
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ================= MAIN CONTENT CONTAINER (FULL WIDTH, NO SIDEBAR) ================= -->
+<div class="mx-auto max-w-7xl px-4 py-6 md:px-8 space-y-5">
+
+    <!-- ACTIVE FILTER CHIPS BAR (Gỡ nhanh từng tiêu chí) -->
+    @if (activeFilterCount > 0)
+    {
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="text-[11px] font-semibold text-muted-foreground mr-1">Đang lọc:</span>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Query))
+            {
+                <button type="button" onclick="removeFilterChip('q')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>Từ khóa: "@Model.Query"</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (!isAllType)
+            {
+                <button type="button" onclick="removeFilterChip('type')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>@(isSale ? "Nhà đất bán" : "Nhà đất cho thuê")</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(propertyTypeDisplay))
+            {
+                <button type="button" onclick="removeFilterChip('propertyType')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>@propertyTypeDisplay</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasLocationFilter)
+            {
+                <button type="button" onclick="removeFilterChip('location')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>Khu vực: @locationLabel</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasPriceFilter)
+            {
+                <button type="button" onclick="removeFilterChip('price')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>Giá: @priceLabel</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasAreaFilter)
+            {
+                <button type="button" onclick="removeFilterChip('area')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>Diện tích: @areaLabel</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasBedroomFilter)
+            {
+                <button type="button" onclick="removeFilterChip('minBedrooms')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>@Model.MinBedrooms+ phòng ngủ</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasBathroomFilter)
+            {
+                <button type="button" onclick="removeFilterChip('minBathrooms')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>@Model.MinBathrooms+ phòng tắm</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+
+            @if (hasBalconyFilter)
+            {
+                <button type="button" onclick="removeFilterChip('balconyDirection')"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-brand-soft/45 px-3 py-1 text-xs font-semibold text-neutral-900 hover:border-destructive hover:bg-rose-50 hover:text-destructive transition-colors cursor-pointer">
+                    <span>Ban công: @Model.BalconyDirection</span>
+                    <i data-lucide="x" class="size-3"></i>
+                </button>
+            }
+        </div>
+    }
+
+    <!-- RESULTS HEADER: CONTEXTUAL HEADING + COUNT + SORT + GRID/LIST TOGGLE -->
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-border">
+        <div>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold text-neutral-900 leading-tight">
+                @contextHeading
             </h1>
-            <p class="text-xs text-muted-foreground mt-0.5">
-                Dữ liệu tin đăng chính thức đã được kiểm duyệt từ hệ thống PropNest.
+            <p class="text-xs sm:text-sm text-muted-foreground mt-1">
+                Hiện có <strong class="text-neutral-900">@Model.TotalCount.ToString("N0", viCulture)</strong> bất động sản đã kiểm duyệt phù hợp
             </p>
         </div>
 
-        <!-- 2. Hàng thanh công cụ: [Nút Bộ lọc] cùng hàng với [Cụm nút Grid / List] -->
-        <div class="flex items-center justify-between gap-3">
-            <!-- Nút Bộ lọc nhỏ gọn -->
-            <button type="button" id="toggleMobileFilterBtn"
-                    class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-neutral-800 shadow-xs hover:border-primary/50 transition-colors">
-                <i data-lucide="filter" class="size-3.5 text-primary"></i>
-                <span>Bộ lọc</span>
-                @if (hasActiveFilters)
-                {
-                    <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
-                        Đang lọc
-                    </span>
-                }
-                <i id="filterToggleIcon" data-lucide="chevron-down" class="size-3.5 text-muted-foreground transition-transform duration-200 @(hasActiveFilters ? "rotate-180" : "")"></i>
-            </button>
+        <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+            <!-- Sắp xếp -->
+            <div class="flex items-center gap-2">
+                <label for="toolbarSortBy" class="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">Sắp xếp:</label>
+                <select id="toolbarSortBy" onchange="quickSetSort(this.value)"
+                        class="h-9 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-neutral-800 outline-none focus:border-primary transition-colors cursor-pointer">
+                    <option value="default" selected="@(string.IsNullOrEmpty(Model.SortBy) || Model.SortBy == "default")">Mặc định (Ưu tiên VIP)</option>
+                    <option value="newest" selected="@(Model.SortBy == "newest")">Mới nhất</option>
+                    <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Giá thấp đến cao</option>
+                    <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Giá cao đến thấp</option>
+                    <option value="area_desc" selected="@(Model.SortBy == "area_desc")">Diện tích lớn nhất</option>
+                </select>
+            </div>
 
-            <!-- Cụm Grid / List trên Mobile -->
-            <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-surface shrink-0">
+            <!-- Grid / List Toggle -->
+            <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-card shrink-0">
                 <a asp-action="Index"
                    asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
                    asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
@@ -61,7 +621,7 @@
                    asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                    asp-route-sortBy="@Model.SortBy"
                    asp-route-page="@Model.PageNumber" asp-route-layout="grid"
-                   class="rounded-lg p-1.5 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
+                   class="rounded-lg p-1.5 transition-colors @(Model.Layout != "list" ? "bg-surface shadow-2xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
                    title="Chế độ lưới">
                     <i data-lucide="layout-grid" class="size-4"></i>
                 </a>
@@ -74,7 +634,7 @@
                    asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
                    asp-route-sortBy="@Model.SortBy"
                    asp-route-page="@Model.PageNumber" asp-route-layout="list"
-                   class="rounded-lg p-1.5 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
+                   class="rounded-lg p-1.5 transition-colors @(Model.Layout == "list" ? "bg-surface shadow-2xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
                    title="Chế độ danh sách">
                     <i data-lucide="list" class="size-4"></i>
                 </a>
@@ -82,316 +642,1266 @@
         </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-8 items-start">
+    <!-- LISTINGS RESULTS -->
+    @if (Model.TotalCount == 0)
+    {
+        <div class="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-xs text-muted-foreground">
+            <div class="size-14 rounded-2xl bg-surface border border-border grid place-items-center mx-auto mb-3 text-muted-foreground/70">
+                <i data-lucide="search-x" class="size-7"></i>
+            </div>
+            <p class="text-base font-bold text-neutral-900">Không tìm thấy bất động sản phù hợp</p>
+            <p class="mt-1 max-w-md mx-auto">Hãy thử nới rộng khoảng giá, mở rộng khu vực hoặc bỏ bớt một vài tiêu chí lọc.</p>
+            <div class="mt-5 flex items-center justify-center gap-2.5 flex-wrap">
+                <button type="button" onclick="openAdvancedFilterModal()"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2 font-semibold text-neutral-800 hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                    <i data-lucide="sliders-horizontal" class="size-3.5"></i> Điều chỉnh bộ lọc
+                </button>
+                <a asp-action="Index" asp-route-layout="@Model.Layout"
+                   class="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2 font-semibold text-white hover:bg-primary-hover transition-colors shadow-2xs">
+                    <i data-lucide="rotate-ccw" class="size-3.5"></i> Xóa tất cả bộ lọc
+                </a>
+            </div>
+        </div>
+    }
+    else if (Model.Layout == "list")
+    {
+        <!-- HORIZONTAL LIST VIEW CARDS -->
+        <div class="space-y-4">
+            @foreach (var p in Model.Properties)
+            {
+                <article class="group rounded-2xl border border-border bg-card p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg hover:border-primary/50 flex flex-col sm:flex-row gap-4">
+                    <div class="relative sm:w-64 md:w-72 aspect-[16/10] sm:aspect-[4/3] shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                        <img src="@p.PrimaryImageUrl" alt="@p.Title"
+                             class="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        @if (p.PackageCode == "VIP")
+                        {
+                            <span class="absolute left-3 top-3 rounded-full bg-amber-500 text-white font-bold px-2.5 py-0.5 text-[10px] shadow-xs">
+                                VIP Nổi Bật
+                            </span>
+                        }
+                        else if (p.PackageCode == "Boost")
+                        {
+                            <span class="absolute left-3 top-3 rounded-full bg-purple-600 text-white font-bold px-2.5 py-0.5 text-[10px] shadow-xs">
+                                Ưu Tiên Đẩy Tin
+                            </span>
+                        }
+                        <span class="absolute left-3 bottom-3 rounded-full bg-black/75 text-white px-2.5 py-0.5 text-[10px] font-medium backdrop-blur-xs">
+                            @(string.Equals(p.ListingType, "rent", StringComparison.OrdinalIgnoreCase) ? "Cho thuê" : "Cần bán")
+                        </span>
+                    </div>
 
-        <!-- ================= CỘT TRÁI: FILTER SIDEBAR ================= -->
-        <aside id="filterSidebar"
-               class="w-full lg:w-72 shrink-0 rounded-2xl border border-border bg-card p-5 shadow-xs relative lg:sticky lg:top-20 @(hasActiveFilters ? "block" : "hidden lg:block")">
-            <div class="flex items-center justify-between border-b border-border/80 pb-3 mb-4">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="filter" class="size-4 text-primary"></i>
-                    <h2 class="text-sm font-bold text-neutral-900">Bộ lọc tìm kiếm</h2>
+                    <div class="flex-1 min-w-0 flex flex-col justify-between gap-3 py-0.5">
+                        <div class="space-y-2">
+                            <div class="flex items-start justify-between gap-3">
+                                <a asp-controller="Properties" asp-action="Details" asp-route-id="@p.Id"
+                                   class="font-display text-base sm:text-lg font-bold text-neutral-900 group-hover:text-primary transition-colors line-clamp-2">
+                                    @p.Title
+                                </a>
+                                <span class="shrink-0 font-display text-lg font-extrabold text-primary whitespace-nowrap">
+                                    @FormatHelper.FormatCompactPrice(p.Price, p.ListingType)
+                                </span>
+                            </div>
+
+                            <p class="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="size-3.5 text-primary shrink-0"></i>
+                                <span class="truncate">@p.FormattedLocation</span>
+                            </p>
+
+                            <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                                <span class="inline-flex items-center gap-1 rounded-lg bg-surface border border-border/80 px-2.5 py-1 font-semibold text-neutral-800">
+                                    <i data-lucide="maximize-2" class="size-3 text-primary"></i>
+                                    @FormatHelper.FormatArea(p.Area)
+                                </span>
+                                @if (p.Bedrooms.HasValue && p.Bedrooms.Value > 0)
+                                {
+                                    <span class="inline-flex items-center gap-1 rounded-lg bg-surface border border-border/80 px-2.5 py-1 text-neutral-700 font-medium">
+                                        <i data-lucide="bed-double" class="size-3 text-muted-foreground"></i>
+                                        @p.Bedrooms PN
+                                    </span>
+                                }
+                                @if (p.Bathrooms.HasValue && p.Bathrooms.Value > 0)
+                                {
+                                    <span class="inline-flex items-center gap-1 rounded-lg bg-surface border border-border/80 px-2.5 py-1 text-neutral-700 font-medium">
+                                        <i data-lucide="bath" class="size-3 text-muted-foreground"></i>
+                                        @p.Bathrooms WC
+                                    </span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(p.BalconyDirection))
+                                {
+                                    <span class="inline-flex items-center gap-1 rounded-lg bg-surface border border-border/80 px-2.5 py-1 text-neutral-700 font-medium">
+                                        <i data-lucide="compass" class="size-3 text-muted-foreground"></i>
+                                        @p.BalconyDirection
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-border/60 flex items-center justify-between gap-3 text-xs">
+                            <span class="text-muted-foreground">
+                                Đăng ngày @p.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                            </span>
+                            <a asp-controller="Properties" asp-action="Details" asp-route-id="@p.Id"
+                               class="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-surface px-4 py-1.5 font-semibold text-primary transition-colors hover:bg-primary hover:text-white">
+                                <span>Xem chi tiết</span>
+                                <i data-lucide="arrow-up-right" class="size-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- FULL-WIDTH GRID VIEW (UP TO 4 COLUMNS) -->
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @foreach (var p in Model.Properties)
+            {
+                <partial name="_PropertyCard" model="p" />
+            }
+        </div>
+    }
+
+    <!-- ================= PHÂN TRANG (PAGINATION) ================= -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Phân trang" class="pt-6 flex items-center justify-center gap-1.5 text-xs font-semibold flex-wrap">
+            @if (Model.PageNumber > 1)
+            {
+                <a asp-action="Index"
+                   asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                   asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                   asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
+                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
+                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@(Model.PageNumber - 1)" asp-route-layout="@Model.Layout"
+                   class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                    <i data-lucide="chevron-left" class="size-3.5"></i>
+                    <span>Trước</span>
+                </a>
+            }
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                var pageIndex = i;
+                <a asp-action="Index"
+                   asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                   asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                   asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
+                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
+                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@pageIndex" asp-route-layout="@Model.Layout"
+                   class="size-9 rounded-xl border flex items-center justify-center transition-colors @(pageIndex == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
+                    @pageIndex
+                </a>
+            }
+
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a asp-action="Index"
+                   asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
+                   asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
+                   asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
+                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
+                   asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@(Model.PageNumber + 1)" asp-route-layout="@Model.Layout"
+                   class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
+                    <span>Sau</span>
+                    <i data-lucide="chevron-right" class="size-3.5"></i>
+                </a>
+            }
+        </nav>
+    }
+</div>
+
+<!-- ================= ADVANCED FILTER MODAL (BỘ LỌC ĐẦY ĐỦ CHUẨN BATDONGSAN) ================= -->
+<div id="advancedFilterModal"
+     class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs items-center justify-center p-3 sm:p-5"
+     role="dialog" aria-modal="true" aria-labelledby="advancedFilterModalTitle">
+    <div id="advancedFilterModalPanel"
+         class="w-full max-w-2xl max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+        <!-- Sticky Modal Header -->
+        <div class="px-5 py-4 border-b border-border bg-surface/70 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5">
+                <span class="grid size-8 place-items-center rounded-xl bg-primary/15 text-primary">
+                    <i data-lucide="sliders-horizontal" class="size-4"></i>
+                </span>
+                <div>
+                    <h2 id="advancedFilterModalTitle" class="font-display text-base font-bold text-neutral-900">
+                        Bộ lọc tìm kiếm bất động sản
+                    </h2>
+                    <p class="text-[11px] text-muted-foreground">
+                        Sắp xếp theo thứ tự nhu cầu giúp bạn chọn nhanh và chính xác hơn
+                    </p>
                 </div>
-                @if (hasActiveFilters)
-                {
-                    <a asp-action="Index" class="text-xs font-semibold text-primary hover:underline">
-                        Xóa tất cả
-                    </a>
-                }
+            </div>
+            <button type="button" onclick="closeAdvancedFilterModal()"
+                    class="grid size-8 place-items-center rounded-xl text-muted-foreground hover:bg-neutral-200/70 hover:text-neutral-900 transition-colors cursor-pointer"
+                    title="Đóng">
+                <i data-lucide="x" class="size-4"></i>
+            </button>
+        </div>
+
+        <!-- Scrollable Modal Body -->
+        <div id="advancedFilterModalBody" class="flex-1 overflow-y-auto p-5 space-y-6">
+
+            <!-- BƯỚC 1: HÌNH THỨC & LOẠI BẤT ĐỘNG SẢN -->
+            <div id="modalSectionPropertyType" class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                        <span class="grid size-5 place-items-center rounded-md bg-primary text-white text-[10px]">1</span>
+                        Hình thức &amp; Loại nhà đất
+                    </h3>
+                </div>
+
+                <!-- Hình thức -->
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-modal-type="all" onclick="setModalType('all')"
+                            class="modal-type-btn h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                        Tất cả
+                    </button>
+                    <button type="button" data-modal-type="sale" onclick="setModalType('sale')"
+                            class="modal-type-btn h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                        Nhà đất bán
+                    </button>
+                    <button type="button" data-modal-type="rent" onclick="setModalType('rent')"
+                            class="modal-type-btn h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                        Nhà đất cho thuê
+                    </button>
+                </div>
+
+                <!-- Loại hình BĐS -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    @foreach (var opt in propertyTypeOptions)
+                    {
+                        <button type="button" data-modal-prop="@opt.Value" onclick="setModalPropertyType('@opt.Value')"
+                                class="modal-prop-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer">
+                            <i data-lucide="@opt.Icon" class="size-4 shrink-0"></i>
+                            <span class="truncate">@opt.Label</span>
+                        </button>
+                    }
+                </div>
             </div>
 
-            <form method="get" asp-action="Index" id="filterSidebarForm" class="space-y-4">
-                <input type="hidden" name="layout" value="@Model.Layout" />
-                <input type="hidden" id="hiddenSortBy" name="sortBy" value="@Model.SortBy" />
-
-                <!-- 1. Từ khóa tìm kiếm -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Từ khóa</label>
-                    <input type="search" name="q" value="@Model.Query" placeholder="Địa chỉ, tên dự án..."
-                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
-                </div>
-
-                <!-- 2. Hình thức giao dịch (ListingType) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Hình thức</label>
-                    <select name="type" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
-                        <option value="all" selected="@(Model.Type == "all")">Tất cả (Mua & Thuê)</option>
-                        <option value="sale" selected="@(string.Equals(Model.Type, "sale", StringComparison.OrdinalIgnoreCase))">Cần bán</option>
-                        <option value="rent" selected="@(string.Equals(Model.Type, "rent", StringComparison.OrdinalIgnoreCase))">Cho thuê</option>
-                    </select>
-                </div>
-
-                <!-- 3. Loại hình bất động sản (PropertyType) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Loại bất động sản</label>
-                    <select name="propertyType" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
-                        <option value="" selected="@(string.IsNullOrEmpty(Model.PropertyType))">Tất cả loại hình</option>
-                        <option value="Apartment" selected="@(Model.PropertyType == "Apartment")">Căn hộ chung cư</option>
-                        <option value="House" selected="@(Model.PropertyType == "House")">Nhà riêng / Nhà phố</option>
-                        <option value="Townhouse" selected="@(Model.PropertyType == "Townhouse")">Nhà liền kề KĐT</option>
-                        <option value="Villa" selected="@(Model.PropertyType == "Villa")">Biệt thự (Villa)</option>
-                        <option value="Land" selected="@(Model.PropertyType == "Land")">Đất nền</option>
-                        <option value="Commercial" selected="@(Model.PropertyType == "Commercial")">Mặt bằng kinh doanh</option>
-                    </select>
-                </div>
-
-                <!-- 4. Tỉnh / Thành phố (City) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Tỉnh / Thành phố</label>
-                    <input type="text" name="city" value="@Model.City" placeholder="Ví dụ: TP. Hồ Chí Minh"
-                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
-                </div>
-
-                <!-- 5. Quận / Huyện (District) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Quận / Huyện</label>
-                    <input type="text" name="district" value="@Model.District" placeholder="Ví dụ: Quận 7, Thủ Đức..."
-                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
-                </div>
-
-                <!-- 6. Phường / Xã (Ward) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Phường / Xã</label>
-                    <input type="text" name="ward" value="@Model.Ward" placeholder="Ví dụ: Tân Phong, Bến Nghé..."
-                           class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary transition-colors" />
-                </div>
-
-                <!-- 7. Khoảng giá (MinPrice - MaxPrice) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Khoảng giá (VNĐ)</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="minPrice" value="@Model.MinPrice" placeholder="Từ"
-                               class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
-                        <input type="number" name="maxPrice" value="@Model.MaxPrice" placeholder="Đến"
-                                class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
+            <!-- BƯỚC 2: KHU VỰC -->
+            <div id="modalSectionLocation" class="space-y-3 pt-5 border-t border-border/80">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                        <span class="grid size-5 place-items-center rounded-md bg-primary text-white text-[10px]">2</span>
+                        Khu vực tìm kiếm
+                    </h3>
+                    <div class="inline-flex items-center rounded-lg border border-border bg-surface p-0.5 text-[10px] font-semibold">
+                        <button type="button" id="modalLocModePost" onclick="switchLocationMode('post')"
+                                class="px-2 py-1 rounded-md bg-primary text-white transition-colors cursor-pointer">
+                            34 tỉnh mới
+                        </button>
+                        <button type="button" id="modalLocModePre" onclick="switchLocationMode('pre')"
+                                class="px-2 py-1 rounded-md text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer">
+                            63 tỉnh cũ
+                        </button>
                     </div>
                 </div>
 
-                <!-- 8. Diện tích (MinArea - MaxArea) -->
-                <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Diện tích (m²)</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="minArea" value="@Model.MinArea" placeholder="Từ"
-                               class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
-                        <input type="number" name="maxArea" value="@Model.MaxArea" placeholder="Đến"
-                               class="w-full h-10 rounded-xl border border-border bg-surface px-2.5 text-xs outline-none focus:border-primary transition-colors" />
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Tỉnh / Thành phố</label>
+                        <select id="modalProvinceSelect"
+                                class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                            <option value="">Toàn quốc</option>
+                        </select>
+                    </div>
+                    <div id="modalDistrictWrap" class="hidden">
+                        <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Quận / Huyện</label>
+                        <select id="modalDistrictSelect"
+                                class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                            <option value="">Tất cả quận / huyện</option>
+                        </select>
+                    </div>
+                    <div id="modalWardWrap">
+                        <label class="block text-[11px] font-semibold text-neutral-700 mb-1">Phường / Xã</label>
+                        <select id="modalWardSelect"
+                                class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs text-neutral-900 outline-none focus:border-primary">
+                            <option value="">Tất cả phường / xã</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- 9. Số phòng ngủ (MinBedrooms) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" id="modalCityManual" placeholder="Hoặc gõ Tỉnh / Thành phố..."
+                           class="h-8 rounded-lg border border-border/80 bg-card px-2.5 text-[11px] outline-none focus:border-primary" />
+                    <input type="text" id="modalDistrictManual" placeholder="Quận / Huyện..."
+                           class="h-8 rounded-lg border border-border/80 bg-card px-2.5 text-[11px] outline-none focus:border-primary" />
+                    <input type="text" id="modalWardManual" placeholder="Phường / Xã..."
+                           class="h-8 rounded-lg border border-border/80 bg-card px-2.5 text-[11px] outline-none focus:border-primary" />
+                </div>
+            </div>
+
+            <!-- BƯỚC 3: MỨC GIÁ -->
+            <div id="modalSectionPrice" class="space-y-3 pt-5 border-t border-border/80">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                        <span class="grid size-5 place-items-center rounded-md bg-primary text-white text-[10px]">3</span>
+                        Mức giá
+                    </h3>
+                    <span id="modalPriceContextLabel" class="text-[11px] text-muted-foreground">Đơn vị: VNĐ</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Giá thấp nhất</label>
+                        <input type="number" id="modalMinPrice" min="0" step="1000000" placeholder="Từ (VNĐ)"
+                               oninput="syncModalPriceFromInput()"
+                               class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary" />
+                        <p id="modalMinPriceHint" class="text-[10px] text-primary font-semibold mt-1 min-h-[14px]"></p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Giá cao nhất</label>
+                        <input type="number" id="modalMaxPrice" min="0" step="1000000" placeholder="Đến (VNĐ)"
+                               oninput="syncModalPriceFromInput()"
+                               class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary" />
+                        <p id="modalMaxPriceHint" class="text-[10px] text-primary font-semibold mt-1 min-h-[14px]"></p>
+                    </div>
+                </div>
+
+                <div id="modalPricePresets" class="flex flex-wrap gap-1.5">
+                    <!-- Populated dynamically for Sale vs Rent -->
+                </div>
+            </div>
+
+            <!-- BƯỚC 4: DIỆN TÍCH -->
+            <div id="modalSectionArea" class="space-y-3 pt-5 border-t border-border/80">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                        <span class="grid size-5 place-items-center rounded-md bg-primary text-white text-[10px]">4</span>
+                        Diện tích
+                    </h3>
+                    <span class="text-[11px] text-muted-foreground">Đơn vị: m²</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Từ (m²)</label>
+                        <input type="number" id="modalMinArea" min="0" placeholder="VD: 50"
+                               oninput="syncModalAreaFromInput()"
+                               class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Đến (m²)</label>
+                        <input type="number" id="modalMaxArea" min="0" placeholder="VD: 120"
+                               oninput="syncModalAreaFromInput()"
+                               class="w-full h-9 rounded-xl border border-border bg-surface px-3 text-xs outline-none focus:border-primary" />
+                    </div>
+                </div>
+
+                <div id="modalAreaPresets" class="flex flex-wrap gap-1.5">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- BƯỚC 5: SỐ PHÒNG & HƯỚNG BAN CÔNG -->
+            <div id="modalSectionSpecs" class="space-y-4 pt-5 border-t border-border/80">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                    <span class="grid size-5 place-items-center rounded-md bg-primary text-white text-[10px]">5</span>
+                    Số phòng &amp; Hướng ban công
+                </h3>
+
+                <!-- Số phòng ngủ -->
                 <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Số phòng ngủ</label>
-                    <select name="minBedrooms" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
-                        <option value="" selected="@(!Model.MinBedrooms.HasValue)">Tất cả</option>
-                        <option value="1" selected="@(Model.MinBedrooms == 1)">1+ phòng ngủ</option>
-                        <option value="2" selected="@(Model.MinBedrooms == 2)">2+ phòng ngủ</option>
-                        <option value="3" selected="@(Model.MinBedrooms == 3)">3+ phòng ngủ</option>
-                        <option value="4" selected="@(Model.MinBedrooms == 4)">4+ phòng ngủ</option>
-                    </select>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-2">Số phòng ngủ</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" data-modal-bed="" onclick="setModalBedrooms('')"
+                                class="modal-bed-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                            Tất cả
+                        </button>
+                        @foreach (var n in new[] { 1, 2, 3, 4, 5 })
+                        {
+                            <button type="button" data-modal-bed="@n" onclick="setModalBedrooms('@n')"
+                                    class="modal-bed-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                                @(n)+ PN
+                            </button>
+                        }
+                    </div>
                 </div>
 
-                <!-- 10. Hướng ban công (BalconyDirection) -->
+                <!-- Số phòng tắm -->
                 <div>
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Hướng ban công</label>
-                    <select name="balconyDirection" class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
-                        <option value="" selected="@(string.IsNullOrEmpty(Model.BalconyDirection))">Tất cả hướng</option>
-                        <option value="Đông" selected="@(Model.BalconyDirection == "Đông")">Đông</option>
-                        <option value="Tây" selected="@(Model.BalconyDirection == "Tây")">Tây</option>
-                        <option value="Nam" selected="@(Model.BalconyDirection == "Nam")">Nam</option>
-                        <option value="Bắc" selected="@(Model.BalconyDirection == "Bắc")">Bắc</option>
-                        <option value="Đông Nam" selected="@(Model.BalconyDirection == "Đông Nam")">Đông Nam</option>
-                        <option value="Đông Bắc" selected="@(Model.BalconyDirection == "Đông Bắc")">Đông Bắc</option>
-                        <option value="Tây Nam" selected="@(Model.BalconyDirection == "Tây Nam")">Tây Nam</option>
-                        <option value="Tây Bắc" selected="@(Model.BalconyDirection == "Tây Bắc")">Tây Bắc</option>
-                    </select>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-2">Số phòng tắm / WC</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" data-modal-bath="" onclick="setModalBathrooms('')"
+                                class="modal-bath-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                            Tất cả
+                        </button>
+                        @foreach (var n in new[] { 1, 2, 3, 4 })
+                        {
+                            <button type="button" data-modal-bath="@n" onclick="setModalBathrooms('@n')"
+                                    class="modal-bath-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                                @(n)+ WC
+                            </button>
+                        }
+                    </div>
                 </div>
 
-                <!-- 11. Sắp xếp trên Mobile -->
-                <div class="lg:hidden">
-                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Sắp xếp theo</label>
-                    <select onchange="document.getElementById('hiddenSortBy').value = this.value;"
-                            class="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-medium outline-none focus:border-primary transition-colors">
-                        <option value="default" selected="@(string.IsNullOrEmpty(Model.SortBy) || Model.SortBy == "default")">Mặc định (Ưu tiên VIP)</option>
-                        <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Giá tăng dần</option>
-                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Giá giảm dần</option>
-                        <option value="area_desc" selected="@(Model.SortBy == "area_desc")">Diện tích lớn nhất</option>
-                        <option value="newest" selected="@(Model.SortBy == "newest")">Mới nhất</option>
-                    </select>
+                <!-- Hướng ban công -->
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-2">Hướng ban công</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" data-modal-balcony="" onclick="setModalBalcony('')"
+                                class="modal-balcony-btn px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                            Tất cả hướng
+                        </button>
+                        @foreach (var dir in balconyOptions)
+                        {
+                            <button type="button" data-modal-balcony="@dir" onclick="setModalBalcony('@dir')"
+                                    class="modal-balcony-btn px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer">
+                                @dir
+                            </button>
+                        }
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Nút áp dụng bộ lọc -->
-                <button type="submit"
-                        class="w-full mt-2 h-10 rounded-xl bg-primary text-white font-semibold text-xs shadow-xs hover:bg-primary-hover transition-colors flex items-center justify-center gap-1.5">
+        <!-- Sticky Modal Footer -->
+        <div class="px-5 py-3.5 border-t border-border bg-surface/80 flex items-center justify-between gap-3 shrink-0">
+            <button type="button" onclick="resetModalFilters()"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-neutral-700 hover:border-destructive hover:text-destructive transition-colors cursor-pointer">
+                <i data-lucide="rotate-ccw" class="size-3.5"></i>
+                <span>Đặt lại tất cả</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="closeAdvancedFilterModal()"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-neutral-900 transition-colors cursor-pointer">
+                    Hủy
+                </button>
+                <button type="button" onclick="applyModalFilters()"
+                        class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-colors cursor-pointer">
                     <i data-lucide="search" class="size-3.5"></i>
                     <span>Áp dụng bộ lọc</span>
                 </button>
-            </form>
-        </aside>
-
-        <!-- ================= CỘT PHẢI: DANH SÁCH TIN ĐĂNG ================= -->
-        <main class="flex-1 min-w-0">
-            <!-- Header Toolbar trên Desktop (chỉ hiện trên màn hình lớn >= lg) -->
-            <div class="hidden lg:flex items-center justify-between gap-4 pb-4 border-b border-border">
-                <div>
-                    <h1 class="font-display text-2xl md:text-3xl font-bold text-neutral-900">
-                        @Model.TotalCount tin đăng phù hợp
-                    </h1>
-                    <p class="text-xs text-muted-foreground mt-0.5">
-                        Dữ liệu tin đăng chính thức đã được kiểm duyệt từ hệ thống PropNest.
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <!-- Dropdown sắp xếp trên Desktop -->
-                    <div class="flex items-center gap-2">
-                        <label for="desktopSortBy" class="text-xs text-muted-foreground whitespace-nowrap">Sắp xếp:</label>
-                        <select id="desktopSortBy"
-                                onchange="document.getElementById('hiddenSortBy').value = this.value; document.getElementById('filterSidebarForm').submit();"
-                                class="h-9 rounded-xl border border-border bg-card px-3 text-xs font-medium outline-none focus:border-primary transition-colors cursor-pointer">
-                            <option value="default" selected="@(string.IsNullOrEmpty(Model.SortBy) || Model.SortBy == "default")">Mặc định (Ưu tiên VIP)</option>
-                            <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Giá tăng dần</option>
-                            <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Giá giảm dần</option>
-                            <option value="area_desc" selected="@(Model.SortBy == "area_desc")">Diện tích lớn nhất</option>
-                            <option value="newest" selected="@(Model.SortBy == "newest")">Mới nhất</option>
-                        </select>
-                    </div>
-
-                    <!-- Layout Toggle (Grid vs List) -->
-                    <div class="flex items-center gap-1 rounded-xl border border-border p-1 bg-surface shrink-0">
-                        <a asp-action="Index"
-                           asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
-                           asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
-                           asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
-                           asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
-                           asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
-                           asp-route-sortBy="@Model.SortBy"
-                           asp-route-page="@Model.PageNumber" asp-route-layout="grid"
-                           class="rounded-lg p-2 transition-colors @(Model.Layout == "grid" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                           title="Chế độ lưới">
-                            <i data-lucide="layout-grid" class="size-4"></i>
-                        </a>
-                        <a asp-action="Index"
-                           asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
-                           asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
-                           asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
-                           asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
-                           asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                           asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
-                           asp-route-sortBy="@Model.SortBy"
-                           asp-route-page="@Model.PageNumber" asp-route-layout="list"
-                           class="rounded-lg p-2 transition-colors @(Model.Layout == "list" ? "bg-card shadow-xs text-primary font-semibold" : "text-muted-foreground hover:text-neutral-900")"
-                           title="Chế độ danh sách">
-                            <i data-lucide="list" class="size-4"></i>
-                        </a>
-                    </div>
-                </div>
             </div>
-
-            <!-- Danh sách hiển thị -->
-            @if (Model.TotalCount == 0)
-            {
-                <div class="mt-8 rounded-2xl border border-dashed border-border bg-card p-12 text-center text-xs text-muted-foreground">
-                    <i data-lucide="search-x" class="size-10 mx-auto mb-3 text-muted-foreground/60"></i>
-                    <p class="text-sm font-bold text-neutral-800">Không tìm thấy bất động sản nào</p>
-                    <p class="mt-1">Hãy thử nới rộng khoảng giá hoặc xóa bớt tiêu chí lọc.</p>
-                    <a asp-action="Index" class="mt-4 inline-flex items-center gap-1 rounded-full border border-primary px-4 py-2 font-semibold text-primary hover:bg-primary hover:text-white transition-colors">
-                        Xóa tất cả bộ lọc
-                    </a>
-                </div>
-            }
-            else
-            {
-                <div class="mt-6 @(Model.Layout == "list" ? "space-y-4" : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3")">
-                    @foreach (var p in Model.Properties)
-                    {
-                        <partial name="_PropertyCard" model="p" />
-                    }
-                </div>
-
-                <!-- ================= PHÂN TRANG (PAGINATION) ================= -->
-                @if (Model.TotalPages > 1)
-                {
-                    <nav aria-label="Phân trang" class="mt-10 flex items-center justify-center gap-1.5 text-xs font-semibold">
-                        <!-- Nút Trang trước -->
-                        @if (Model.PageNumber > 1)
-                        {
-                            <a asp-action="Index"
-                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
-                               asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
-                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
-                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
-                               asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
-                               asp-route-sortBy="@Model.SortBy"
-                               asp-route-page="@(Model.PageNumber - 1)" asp-route-layout="@Model.Layout"
-                               class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
-                                <i data-lucide="chevron-left" class="size-3.5"></i>
-                                <span>Trước</span>
-                            </a>
-                        }
-
-                        <!-- Các số trang -->
-                        @for (var i = 1; i <= Model.TotalPages; i++)
-                        {
-                            var pageIndex = i;
-                            <a asp-action="Index"
-                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
-                               asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
-                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
-                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
-                               asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
-                               asp-route-sortBy="@Model.SortBy"
-                               asp-route-page="@pageIndex" asp-route-layout="@Model.Layout"
-                               class="size-9 rounded-xl border flex items-center justify-center transition-colors @(pageIndex == Model.PageNumber ? "border-primary bg-primary text-white shadow-xs" : "border-border bg-card text-neutral-700 hover:border-primary hover:text-primary")">
-                                @pageIndex
-                            </a>
-                        }
-
-                        <!-- Nút Trang sau -->
-                        @if (Model.PageNumber < Model.TotalPages)
-                        {
-                            <a asp-action="Index"
-                               asp-route-q="@Model.Query" asp-route-type="@Model.Type" asp-route-propertyType="@Model.PropertyType"
-                               asp-route-city="@Model.City" asp-route-district="@Model.District" asp-route-ward="@Model.Ward"
-                               asp-route-provinceCode="@Model.ProvinceCode" asp-route-districtCode="@Model.DistrictCode" asp-route-wardCode="@Model.WardCode"
-                               asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
-                               asp-route-minArea="@Model.MinArea" asp-route-maxArea="@Model.MaxArea"
-                               asp-route-minBedrooms="@Model.MinBedrooms" asp-route-minBathrooms="@Model.MinBathrooms" asp-route-balconyDirection="@Model.BalconyDirection"
-                               asp-route-sortBy="@Model.SortBy"
-                               asp-route-page="@(Model.PageNumber + 1)" asp-route-layout="@Model.Layout"
-                               class="h-9 px-3 rounded-xl border border-border bg-card text-neutral-700 hover:border-primary hover:text-primary flex items-center gap-1 transition-colors">
-                                <span>Sau</span>
-                                <i data-lucide="chevron-right" class="size-3.5"></i>
-                            </a>
-                        }
-                    </nav>
-                }
-            }
-        </main>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggleBtn = document.getElementById('toggleMobileFilterBtn');
-            const sidebar = document.getElementById('filterSidebar');
-            const toggleIcon = document.getElementById('filterToggleIcon');
+        (function () {
+            const INITIAL_STATE = @Html.Raw(initialFilterStateJson);
 
-            if (toggleBtn && sidebar && toggleIcon) {
-                toggleBtn.addEventListener('click', function () {
-                    const isHidden = sidebar.classList.contains('hidden');
-                    if (isHidden) {
-                        sidebar.classList.remove('hidden');
-                        toggleIcon.classList.add('rotate-180');
-                    } else {
-                        sidebar.classList.add('hidden');
-                        toggleIcon.classList.remove('rotate-180');
+            const SALE_PRICE_PRESETS = [
+                { label: 'Tất cả mức giá', min: '', max: '' },
+                { label: 'Dưới 1 tỷ', min: '', max: '1000000000' },
+                { label: '1 – 2 tỷ', min: '1000000000', max: '2000000000' },
+                { label: '2 – 3 tỷ', min: '2000000000', max: '3000000000' },
+                { label: '3 – 5 tỷ', min: '3000000000', max: '5000000000' },
+                { label: '5 – 7 tỷ', min: '5000000000', max: '7000000000' },
+                { label: '7 – 10 tỷ', min: '7000000000', max: '10000000000' },
+                { label: '10 – 20 tỷ', min: '10000000000', max: '20000000000' },
+                { label: 'Trên 20 tỷ', min: '20000000000', max: '' }
+            ];
+
+            const RENT_PRICE_PRESETS = [
+                { label: 'Tất cả mức giá', min: '', max: '' },
+                { label: 'Dưới 3 triệu', min: '', max: '3000000' },
+                { label: '3 – 5 triệu', min: '3000000', max: '5000000' },
+                { label: '5 – 10 triệu', min: '5000000', max: '10000000' },
+                { label: '10 – 20 triệu', min: '10000000', max: '20000000' },
+                { label: '20 – 40 triệu', min: '20000000', max: '40000000' },
+                { label: 'Trên 40 triệu', min: '40000000', max: '' }
+            ];
+
+            const AREA_PRESETS = [
+                { label: 'Tất cả diện tích', min: '', max: '' },
+                { label: 'Dưới 30 m²', min: '', max: '30' },
+                { label: '30 – 50 m²', min: '30', max: '50' },
+                { label: '50 – 80 m²', min: '50', max: '80' },
+                { label: '80 – 100 m²', min: '80', max: '100' },
+                { label: '100 – 150 m²', min: '100', max: '150' },
+                { label: '150 – 250 m²', min: '150', max: '250' },
+                { label: 'Trên 250 m²', min: '250', max: '' }
+            ];
+
+            const modalDraft = {
+                type: INITIAL_STATE.type || 'all',
+                propertyType: INITIAL_STATE.propertyType || '',
+                city: INITIAL_STATE.city || '',
+                district: INITIAL_STATE.district || '',
+                ward: INITIAL_STATE.ward || '',
+                provinceCode: INITIAL_STATE.provinceCode != null ? String(INITIAL_STATE.provinceCode) : '',
+                districtCode: INITIAL_STATE.districtCode != null ? String(INITIAL_STATE.districtCode) : '',
+                wardCode: INITIAL_STATE.wardCode != null ? String(INITIAL_STATE.wardCode) : '',
+                minPrice: INITIAL_STATE.minPrice != null ? String(INITIAL_STATE.minPrice) : '',
+                maxPrice: INITIAL_STATE.maxPrice != null ? String(INITIAL_STATE.maxPrice) : '',
+                minArea: INITIAL_STATE.minArea != null ? String(INITIAL_STATE.minArea) : '',
+                maxArea: INITIAL_STATE.maxArea != null ? String(INITIAL_STATE.maxArea) : '',
+                minBedrooms: INITIAL_STATE.minBedrooms != null ? String(INITIAL_STATE.minBedrooms) : '',
+                minBathrooms: INITIAL_STATE.minBathrooms != null ? String(INITIAL_STATE.minBathrooms) : '',
+                balconyDirection: INITIAL_STATE.balconyDirection || ''
+            };
+
+            let locationMode = INITIAL_STATE.districtCode ? 'pre' : 'post';
+            const provinceCache = { post: null, pre: null };
+            const districtCache = {};
+            const wardCache = {};
+
+            function formatVndShort(rawVal) {
+                const n = Number(rawVal);
+                if (!rawVal || !Number.isFinite(n) || n <= 0) return '';
+                if (n >= 1_000_000_000) {
+                    const b = n / 1_000_000_000;
+                    return '= ' + b.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ VNĐ';
+                }
+                if (n >= 1_000_000) {
+                    const m = n / 1_000_000;
+                    return '= ' + m.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu VNĐ';
+                }
+                return '= ' + n.toLocaleString('vi-VN') + ' đ';
+            }
+
+            window.updatePricePreview = function (inputId, hintId) {
+                const inp = document.getElementById(inputId);
+                const hint = document.getElementById(hintId);
+                if (!inp || !hint) return;
+                hint.textContent = formatVndShort(inp.value);
+            };
+
+            function submitCleanForm() {
+                const form = document.getElementById('listingsFilterForm');
+                if (!form) return;
+
+                // Disable empty or default-only fields so URL query stays clean
+                const fields = form.querySelectorAll('input[name]');
+                fields.forEach(el => {
+                    const val = (el.value || '').trim();
+                    const isDefault =
+                        val === '' ||
+                        (el.name === 'type' && val === 'all') ||
+                        (el.name === 'sortBy' && val === 'default') ||
+                        (el.name === 'layout' && val === 'grid');
+                    el.disabled = isDefault;
+                });
+
+                form.submit();
+            }
+
+            function closeAllPopovers() {
+                document.querySelectorAll('.filter-popover').forEach(p => p.classList.add('hidden'));
+                document.querySelectorAll('.popover-chevron').forEach(c => c.classList.remove('rotate-180'));
+            }
+
+            window.toggleFilterPopover = function (key, mobileModalSectionId) {
+                // On mobile (< 768px), open the unified modal jumped directly to the matching section
+                if (window.innerWidth < 768) {
+                    openAdvancedFilterModal(mobileModalSectionId);
+                    return;
+                }
+
+                const target = document.getElementById('popover-' + key);
+                if (!target) return;
+                const willOpen = target.classList.contains('hidden');
+                closeAllPopovers();
+
+                if (willOpen) {
+                    target.classList.remove('hidden');
+                    const group = document.querySelector(`[data-popover-root="${key}"]`);
+                    const chevron = group ? group.querySelector('.popover-chevron') : null;
+                    if (chevron) chevron.classList.add('rotate-180');
+
+                    if (key === 'location') {
+                        ensureProvincesLoaded(locationMode);
+                    } else if (key === 'price') {
+                        renderPopoverPricePresets();
+                        updatePricePreview('popMinPrice', 'popMinPriceHint');
+                        updatePricePreview('popMaxPrice', 'popMaxPriceHint');
+                    } else if (key === 'area') {
+                        renderPopoverAreaPresets();
+                    }
+                }
+            };
+
+            // Quick bar actions
+            window.quickSetType = function (typeVal) {
+                const currentType = document.getElementById('hfType').value;
+                document.getElementById('hfType').value = typeVal;
+                // Clear price range if switching between sale and rent so presets never mismatch
+                if ((currentType === 'rent' && typeVal !== 'rent') || (currentType !== 'rent' && typeVal === 'rent')) {
+                    document.getElementById('hfMinPrice').value = '';
+                    document.getElementById('hfMaxPrice').value = '';
+                }
+                submitCleanForm();
+            };
+
+            window.clearKeywordAndSubmit = function () {
+                const kw = document.getElementById('searchKeywordInput');
+                if (kw) kw.value = '';
+                submitCleanForm();
+            };
+
+            window.quickPickPropertyType = function (val) {
+                document.getElementById('hfPropertyType').value = val;
+                submitCleanForm();
+            };
+
+            window.quickPickBedrooms = function (val) {
+                document.getElementById('hfMinBedrooms').value = val;
+                submitCleanForm();
+            };
+
+            window.quickSetSort = function (val) {
+                document.getElementById('hfSortBy').value = val;
+                submitCleanForm();
+            };
+
+            window.quickPickCity = function (cityName) {
+                document.getElementById('hfCity').value = cityName;
+                document.getElementById('hfDistrict').value = '';
+                document.getElementById('hfWard').value = '';
+                document.getElementById('hfProvinceCode').value = '';
+                document.getElementById('hfDistrictCode').value = '';
+                document.getElementById('hfWardCode').value = '';
+                submitCleanForm();
+            };
+
+            window.removeFilterChip = function (key) {
+                if (key === 'q') {
+                    const kw = document.getElementById('searchKeywordInput');
+                    if (kw) kw.value = '';
+                } else if (key === 'type') {
+                    document.getElementById('hfType').value = 'all';
+                } else if (key === 'propertyType') {
+                    document.getElementById('hfPropertyType').value = '';
+                } else if (key === 'location') {
+                    ['hfCity', 'hfDistrict', 'hfWard', 'hfProvinceCode', 'hfDistrictCode', 'hfWardCode'].forEach(id => {
+                        document.getElementById(id).value = '';
+                    });
+                } else if (key === 'price') {
+                    document.getElementById('hfMinPrice').value = '';
+                    document.getElementById('hfMaxPrice').value = '';
+                } else if (key === 'area') {
+                    document.getElementById('hfMinArea').value = '';
+                    document.getElementById('hfMaxArea').value = '';
+                } else if (key === 'minBedrooms') {
+                    document.getElementById('hfMinBedrooms').value = '';
+                } else if (key === 'minBathrooms') {
+                    document.getElementById('hfMinBathrooms').value = '';
+                } else if (key === 'balconyDirection') {
+                    document.getElementById('hfBalconyDirection').value = '';
+                }
+                submitCleanForm();
+            };
+
+            // Popover Price & Area rendering
+            function getPresetsForType(typeVal) {
+                return typeVal === 'rent' ? RENT_PRICE_PRESETS : SALE_PRICE_PRESETS;
+            }
+
+            function renderPopoverPricePresets() {
+                const container = document.getElementById('popPricePresets');
+                if (!container) return;
+                const activeMin = (document.getElementById('popMinPrice')?.value || '').trim();
+                const activeMax = (document.getElementById('popMaxPrice')?.value || '').trim();
+                const presets = getPresetsForType(document.getElementById('hfType').value);
+
+                container.innerHTML = presets.map(p => {
+                    const active = activeMin === p.min && activeMax === p.max;
+                    return `<button type="button" onclick="pickPopoverPricePreset('${p.min}', '${p.max}')"
+                        class="px-2.5 py-2 rounded-xl border text-xs text-left transition-colors cursor-pointer ${active ? 'border-primary bg-brand-soft/60 text-primary font-bold' : 'border-border bg-surface text-neutral-800 hover:border-primary/60 font-medium'}">${p.label}</button>`;
+                }).join('');
+            }
+
+            window.pickPopoverPricePreset = function (min, max) {
+                document.getElementById('hfMinPrice').value = min;
+                document.getElementById('hfMaxPrice').value = max;
+                submitCleanForm();
+            };
+
+            window.resetPricePopover = function () {
+                document.getElementById('popMinPrice').value = '';
+                document.getElementById('popMaxPrice').value = '';
+                document.getElementById('hfMinPrice').value = '';
+                document.getElementById('hfMaxPrice').value = '';
+                submitCleanForm();
+            };
+
+            window.applyPricePopover = function () {
+                document.getElementById('hfMinPrice').value = (document.getElementById('popMinPrice').value || '').trim();
+                document.getElementById('hfMaxPrice').value = (document.getElementById('popMaxPrice').value || '').trim();
+                submitCleanForm();
+            };
+
+            function renderPopoverAreaPresets() {
+                const container = document.getElementById('popAreaPresets');
+                if (!container) return;
+                const activeMin = (document.getElementById('popMinArea')?.value || '').trim();
+                const activeMax = (document.getElementById('popMaxArea')?.value || '').trim();
+
+                container.innerHTML = AREA_PRESETS.map(p => {
+                    const active = activeMin === p.min && activeMax === p.max;
+                    return `<button type="button" onclick="pickPopoverAreaPreset('${p.min}', '${p.max}')"
+                        class="px-2.5 py-2 rounded-xl border text-xs text-left transition-colors cursor-pointer ${active ? 'border-primary bg-brand-soft/60 text-primary font-bold' : 'border-border bg-surface text-neutral-800 hover:border-primary/60 font-medium'}">${p.label}</button>`;
+                }).join('');
+            }
+
+            window.pickPopoverAreaPreset = function (min, max) {
+                document.getElementById('hfMinArea').value = min;
+                document.getElementById('hfMaxArea').value = max;
+                submitCleanForm();
+            };
+
+            window.resetAreaPopover = function () {
+                document.getElementById('popMinArea').value = '';
+                document.getElementById('popMaxArea').value = '';
+                document.getElementById('hfMinArea').value = '';
+                document.getElementById('hfMaxArea').value = '';
+                submitCleanForm();
+            };
+
+            window.applyAreaPopover = function () {
+                document.getElementById('hfMinArea').value = (document.getElementById('popMinArea').value || '').trim();
+                document.getElementById('hfMaxArea').value = (document.getElementById('popMaxArea').value || '').trim();
+                submitCleanForm();
+            };
+
+            // Location loading & syncing (Popover + Modal)
+            function updateLocationModeButtons() {
+                const pairs = [
+                    ['popLocModePost', 'popLocModePre', 'popDistrictWrap'],
+                    ['modalLocModePost', 'modalLocModePre', 'modalDistrictWrap']
+                ];
+                pairs.forEach(([postId, preId, distWrapId]) => {
+                    const btnPost = document.getElementById(postId);
+                    const btnPre = document.getElementById(preId);
+                    const distWrap = document.getElementById(distWrapId);
+                    if (btnPost && btnPre) {
+                        if (locationMode === 'post') {
+                            btnPost.className = 'px-2 py-1 rounded-md bg-primary text-white transition-colors cursor-pointer';
+                            btnPre.className = 'px-2 py-1 rounded-md text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer';
+                        } else {
+                            btnPre.className = 'px-2 py-1 rounded-md bg-primary text-white transition-colors cursor-pointer';
+                            btnPost.className = 'px-2 py-1 rounded-md text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer';
+                        }
+                    }
+                    if (distWrap) {
+                        distWrap.classList.toggle('hidden', locationMode === 'post');
                     }
                 });
             }
-        });
+
+            window.switchLocationMode = async function (mode) {
+                if (mode !== 'post' && mode !== 'pre') return;
+                locationMode = mode;
+                updateLocationModeButtons();
+                await ensureProvincesLoaded(mode);
+            };
+
+            async function ensureProvincesLoaded(mode) {
+                updateLocationModeButtons();
+                if (!provinceCache[mode]) {
+                    try {
+                        const res = await fetch('/listings/locations/provinces?mode=' + encodeURIComponent(mode));
+                        if (res.ok) {
+                            provinceCache[mode] = await res.json();
+                        }
+                    } catch {
+                        provinceCache[mode] = [];
+                    }
+                }
+                const list = provinceCache[mode] || [];
+                populateProvinceSelect('popProvinceSelect', list, document.getElementById('hfProvinceCode').value, document.getElementById('hfCity').value);
+                populateProvinceSelect('modalProvinceSelect', list, modalDraft.provinceCode, modalDraft.city);
+            }
+
+            function populateProvinceSelect(selectId, list, selectedCode, selectedName) {
+                const sel = document.getElementById(selectId);
+                if (!sel) return;
+                sel.innerHTML = '<option value="">Toàn quốc</option>' + list.map(p => {
+                    const code = String(p.code ?? p.Code ?? '');
+                    const name = String(p.name ?? p.Name ?? '');
+                    const isSel = (selectedCode && code === String(selectedCode))
+                        || (!selectedCode && selectedName && name.toLowerCase() === selectedName.toLowerCase());
+                    return `<option value="${code}" data-name="${escapeAttr(name)}" ${isSel ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+                }).join('');
+
+                if (sel.value) {
+                    handleProvinceChange(selectId, sel.value, true);
+                }
+            }
+
+            async function handleProvinceChange(selectId, provinceCode, preserveChildren) {
+                const isModal = selectId.startsWith('modal');
+                const distSel = document.getElementById(isModal ? 'modalDistrictSelect' : 'popDistrictSelect');
+                const wardSel = document.getElementById(isModal ? 'modalWardSelect' : 'popWardSelect');
+                const provSel = document.getElementById(selectId);
+                const selectedOpt = provSel ? provSel.options[provSel.selectedIndex] : null;
+                const provName = selectedOpt ? (selectedOpt.getAttribute('data-name') || '') : '';
+
+                if (isModal) {
+                    modalDraft.provinceCode = provinceCode || '';
+                    modalDraft.city = provName;
+                    const mCity = document.getElementById('modalCityManual');
+                    if (mCity) mCity.value = provName;
+                    if (!preserveChildren) {
+                        modalDraft.districtCode = '';
+                        modalDraft.district = '';
+                        modalDraft.wardCode = '';
+                        modalDraft.ward = '';
+                        const mDist = document.getElementById('modalDistrictManual');
+                        const mWard = document.getElementById('modalWardManual');
+                        if (mDist) mDist.value = '';
+                        if (mWard) mWard.value = '';
+                    }
+                } else {
+                    const pCity = document.getElementById('popCityManual');
+                    if (pCity) pCity.value = provName;
+                    if (!preserveChildren) {
+                        const pDist = document.getElementById('popDistrictManual');
+                        if (pDist) pDist.value = '';
+                    }
+                }
+
+                if (distSel) distSel.innerHTML = '<option value="">Tất cả quận / huyện</option>';
+                if (wardSel) wardSel.innerHTML = '<option value="">Tất cả phường / xã</option>';
+
+                if (!provinceCode) return;
+
+                if (locationMode === 'pre') {
+                    if (!districtCache[provinceCode]) {
+                        try {
+                            const res = await fetch(`/listings/locations/provinces/${encodeURIComponent(provinceCode)}/districts`);
+                            districtCache[provinceCode] = res.ok ? await res.json() : [];
+                        } catch {
+                            districtCache[provinceCode] = [];
+                        }
+                    }
+                    const dList = districtCache[provinceCode] || [];
+                    const targetDistCode = isModal ? modalDraft.districtCode : document.getElementById('hfDistrictCode').value;
+                    const targetDistName = isModal ? modalDraft.district : document.getElementById('hfDistrict').value;
+                    if (distSel) {
+                        distSel.innerHTML = '<option value="">Tất cả quận / huyện</option>' + dList.map(d => {
+                            const code = String(d.code ?? d.Code ?? '');
+                            const name = String(d.name ?? d.Name ?? '');
+                            const isSel = preserveChildren && ((targetDistCode && code === String(targetDistCode))
+                                || (!targetDistCode && targetDistName && name.toLowerCase() === targetDistName.toLowerCase()));
+                            return `<option value="${code}" data-name="${escapeAttr(name)}" ${isSel ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+                        }).join('');
+                        if (distSel.value) {
+                            await handleDistrictChange(distSel.id, distSel.value, preserveChildren);
+                        }
+                    }
+                } else {
+                    const cacheKey = 'p_' + provinceCode;
+                    if (!wardCache[cacheKey]) {
+                        try {
+                            const res = await fetch(`/listings/locations/provinces/${encodeURIComponent(provinceCode)}/wards`);
+                            wardCache[cacheKey] = res.ok ? await res.json() : [];
+                        } catch {
+                            wardCache[cacheKey] = [];
+                        }
+                    }
+                    fillWardOptions(wardSel, wardCache[cacheKey] || [], isModal, preserveChildren);
+                }
+            }
+
+            async function handleDistrictChange(selectId, districtCode, preserveWard) {
+                const isModal = selectId.startsWith('modal');
+                const distSel = document.getElementById(selectId);
+                const wardSel = document.getElementById(isModal ? 'modalWardSelect' : 'popWardSelect');
+                const selectedOpt = distSel ? distSel.options[distSel.selectedIndex] : null;
+                const distName = selectedOpt ? (selectedOpt.getAttribute('data-name') || '') : '';
+
+                if (isModal) {
+                    modalDraft.districtCode = districtCode || '';
+                    modalDraft.district = distName;
+                    const mDist = document.getElementById('modalDistrictManual');
+                    if (mDist) mDist.value = distName;
+                    if (!preserveWard) {
+                        modalDraft.wardCode = '';
+                        modalDraft.ward = '';
+                        const mWard = document.getElementById('modalWardManual');
+                        if (mWard) mWard.value = '';
+                    }
+                } else {
+                    const pDist = document.getElementById('popDistrictManual');
+                    if (pDist) pDist.value = distName;
+                }
+
+                if (wardSel) wardSel.innerHTML = '<option value="">Tất cả phường / xã</option>';
+                if (!districtCode) return;
+
+                const cacheKey = 'd_' + districtCode;
+                if (!wardCache[cacheKey]) {
+                    try {
+                        const res = await fetch(`/listings/locations/districts/${encodeURIComponent(districtCode)}/wards`);
+                        wardCache[cacheKey] = res.ok ? await res.json() : [];
+                    } catch {
+                        wardCache[cacheKey] = [];
+                    }
+                }
+                fillWardOptions(wardSel, wardCache[cacheKey] || [], isModal, preserveWard);
+            }
+
+            function fillWardOptions(wardSel, list, isModal, preserveWard) {
+                if (!wardSel) return;
+                const targetWardCode = isModal ? modalDraft.wardCode : document.getElementById('hfWardCode').value;
+                const targetWardName = isModal ? modalDraft.ward : document.getElementById('hfWard').value;
+                wardSel.innerHTML = '<option value="">Tất cả phường / xã</option>' + list.map(w => {
+                    const code = String(w.code ?? w.Code ?? '');
+                    const name = String(w.name ?? w.Name ?? '');
+                    const isSel = preserveWard && ((targetWardCode && code === String(targetWardCode))
+                        || (!targetWardCode && targetWardName && name.toLowerCase() === targetWardName.toLowerCase()));
+                    return `<option value="${code}" data-name="${escapeAttr(name)}" ${isSel ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+                }).join('');
+            }
+
+            window.resetLocationPopover = function () {
+                ['hfCity', 'hfDistrict', 'hfWard', 'hfProvinceCode', 'hfDistrictCode', 'hfWardCode'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                submitCleanForm();
+            };
+
+            window.applyLocationPopover = function () {
+                const provSel = document.getElementById('popProvinceSelect');
+                const distSel = document.getElementById('popDistrictSelect');
+                const wardSel = document.getElementById('popWardSelect');
+                const cityManual = (document.getElementById('popCityManual')?.value || '').trim();
+                const distManual = (document.getElementById('popDistrictManual')?.value || '').trim();
+
+                const provOpt = provSel && provSel.value ? provSel.options[provSel.selectedIndex] : null;
+                const distOpt = distSel && distSel.value ? distSel.options[distSel.selectedIndex] : null;
+                const wardOpt = wardSel && wardSel.value ? wardSel.options[wardSel.selectedIndex] : null;
+
+                document.getElementById('hfProvinceCode').value = provSel?.value || '';
+                document.getElementById('hfCity').value = cityManual || (provOpt?.getAttribute('data-name') || '');
+                document.getElementById('hfDistrictCode').value = locationMode === 'pre' ? (distSel?.value || '') : '';
+                document.getElementById('hfDistrict').value = distManual || (distOpt?.getAttribute('data-name') || '');
+                document.getElementById('hfWardCode').value = wardSel?.value || '';
+                document.getElementById('hfWard').value = wardOpt?.getAttribute('data-name') || '';
+
+                submitCleanForm();
+            };
+
+            // Advanced Filter Modal lifecycle
+            window.openAdvancedFilterModal = function (scrollToSectionId) {
+                closeAllPopovers();
+                const modal = document.getElementById('advancedFilterModal');
+                if (!modal) return;
+
+                // Hydrate modal draft from authoritative hidden inputs
+                modalDraft.type = document.getElementById('hfType').value || 'all';
+                modalDraft.propertyType = document.getElementById('hfPropertyType').value || '';
+                modalDraft.city = document.getElementById('hfCity').value || '';
+                modalDraft.district = document.getElementById('hfDistrict').value || '';
+                modalDraft.ward = document.getElementById('hfWard').value || '';
+                modalDraft.provinceCode = document.getElementById('hfProvinceCode').value || '';
+                modalDraft.districtCode = document.getElementById('hfDistrictCode').value || '';
+                modalDraft.wardCode = document.getElementById('hfWardCode').value || '';
+                modalDraft.minPrice = document.getElementById('hfMinPrice').value || '';
+                modalDraft.maxPrice = document.getElementById('hfMaxPrice').value || '';
+                modalDraft.minArea = document.getElementById('hfMinArea').value || '';
+                modalDraft.maxArea = document.getElementById('hfMaxArea').value || '';
+                modalDraft.minBedrooms = document.getElementById('hfMinBedrooms').value || '';
+                modalDraft.minBathrooms = document.getElementById('hfMinBathrooms').value || '';
+                modalDraft.balconyDirection = document.getElementById('hfBalconyDirection').value || '';
+
+                syncModalUI();
+                ensureProvincesLoaded(locationMode);
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+
+                if (scrollToSectionId) {
+                    setTimeout(() => {
+                        const section = document.getElementById(scrollToSectionId);
+                        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 60);
+                }
+            };
+
+            window.closeAdvancedFilterModal = function () {
+                const modal = document.getElementById('advancedFilterModal');
+                if (!modal) return;
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            };
+
+            function syncModalUI() {
+                document.querySelectorAll('.modal-type-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-modal-type') === modalDraft.type;
+                    btn.className = 'modal-type-btn h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer ' +
+                        (active ? 'border-primary bg-primary text-white shadow-2xs' : 'border-border bg-surface text-neutral-800 hover:border-primary/60');
+                });
+
+                document.querySelectorAll('.modal-prop-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-modal-prop') === modalDraft.propertyType;
+                    btn.className = 'modal-prop-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs text-left transition-all cursor-pointer ' +
+                        (active ? 'border-primary bg-brand-soft/60 text-primary font-bold shadow-2xs' : 'border-border bg-surface text-neutral-800 hover:border-primary/60 font-medium');
+                });
+
+                document.getElementById('modalCityManual').value = modalDraft.city;
+                document.getElementById('modalDistrictManual').value = modalDraft.district;
+                document.getElementById('modalWardManual').value = modalDraft.ward;
+
+                document.getElementById('modalMinPrice').value = modalDraft.minPrice;
+                document.getElementById('modalMaxPrice').value = modalDraft.maxPrice;
+                updatePricePreview('modalMinPrice', 'modalMinPriceHint');
+                updatePricePreview('modalMaxPrice', 'modalMaxPriceHint');
+
+                const priceCtx = document.getElementById('modalPriceContextLabel');
+                if (priceCtx) {
+                    priceCtx.textContent = modalDraft.type === 'rent' ? 'Giá thuê / tháng (VNĐ)' : 'Giá bán (VNĐ)';
+                }
+
+                renderModalPricePresets();
+
+                document.getElementById('modalMinArea').value = modalDraft.minArea;
+                document.getElementById('modalMaxArea').value = modalDraft.maxArea;
+                renderModalAreaPresets();
+
+                document.querySelectorAll('.modal-bed-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-modal-bed') === modalDraft.minBedrooms;
+                    btn.className = 'modal-bed-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ' +
+                        (active ? 'border-primary bg-primary text-white shadow-2xs' : 'border-border bg-surface text-neutral-800 hover:border-primary/60');
+                });
+
+                document.querySelectorAll('.modal-bath-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-modal-bath') === modalDraft.minBathrooms;
+                    btn.className = 'modal-bath-btn px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ' +
+                        (active ? 'border-primary bg-primary text-white shadow-2xs' : 'border-border bg-surface text-neutral-800 hover:border-primary/60');
+                });
+
+                document.querySelectorAll('.modal-balcony-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-modal-balcony') === modalDraft.balconyDirection;
+                    btn.className = 'modal-balcony-btn px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ' +
+                        (active ? 'border-primary bg-primary text-white shadow-2xs' : 'border-border bg-surface text-neutral-800 hover:border-primary/60');
+                });
+            }
+
+            function renderModalPricePresets() {
+                const container = document.getElementById('modalPricePresets');
+                if (!container) return;
+                const presets = getPresetsForType(modalDraft.type);
+                container.innerHTML = presets.map(p => {
+                    const active = modalDraft.minPrice === p.min && modalDraft.maxPrice === p.max;
+                    return `<button type="button" onclick="pickModalPricePreset('${p.min}', '${p.max}')"
+                        class="px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer ${active ? 'border-primary bg-brand-soft/60 text-primary font-bold' : 'border-border bg-surface text-neutral-800 hover:border-primary/60 font-medium'}">${p.label}</button>`;
+                }).join('');
+            }
+
+            function renderModalAreaPresets() {
+                const container = document.getElementById('modalAreaPresets');
+                if (!container) return;
+                container.innerHTML = AREA_PRESETS.map(p => {
+                    const active = modalDraft.minArea === p.min && modalDraft.maxArea === p.max;
+                    return `<button type="button" onclick="pickModalAreaPreset('${p.min}', '${p.max}')"
+                        class="px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer ${active ? 'border-primary bg-brand-soft/60 text-primary font-bold' : 'border-border bg-surface text-neutral-800 hover:border-primary/60 font-medium'}">${p.label}</button>`;
+                }).join('');
+            }
+
+            window.setModalType = function (val) {
+                if ((modalDraft.type === 'rent' && val !== 'rent') || (modalDraft.type !== 'rent' && val === 'rent')) {
+                    modalDraft.minPrice = '';
+                    modalDraft.maxPrice = '';
+                }
+                modalDraft.type = val;
+                syncModalUI();
+            };
+
+            window.setModalPropertyType = function (val) {
+                modalDraft.propertyType = val;
+                syncModalUI();
+            };
+
+            window.pickModalPricePreset = function (min, max) {
+                modalDraft.minPrice = min;
+                modalDraft.maxPrice = max;
+                syncModalUI();
+            };
+
+            window.syncModalPriceFromInput = function () {
+                modalDraft.minPrice = (document.getElementById('modalMinPrice').value || '').trim();
+                modalDraft.maxPrice = (document.getElementById('modalMaxPrice').value || '').trim();
+                updatePricePreview('modalMinPrice', 'modalMinPriceHint');
+                updatePricePreview('modalMaxPrice', 'modalMaxPriceHint');
+                renderModalPricePresets();
+            };
+
+            window.pickModalAreaPreset = function (min, max) {
+                modalDraft.minArea = min;
+                modalDraft.maxArea = max;
+                syncModalUI();
+            };
+
+            window.syncModalAreaFromInput = function () {
+                modalDraft.minArea = (document.getElementById('modalMinArea').value || '').trim();
+                modalDraft.maxArea = (document.getElementById('modalMaxArea').value || '').trim();
+                renderModalAreaPresets();
+            };
+
+            window.setModalBedrooms = function (val) {
+                modalDraft.minBedrooms = val;
+                syncModalUI();
+            };
+
+            window.setModalBathrooms = function (val) {
+                modalDraft.minBathrooms = val;
+                syncModalUI();
+            };
+
+            window.setModalBalcony = function (val) {
+                modalDraft.balconyDirection = val;
+                syncModalUI();
+            };
+
+            window.resetModalFilters = function () {
+                modalDraft.type = 'all';
+                modalDraft.propertyType = '';
+                modalDraft.city = '';
+                modalDraft.district = '';
+                modalDraft.ward = '';
+                modalDraft.provinceCode = '';
+                modalDraft.districtCode = '';
+                modalDraft.wardCode = '';
+                modalDraft.minPrice = '';
+                modalDraft.maxPrice = '';
+                modalDraft.minArea = '';
+                modalDraft.maxArea = '';
+                modalDraft.minBedrooms = '';
+                modalDraft.minBathrooms = '';
+                modalDraft.balconyDirection = '';
+
+                const pSel = document.getElementById('modalProvinceSelect');
+                const dSel = document.getElementById('modalDistrictSelect');
+                const wSel = document.getElementById('modalWardSelect');
+                if (pSel) pSel.value = '';
+                if (dSel) dSel.innerHTML = '<option value="">Tất cả quận / huyện</option>';
+                if (wSel) wSel.innerHTML = '<option value="">Tất cả phường / xã</option>';
+
+                syncModalUI();
+            };
+
+            window.applyModalFilters = function () {
+                const cityManual = (document.getElementById('modalCityManual')?.value || '').trim();
+                const distManual = (document.getElementById('modalDistrictManual')?.value || '').trim();
+                const wardManual = (document.getElementById('modalWardManual')?.value || '').trim();
+                const wardSel = document.getElementById('modalWardSelect');
+                const wardOpt = wardSel && wardSel.value ? wardSel.options[wardSel.selectedIndex] : null;
+
+                document.getElementById('hfType').value = modalDraft.type;
+                document.getElementById('hfPropertyType').value = modalDraft.propertyType;
+                document.getElementById('hfProvinceCode').value = modalDraft.provinceCode;
+                document.getElementById('hfCity').value = cityManual || modalDraft.city;
+                document.getElementById('hfDistrictCode').value = locationMode === 'pre' ? modalDraft.districtCode : '';
+                document.getElementById('hfDistrict').value = distManual || modalDraft.district;
+                document.getElementById('hfWardCode').value = wardSel?.value || modalDraft.wardCode;
+                document.getElementById('hfWard').value = wardManual || (wardOpt?.getAttribute('data-name') || modalDraft.ward);
+                document.getElementById('hfMinPrice').value = modalDraft.minPrice;
+                document.getElementById('hfMaxPrice').value = modalDraft.maxPrice;
+                document.getElementById('hfMinArea').value = modalDraft.minArea;
+                document.getElementById('hfMaxArea').value = modalDraft.maxArea;
+                document.getElementById('hfMinBedrooms').value = modalDraft.minBedrooms;
+                document.getElementById('hfMinBathrooms').value = modalDraft.minBathrooms;
+                document.getElementById('hfBalconyDirection').value = modalDraft.balconyDirection;
+
+                closeAdvancedFilterModal();
+                submitCleanForm();
+            };
+
+            function escapeHtml(str) {
+                return String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function escapeAttr(str) {
+                return escapeHtml(str).replace(/'/g, '&#39;');
+            }
+
+            // Event wiring
+            document.addEventListener('DOMContentLoaded', function () {
+                const form = document.getElementById('listingsFilterForm');
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        submitCleanForm();
+                    });
+                }
+
+                // Wire cascading dropdowns
+                document.getElementById('popProvinceSelect')?.addEventListener('change', e => handleProvinceChange('popProvinceSelect', e.target.value, false));
+                document.getElementById('popDistrictSelect')?.addEventListener('change', e => handleDistrictChange('popDistrictSelect', e.target.value, false));
+                document.getElementById('modalProvinceSelect')?.addEventListener('change', e => handleProvinceChange('modalProvinceSelect', e.target.value, false));
+                document.getElementById('modalDistrictSelect')?.addEventListener('change', e => handleDistrictChange('modalDistrictSelect', e.target.value, false));
+                document.getElementById('modalWardSelect')?.addEventListener('change', e => {
+                    const opt = e.target.options[e.target.selectedIndex];
+                    modalDraft.wardCode = e.target.value || '';
+                    modalDraft.ward = opt ? (opt.getAttribute('data-name') || '') : '';
+                    const mWard = document.getElementById('modalWardManual');
+                    if (mWard) mWard.value = modalDraft.ward;
+                });
+
+                // Clear province/district code if user manually edits text inputs
+                document.getElementById('popCityManual')?.addEventListener('input', () => {
+                    const pSel = document.getElementById('popProvinceSelect');
+                    if (pSel) pSel.value = '';
+                });
+                document.getElementById('popDistrictManual')?.addEventListener('input', () => {
+                    const dSel = document.getElementById('popDistrictSelect');
+                    if (dSel) dSel.value = '';
+                });
+                document.getElementById('modalCityManual')?.addEventListener('input', e => {
+                    modalDraft.city = e.target.value.trim();
+                    modalDraft.provinceCode = '';
+                    const pSel = document.getElementById('modalProvinceSelect');
+                    if (pSel) pSel.value = '';
+                });
+                document.getElementById('modalDistrictManual')?.addEventListener('input', e => {
+                    modalDraft.district = e.target.value.trim();
+                    modalDraft.districtCode = '';
+                    const dSel = document.getElementById('modalDistrictSelect');
+                    if (dSel) dSel.value = '';
+                });
+                document.getElementById('modalWardManual')?.addEventListener('input', e => {
+                    modalDraft.ward = e.target.value.trim();
+                    modalDraft.wardCode = '';
+                    const wSel = document.getElementById('modalWardSelect');
+                    if (wSel) wSel.value = '';
+                });
+
+                // Close popovers when clicking outside
+                document.addEventListener('click', function (e) {
+                    if (!e.target.closest('.filter-popover-group')) {
+                        closeAllPopovers();
+                    }
+                });
+
+                // Close modal on backdrop click or ESC
+                const modal = document.getElementById('advancedFilterModal');
+                if (modal) {
+                    modal.addEventListener('click', function (e) {
+                        if (e.target === modal) {
+                            closeAdvancedFilterModal();
+                        }
+                    });
+                }
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') {
+                        closeAllPopovers();
+                        closeAdvancedFilterModal();
+                    }
+                });
+            });
+        })();
     </script>
 }

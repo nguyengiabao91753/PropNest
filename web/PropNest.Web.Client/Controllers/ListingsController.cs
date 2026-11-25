@@ -66,4 +66,40 @@ public class ListingsController : Controller
         // 3. Truyền ViewModel sang View để render giao diện
         return View(model);
     }
+
+    [HttpGet("locations/provinces")]
+    public async Task<IActionResult> GetProvinces(
+        [FromQuery] string mode = "post",
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _listingService.GetProvincesAsync(mode, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpGet("locations/provinces/{provinceCode:int}/districts")]
+    public async Task<IActionResult> GetDistrictsByProvince(
+        int provinceCode,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _listingService.GetDistrictsByProvinceAsync(provinceCode, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpGet("locations/provinces/{provinceCode:int}/wards")]
+    public async Task<IActionResult> GetWardsByProvince(
+        int provinceCode,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _listingService.GetWardsByProvinceAsync(provinceCode, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpGet("locations/districts/{districtCode:int}/wards")]
+    public async Task<IActionResult> GetWardsByDistrict(
+        int districtCode,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _listingService.GetWardsByDistrictAsync(districtCode, cancellationToken);
+        return Ok(items);
+    }
 }
