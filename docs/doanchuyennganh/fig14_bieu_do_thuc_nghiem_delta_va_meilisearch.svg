@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="620" viewBox="0 0 1360 620" role="img" aria-label="Biểu đồ thực nghiệm dung lượng History Delta Engine và độ trễ tìm kiếm Meilisearch">
+  <defs>
+    <style>
+      .sans { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+      .mono { font-family: 'Consolas', 'Courier New', monospace; }
+      .math { font-family: 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2B7BB9"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2E8B57"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#C93B3B"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#D96B27"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1360" height="620" fill="#FFFFFF"/>
+<text x="680" y="36" text-anchor="middle" fill="#111827" font-size="20" font-weight="700" class="sans">KẾT QUẢ THỰC NGHIỆM: LƯU TRỮ HISTORY DELTA ENGINE &amp; ĐỘ TRỄ MEILISEARCH (5.000 TIN)</text>
+<line x1="44" y1="52" x2="1316" y2="52" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="44" y="72" width="616" height="516" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.6"/>
+<text x="352" y="102" text-anchor="middle" fill="#1E3A5F" font-size="14.5" font-weight="700" class="sans">A. Tăng trưởng dung lượng lưu trữ qua 50 lần chỉnh sửa (100 tin)</text>
+<line x1="120" y1="470.0" x2="620" y2="470.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="474.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">0 KB</text>
+<line x1="120" y1="410.0" x2="620" y2="410.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="414.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">20 KB</text>
+<line x1="120" y1="350.0" x2="620" y2="350.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="354.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">40 KB</text>
+<line x1="120" y1="290.0" x2="620" y2="290.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="294.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">60 KB</text>
+<line x1="120" y1="230.0" x2="620" y2="230.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="234.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">80 KB</text>
+<line x1="120" y1="170.0" x2="620" y2="170.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="110" y="174.0" text-anchor="end" fill="#475569" font-size="11.5" class="sans">100 KB</text>
+<line x1="120" y1="140" x2="120" y2="470" stroke="#334155" stroke-width="2"/>
+<line x1="120" y1="470" x2="620" y2="470" stroke="#334155" stroke-width="2"/>
+<text x="370.0" y="512" text-anchor="middle" fill="#334155" font-size="12.5" font-weight="600" class="sans">Số lần chỉnh sửa liên tiếp trên mỗi tin đăng (N)</text>
+<text x="72" y="305.0" text-anchor="middle" fill="#334155" font-size="12.5" font-weight="600" class="sans" transform="rotate(-90 72 305.0)">Dung lượng TB / tin (KB)</text>
+<line x1="120.0" y1="470" x2="120.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="120.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">0</text>
+<line x1="220.0" y1="470" x2="220.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="220.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">10</text>
+<line x1="320.0" y1="470" x2="320.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="320.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">20</text>
+<line x1="420.0" y1="470" x2="420.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="420.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">30</text>
+<line x1="520.0" y1="470" x2="520.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="520.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">40</text>
+<line x1="620.0" y1="470" x2="620.0" y2="476" stroke="#334155" stroke-width="1.5"/>
+<text x="620.0" y="492" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">50</text>
+<polygon points="120.0,464.3 130.0,459.2 170.0,437.0 220.0,408.7 320.0,351.5 420.0,293.9 620.0,178.7 620.0,416.4 420.0,435.4 320.0,445.6 220.0,455.5 170.0,459.9 130.0,463.7 120.0,464.3" fill="#DCFCE7" opacity="0.55"/>
+<polyline points="120.0,464.3 130.0,459.2 170.0,437.0 220.0,408.7 320.0,351.5 420.0,293.9 620.0,178.7" fill="none" stroke="#DC2626" stroke-width="3"/>
+<circle cx="120.0" cy="464.3" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="130.0" cy="459.2" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="170.0" cy="437.0" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="220.0" cy="408.7" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="320.0" cy="351.5" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="420.0" cy="293.9" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="620.0" cy="178.7" r="4.5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+<polyline points="120.0,464.3 130.0,463.7 170.0,459.9 220.0,455.5 320.0,445.6 420.0,435.4 620.0,416.4" fill="none" stroke="#16A34A" stroke-width="3"/>
+<circle cx="120.0" cy="464.3" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="130.0" cy="463.7" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="170.0" cy="459.9" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="220.0" cy="455.5" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="320.0" cy="445.6" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="420.0" cy="435.4" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<circle cx="620.0" cy="416.4" r="4.5" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5"/>
+<text x="612.0" y="166.7" text-anchor="end" fill="#B91C1C" font-size="12" font-weight="700" class="sans">97,09 KB</text>
+<text x="612.0" y="404.4" text-anchor="end" fill="#15803D" font-size="12" font-weight="700" class="sans">17,88 KB</text>
+<line x1="520.0" y1="242.3" x2="520.0" y2="419.9" stroke="#15803D" stroke-width="1.8" stroke-dasharray="4,3"/>
+<rect x="448.0" y="313.1" width="144" height="36" rx="6" fill="#14532D"/>
+<text x="520.0" y="336.1" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="700" class="sans">Tiết kiệm 81,59%</text>
+<rect x="136" y="128" width="248" height="58" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+<line x1="150" y1="148" x2="178" y2="148" stroke="#DC2626" stroke-width="3"/>
+<text x="186" y="152" fill="#111827" font-size="11.5" font-weight="600" class="sans">Full Snapshot (TB 1.904 B/bản ghi)</text>
+<line x1="150" y1="170" x2="178" y2="170" stroke="#16A34A" stroke-width="3"/>
+<text x="186" y="174" fill="#111827" font-size="11.5" font-weight="600" class="sans">History Delta (TB 322 B/delta)</text>
+<text x="352" y="566" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Thời gian tái tạo trạng thái (Replay 50 delta): TB 0,074 ms (p95 = 0,081 ms)</text>
+<rect x="688" y="72" width="628" height="516" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.6"/>
+<text x="1002" y="102" text-anchor="middle" fill="#1E3A5F" font-size="14.5" font-weight="700" class="sans">B. Độ trễ truy vấn thực nghiệm Meilisearch v1.11 (5.000 tin, 40 lượt/mẫu)</text>
+<line x1="865.0" y1="132" x2="865.0" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="865.0" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">0 ms</text>
+<line x1="928.3" y1="132" x2="928.3" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="928.3" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">5 ms</text>
+<line x1="991.7" y1="132" x2="991.7" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="991.7" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">10 ms</text>
+<line x1="1055.0" y1="132" x2="1055.0" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1055.0" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">15 ms</text>
+<line x1="1118.3" y1="132" x2="1118.3" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1118.3" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">20 ms</text>
+<line x1="1181.7" y1="132" x2="1181.7" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1181.7" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">25 ms</text>
+<line x1="1245.0" y1="132" x2="1245.0" y2="492" stroke="#E2E8F0" stroke-width="1"/>
+<text x="1245.0" y="510" text-anchor="middle" fill="#475569" font-size="11" class="sans">30 ms</text>
+<line x1="865" y1="132" x2="865" y2="492" stroke="#334155" stroke-width="2"/>
+<line x1="865" y1="492" x2="1245" y2="492" stroke="#334155" stroke-width="2"/>
+<text x="1055.0" y="534" text-anchor="middle" fill="#334155" font-size="12" font-weight="600" class="sans">Thời gian phản hồi đo thực tế (ms)</text>
+<text x="855" y="170" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q1: Tiếng Việt đ/Đ</text>
+<rect x="865" y="148" width="12.7" height="12" rx="2" fill="#16A34A"/>
+<text x="882.7" y="158" fill="#15803D" font-size="10" font-weight="700" class="sans">1.00 ms</text>
+<rect x="865" y="162" width="118.2" height="12" rx="2" fill="#2B7BB9"/>
+<text x="988.2" y="172" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">9.33 ms</text>
+<rect x="865" y="176" width="339.8" height="12" rx="2" fill="#F59E0B"/>
+<text x="1209.8" y="186" fill="#B45309" font-size="10" font-weight="700" class="sans">26.83 ms</text>
+<text x="855" y="228" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q2: Sai chính tả (Typo)</text>
+<rect x="865" y="206" width="12.7" height="12" rx="2" fill="#16A34A"/>
+<text x="882.7" y="216" fill="#15803D" font-size="10" font-weight="700" class="sans">1.00 ms</text>
+<rect x="865" y="220" width="80.8" height="12" rx="2" fill="#2B7BB9"/>
+<text x="950.8" y="230" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">6.38 ms</text>
+<rect x="865" y="234" width="286.9" height="12" rx="2" fill="#F59E0B"/>
+<text x="1156.9" y="244" fill="#B45309" font-size="10" font-weight="700" class="sans">22.65 ms</text>
+<text x="855" y="286" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q3: Đồng nghĩa (Synonym)</text>
+<rect x="865" y="264" width="9.1" height="12" rx="2" fill="#16A34A"/>
+<text x="879.1" y="274" fill="#15803D" font-size="10" font-weight="700" class="sans">0.72 ms</text>
+<rect x="865" y="278" width="99.8" height="12" rx="2" fill="#2B7BB9"/>
+<text x="969.8" y="288" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">7.88 ms</text>
+<rect x="865" y="292" width="331.5" height="12" rx="2" fill="#F59E0B"/>
+<text x="1201.5" y="302" fill="#B45309" font-size="10" font-weight="700" class="sans">26.17 ms</text>
+<text x="855" y="344" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q4: Lọc đa chiều (8 facet)</text>
+<rect x="865" y="322" width="3.0" height="12" rx="2" fill="#16A34A"/>
+<text x="873.0" y="332" fill="#15803D" font-size="10" font-weight="700" class="sans">0.05 ms</text>
+<rect x="865" y="336" width="64.2" height="12" rx="2" fill="#2B7BB9"/>
+<text x="934.2" y="346" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">5.07 ms</text>
+<rect x="865" y="350" width="325.2" height="12" rx="2" fill="#F59E0B"/>
+<text x="1195.2" y="360" fill="#B45309" font-size="10" font-weight="700" class="sans">25.67 ms</text>
+<text x="855" y="402" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q5: Địa chỉ cũ/mới Token</text>
+<rect x="865" y="380" width="3.0" height="12" rx="2" fill="#16A34A"/>
+<text x="873.0" y="390" fill="#15803D" font-size="10" font-weight="700" class="sans">0.05 ms</text>
+<rect x="865" y="394" width="104.0" height="12" rx="2" fill="#2B7BB9"/>
+<text x="974.0" y="404" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">8.21 ms</text>
+<rect x="865" y="408" width="332.8" height="12" rx="2" fill="#F59E0B"/>
+<text x="1202.8" y="418" fill="#B45309" font-size="10" font-weight="700" class="sans">26.27 ms</text>
+<text x="855" y="460" text-anchor="end" fill="#111827" font-size="11.5" font-weight="600" class="sans">Q6: Full-text + Lọc + Sort</text>
+<rect x="865" y="438" width="12.3" height="12" rx="2" fill="#16A34A"/>
+<text x="882.3" y="448" fill="#15803D" font-size="10" font-weight="700" class="sans">0.97 ms</text>
+<rect x="865" y="452" width="87.0" height="12" rx="2" fill="#2B7BB9"/>
+<text x="957.0" y="462" fill="#1E3A5F" font-size="10" font-weight="700" class="sans">6.87 ms</text>
+<rect x="865" y="466" width="347.2" height="12" rx="2" fill="#F59E0B"/>
+<text x="1217.2" y="476" fill="#B45309" font-size="10" font-weight="700" class="sans">27.41 ms</text>
+<rect x="720" y="548" width="564" height="28" rx="5" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+<rect x="736" y="556" width="14" height="12" rx="2" fill="#16A34A"/>
+<text x="756" y="566" fill="#111827" font-size="11" font-weight="600" class="sans">Engine lõi (≤ 1 ms)</text>
+<rect x="890" y="556" width="14" height="12" rx="2" fill="#2B7BB9"/>
+<text x="910" y="566" fill="#111827" font-size="11" font-weight="600" class="sans">HTTP E2E Trung bình</text>
+<rect x="1062" y="556" width="14" height="12" rx="2" fill="#F59E0B"/>
+<text x="1082" y="566" fill="#111827" font-size="11" font-weight="600" class="sans">HTTP E2E p95 | Nạp chỉ mục: 7.556 tin/s</text>
+</svg>

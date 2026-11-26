@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="720" viewBox="0 0 1360 720" role="img" aria-label="Kiểm soát xung đột đồng thời OCC RowVersion và mô hình History Delta Engine">
+  <defs>
+    <style>
+      .sans { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+      .mono { font-family: 'Consolas', 'Courier New', monospace; }
+      .math { font-family: 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2B7BB9"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2E8B57"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#C93B3B"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#D96B27"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1360" height="720" fill="#FFFFFF"/>
+<text x="680" y="38" text-anchor="middle" fill="#111827" font-size="21" font-weight="700" class="sans">KIỂM SOÁT XUNG ĐỘT GHI ĐỒNG THỜI (OCC) VÀ MÔ HÌNH HISTORY DELTA ENGINE</text>
+<line x1="50" y1="54" x2="1310" y2="54" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="40" y="72" width="622" height="618" rx="10" fill="#FAFCFF" stroke="#CBD5E1" stroke-width="1.8"/>
+<rect x="40" y="72" width="622" height="36" rx="8" fill="#1E3A5F"/>
+<text x="351" y="95" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700" class="sans">A. KIỂM SOÁT ĐỒNG THỜI LẠC QUAN (OCC — ROWVERSION)</text>
+<rect x="200" y="130" width="302" height="58" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="2"/>
+<text x="351" y="154" text-anchor="middle" fill="#111827" font-size="13.5" font-weight="700" class="sans">SQL Server: Listings (Id = 101)</text>
+<text x="351" y="176" text-anchor="middle" fill="#2B7BB9" font-size="12.5" font-weight="700" class="mono">Price = 4.5B | RowVersion = v₁</text>
+<rect x="66" y="236" width="256" height="94" rx="8" fill="#ECFDF5" stroke="#2E8B57" stroke-width="2"/>
+<text x="194" y="260" text-anchor="middle" fill="#14532D" font-size="13.5" font-weight="700" class="sans">Giao dịch T₁ (Người bán A)</text>
+<text x="194" y="282" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">1. Đọc bản ghi với v₁</text>
+<text x="194" y="300" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">2. Gửi PUT (Price=4.2B, v₁)</text>
+<text x="194" y="318" text-anchor="middle" fill="#166534" font-size="11.5" font-weight="700" class="sans">Đến trước tại t₁</text>
+<rect x="380" y="236" width="256" height="94" rx="8" fill="#FEF2F2" stroke="#C93B3B" stroke-width="2"/>
+<text x="508" y="260" text-anchor="middle" fill="#7F1D1D" font-size="13.5" font-weight="700" class="sans">Giao dịch T₂ (Admin / Tab 2)</text>
+<text x="508" y="282" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">1. Đọc bản ghi với v₁</text>
+<text x="508" y="300" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">2. Gửi PUT (Title mới, v₁)</text>
+<text x="508" y="318" text-anchor="middle" fill="#991B1B" font-size="11.5" font-weight="700" class="sans">Đến sau tại t₂ &gt; t₁</text>
+<line x1="280" y1="188" x2="210" y2="232" stroke="#2E8B57" stroke-width="2" marker-end="url(#ah-green)"/>
+<line x1="422" y1="188" x2="492" y2="232" stroke="#C93B3B" stroke-width="2" marker-end="url(#ah-red)"/>
+<rect x="66" y="374" width="256" height="106" rx="8" fill="#FFFFFF" stroke="#2E8B57" stroke-width="1.8"/>
+<text x="194" y="396" text-anchor="middle" fill="#14532D" font-size="12" font-weight="700" class="mono">UPDATE Listings SET ...</text>
+<text x="194" y="415" text-anchor="middle" fill="#14532D" font-size="12" font-weight="700" class="mono">WHERE Id=101 AND RV=v₁</text>
+<line x1="82" y1="426" x2="306" y2="426" stroke="#D1FAE5" stroke-width="1.3"/>
+<text x="194" y="447" text-anchor="middle" fill="#166534" font-size="12" font-weight="700" class="sans">Khớp (1 row) → RV := v₂</text>
+<text x="194" y="467" text-anchor="middle" fill="#15803D" font-size="12.5" font-weight="700" class="sans">HTTP 200 OK</text>
+<rect x="380" y="374" width="256" height="106" rx="8" fill="#FFFFFF" stroke="#C93B3B" stroke-width="1.8"/>
+<text x="508" y="396" text-anchor="middle" fill="#991B1B" font-size="12" font-weight="700" class="mono">UPDATE Listings SET ...</text>
+<text x="508" y="415" text-anchor="middle" fill="#991B1B" font-size="12" font-weight="700" class="mono">WHERE Id=101 AND RV=v₁</text>
+<line x1="396" y1="426" x2="620" y2="426" stroke="#FEE2E2" stroke-width="1.3"/>
+<text x="508" y="447" text-anchor="middle" fill="#991B1B" font-size="12" font-weight="700" class="sans">Sai khớp (0 rows, RV hiện là v₂)</text>
+<text x="508" y="467" text-anchor="middle" fill="#DC2626" font-size="12.5" font-weight="700" class="sans">HTTP 409 Conflict</text>
+<line x1="194" y1="330" x2="194" y2="369" stroke="#2E8B57" stroke-width="2" marker-end="url(#ah-green)"/>
+<line x1="508" y1="330" x2="508" y2="369" stroke="#C93B3B" stroke-width="2" marker-end="url(#ah-red)"/>
+<rect x="66" y="514" width="570" height="150" rx="8" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.6"/>
+<text x="351" y="540" text-anchor="middle" fill="#1E3A5F" font-size="13.5" font-weight="700" class="sans">Bất biến kiểm soát xung đột (EF Core Exception Middleware)</text>
+<text x="351" y="570" text-anchor="middle" fill="#111827" font-size="13.5" class="math">Commit(Tᵢ) hợp lệ  ⇔  v_read(Tᵢ) = v_current(DB)</text>
+<text x="351" y="600" text-anchor="middle" fill="#334155" font-size="12" class="sans">DbUpdateConcurrencyException → Chuyển đổi tự động thành HTTP 409</text>
+<text x="351" y="624" text-anchor="middle" fill="#334155" font-size="12" class="sans">Áp dụng trên cả hai bảng trọng yếu: Listings &amp; Wallets (RowVersion 8-byte)</text>
+<text x="351" y="648" text-anchor="middle" fill="#14532D" font-size="12.5" font-weight="700" class="sans">Tỷ lệ mất dữ liệu ghi đè (Lost Updates) = 0,0%</text>
+<rect x="698" y="72" width="622" height="618" rx="10" fill="#FAFCFF" stroke="#CBD5E1" stroke-width="1.8"/>
+<rect x="698" y="72" width="622" height="36" rx="8" fill="#2E6F40"/>
+<text x="1009" y="95" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700" class="sans">B. THUẬT TOÁN HISTORY DELTA ENGINE &amp; STATE REPLAY</text>
+<rect x="726" y="132" width="136" height="82" rx="8" fill="#1E3A5F" stroke="#0F172A" stroke-width="2"/>
+<text x="794" y="160" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700" class="sans">Snapshot S₀</text>
+<text x="794" y="180" text-anchor="middle" fill="#CBD5E1" font-size="11.5" class="sans">Tạo tin ban đầu</text>
+<text x="794" y="198" text-anchor="middle" fill="#93C5FD" font-size="11.5" font-weight="700" class="mono">~1.904 bytes</text>
+<line x1="862" y1="173" x2="895" y2="173" stroke="#2E8B57" stroke-width="2.2" marker-end="url(#ah-green)"/>
+<rect x="900" y="138" width="114" height="70" rx="7" fill="#ECFDF5" stroke="#2E8B57" stroke-width="1.8"/>
+<text x="957" y="160" text-anchor="middle" fill="#14532D" font-size="13" font-weight="700" class="sans">Delta Δ₁</text>
+<text x="957" y="178" text-anchor="middle" fill="#475569" font-size="10.5" class="sans">Price: 4.5B→4.2B</text>
+<text x="957" y="196" text-anchor="middle" fill="#166534" font-size="11" font-weight="700" class="mono">~165 B</text>
+<line x1="1014" y1="173" x2="1037" y2="173" stroke="#2E8B57" stroke-width="2.2" marker-end="url(#ah-green)"/>
+<rect x="1042" y="138" width="114" height="70" rx="7" fill="#ECFDF5" stroke="#2E8B57" stroke-width="1.8"/>
+<text x="1099" y="160" text-anchor="middle" fill="#14532D" font-size="13" font-weight="700" class="sans">Delta Δ₂</text>
+<text x="1099" y="178" text-anchor="middle" fill="#475569" font-size="10.5" class="sans">Title, Bedrooms</text>
+<text x="1099" y="196" text-anchor="middle" fill="#166534" font-size="11" font-weight="700" class="mono">~290 B</text>
+<line x1="1156" y1="173" x2="1179" y2="173" stroke="#2E8B57" stroke-width="2.2" marker-end="url(#ah-green)"/>
+<rect x="1184" y="138" width="114" height="70" rx="7" fill="#ECFDF5" stroke="#2E8B57" stroke-width="1.8"/>
+<text x="1241" y="160" text-anchor="middle" fill="#14532D" font-size="13" font-weight="700" class="sans">Delta Δₖ</text>
+<text x="1241" y="178" text-anchor="middle" fill="#475569" font-size="10.5" class="sans">Chỉ trường đổi</text>
+<text x="1241" y="196" text-anchor="middle" fill="#166534" font-size="11" font-weight="700" class="mono">~322 B TB</text>
+<rect x="726" y="246" width="568" height="132" rx="8" fill="#FFFFFF" stroke="#2B7BB9" stroke-width="1.8"/>
+<text x="1010" y="272" text-anchor="middle" fill="#1E3A5F" font-size="13.5" font-weight="700" class="sans">Hàm tính sai phân (DeltaEngine.CreateDeltas — 16 trường ListingDto)</text>
+<text x="1010" y="302" text-anchor="middle" fill="#111827" font-size="13.5" class="math">Δₖ = { (f, Sₖ₋₁[f], Sₖ[f])  |  f ∈ F₁₆,  Sₖ₋₁[f] ≠ Sₖ[f] }</text>
+<text x="1010" y="330" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">F₁₆ = {Title, Description, PropertyType, ListingType, Price, Area, Floors, Bedrooms,</text>
+<text x="1010" y="348" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Bathrooms, BalconyDirection, AdminMode, City, District, Ward, Address, LegacyAddress}</text>
+<text x="1010" y="368" text-anchor="middle" fill="#2B7BB9" font-size="11.5" font-weight="600" class="sans">Lưu vào cột ListingHistories.DeltasJson (SnapshotJson = NULL khi Update)</text>
+<rect x="726" y="404" width="568" height="108" rx="8" fill="#F0FDF4" stroke="#2E8B57" stroke-width="1.8"/>
+<text x="1010" y="428" text-anchor="middle" fill="#14532D" font-size="13.5" font-weight="700" class="sans">Động cơ tái tạo trạng thái tại phiên bản bất kỳ k (State Replay)</text>
+<text x="1010" y="458" text-anchor="middle" fill="#111827" font-size="14" class="math">Sₖ = Apply( ··· Apply(Apply(S₀, Δ₁), Δ₂) ··· , Δₖ )</text>
+<text x="1010" y="490" text-anchor="middle" fill="#334155" font-size="12" class="sans">Độ phức tạp thời gian: O(k · |Δ̄|)  |  Độ trễ thực nghiệm tại k = 50: 0,074 ms</text>
+<rect x="726" y="538" width="568" height="126" rx="8" fill="#FFF7ED" stroke="#D96B27" stroke-width="1.8"/>
+<text x="1010" y="564" text-anchor="middle" fill="#9A3412" font-size="13.5" font-weight="700" class="sans">Mô hình tối ưu dung lượng lưu trữ qua N lần chỉnh sửa</text>
+<text x="1010" y="594" text-anchor="middle" fill="#111827" font-size="13" class="math">Size_Full(N) = (N + 1) · |S̄|     vs.     Size_Delta(N) = |S₀| + N · |Δ̄|</text>
+<text x="1010" y="622" text-anchor="middle" fill="#111827" font-size="13" class="math">Tỷ lệ tiết kiệm  η(N) = 1 − (|S₀| + N·|Δ̄|) / ((N+1)·|S̄|)</text>
+<text x="1010" y="648" text-anchor="middle" fill="#14532D" font-size="12.5" font-weight="700" class="sans">Tại N = 50: 97,09 KB → 17,88 KB  ⇒  Tiết kiệm 81,59% dung lượng CSDL</text>
+</svg>

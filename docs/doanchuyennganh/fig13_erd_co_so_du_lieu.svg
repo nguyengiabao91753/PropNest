@@ -1,0 +1,203 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="860" viewBox="0 0 1440 860" role="img" aria-label="Sơ đồ thực thể kết hợp ERD cơ sở dữ liệu PropNestDb trên SQL Server 2022">
+  <defs>
+    <style>
+      .sans { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+      .mono { font-family: 'Consolas', 'Courier New', monospace; }
+      .math { font-family: 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2B7BB9"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2E8B57"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#C93B3B"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#D96B27"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1440" height="860" fill="#FFFFFF"/>
+<text x="720" y="36" text-anchor="middle" fill="#111827" font-size="21" font-weight="700" class="sans">SƠ ĐỒ THỰC THỂ KẾT HỢP (ERD) CƠ SỞ DỮ LIỆU PROPNESTDB (SQL SERVER 2022)</text>
+<line x1="40" y1="52" x2="1400" y2="52" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="36" y="68" width="430" height="358" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.6" stroke-dasharray="6,4"/>
+<text x="50" y="90" fill="#1E293B" font-size="11.5" font-weight="700" class="sans">1. NGƯỜI DÙNG &amp; TÀI CHÍNH (IDENTITY &amp; WALLET)</text>
+<rect x="492" y="68" width="464" height="492" rx="10" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1.6" stroke-dasharray="6,4"/>
+<text x="506" y="90" fill="#1E293B" font-size="11.5" font-weight="700" class="sans">2. TIN ĐĂNG BĐS &amp; LỊCH SỬ (CORE LISTINGS)</text>
+<rect x="982" y="68" width="422" height="492" rx="10" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.6" stroke-dasharray="6,4"/>
+<text x="996" y="90" fill="#1E293B" font-size="11.5" font-weight="700" class="sans">3. KIỂM DUYỆT AI &amp; BỘ LUẬT (MODERATION &amp; AME)</text>
+<rect x="36" y="448" width="430" height="382" rx="10" fill="#FAF5FF" stroke="#D8B4FE" stroke-width="1.6" stroke-dasharray="6,4"/>
+<text x="50" y="470" fill="#1E293B" font-size="11.5" font-weight="700" class="sans">4. GÓI DỊCH VỤ &amp; SAGA WORKFLOW</text>
+<rect x="492" y="580" width="912" height="250" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.6" stroke-dasharray="6,4"/>
+<text x="506" y="602" fill="#1E293B" font-size="11.5" font-weight="700" class="sans">5. ĐẢM BẢO ĐỘ TIN CẬY PHÂN TÁN (OUTBOX · INBOX · IDEMPOTENCY)</text>
+<rect x="54" y="102" width="186" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 60 102 L 234 102 Q 240 102 240 108 L 240 128 L 54 128 L 54 108 Q 54 102 60 102 Z" fill="#1D4ED8"/>
+<text x="147.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">ApplicationUsers</text>
+<text x="64" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK Id : bigint</text>
+<text x="64" y="162" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Email : nvarchar(256)</text>
+<text x="64" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   FullName : nvarchar</text>
+<text x="64" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Role : User|Admin</text>
+<text x="64" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status : Active</text>
+<rect x="264" y="102" width="184" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 270 102 L 442 102 Q 448 102 448 108 L 448 128 L 264 128 L 264 108 Q 264 102 270 102 Z" fill="#1D4ED8"/>
+<text x="356.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">Wallets</text>
+<text x="274" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK WalletId : bigint</text>
+<text x="274" y="162" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK UserId : bigint (UQ)</text>
+<text x="274" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   MainBalance : decimal</text>
+<text x="274" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PromoBalance : decimal</text>
+<text x="274" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RowVersion : rowver</text>
+<rect x="130" y="266" width="260" height="144" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 136 266 L 384 266 Q 390 266 390 272 L 390 292 L 130 292 L 130 272 Q 130 266 136 266 Z" fill="#1D4ED8"/>
+<text x="260.0" y="284" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">WalletTransactions</text>
+<text x="140" y="308" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK TransactionId : bigint</text>
+<text x="140" y="326" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK WalletId : bigint</text>
+<text x="140" y="344" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CorrelationId : uniqueid</text>
+<text x="140" y="362" fill="#334155" font-size="10.8" font-weight="400" class="mono">   TransactionType : enum</text>
+<text x="140" y="380" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Amount / BalanceBefore / After</text>
+<text x="140" y="398" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CreatedAt : datetimeoffset</text>
+<rect x="514" y="102" width="232" height="234" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 520 102 L 740 102 Q 746 102 746 108 L 746 128 L 514 128 L 514 108 Q 514 102 520 102 Z" fill="#15803D"/>
+<text x="630.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">Listings</text>
+<text x="524" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK ListingId : bigint</text>
+<text x="524" y="162" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK OwnerUserId : bigint</text>
+<text x="524" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Title, Description</text>
+<text x="524" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PropertyType, ListingType</text>
+<text x="524" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Price, Area, Floors, Beds</text>
+<text x="524" y="234" fill="#334155" font-size="10.8" font-weight="400" class="mono">   City, District, Ward, Addr</text>
+<text x="524" y="252" fill="#334155" font-size="10.8" font-weight="400" class="mono">   AdminMode, Codes, Legacy</text>
+<text x="524" y="270" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status, ModerationDecision</text>
+<text x="524" y="288" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PackageCode, Start/EndDate</text>
+<text x="524" y="306" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PackageEndDate : dto?</text>
+<text x="524" y="324" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RowVersion : rowver</text>
+<rect x="768" y="102" width="170" height="144" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 774 102 L 932 102 Q 938 102 938 108 L 938 128 L 768 128 L 768 108 Q 768 102 774 102 Z" fill="#15803D"/>
+<text x="853.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">ListingImages</text>
+<text x="778" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK ImageId : bigint</text>
+<text x="778" y="162" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId : bigint</text>
+<text x="778" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Url, PublicId</text>
+<text x="778" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   SortOrder : int</text>
+<text x="778" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   IsCover : bit</text>
+<text x="778" y="234" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status : nvarchar</text>
+<rect x="768" y="286" width="170" height="162" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 774 286 L 932 286 Q 938 286 938 292 L 938 312 L 768 312 L 768 292 Q 768 286 774 286 Z" fill="#15803D"/>
+<text x="853.0" y="304" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">ListingHistories</text>
+<text x="778" y="328" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK HistoryId : bigint</text>
+<text x="778" y="346" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId : bigint</text>
+<text x="778" y="364" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ActorUserId : bigint?</text>
+<text x="778" y="382" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ActionType : nvarchar</text>
+<text x="778" y="400" fill="#334155" font-size="10.8" font-weight="400" class="mono">   SnapshotJson : max?</text>
+<text x="778" y="418" fill="#334155" font-size="10.8" font-weight="400" class="mono">   DeltasJson : max?</text>
+<text x="778" y="436" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Note : nvarchar(500)</text>
+<rect x="1002" y="102" width="188" height="144" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 1008 102 L 1184 102 Q 1190 102 1190 108 L 1190 128 L 1002 128 L 1002 108 Q 1002 102 1008 102 Z" fill="#C2410C"/>
+<text x="1096.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">AmeModerationResults</text>
+<text x="1012" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK ResultId : bigint</text>
+<text x="1012" y="162" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId : bigint</text>
+<text x="1012" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CorrelationId : guid</text>
+<text x="1012" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Decision : enum</text>
+<text x="1012" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ScoreJson, ReasonsJson</text>
+<text x="1012" y="234" fill="#334155" font-size="10.8" font-weight="400" class="mono">   WarningsJson, ModelInfo</text>
+<rect x="1204" y="102" width="184" height="144" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 1210 102 L 1382 102 Q 1388 102 1388 108 L 1388 128 L 1204 128 L 1204 108 Q 1204 102 1210 102 Z" fill="#C2410C"/>
+<text x="1296.0" y="120" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">ModerationReviews</text>
+<text x="1214" y="144" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK ReviewId : bigint</text>
+<text x="1214" y="162" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId : bigint</text>
+<text x="1214" y="180" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Source : AME|Admin</text>
+<text x="1214" y="198" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Decision : enum</text>
+<text x="1214" y="216" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ReasonsJson : max?</text>
+<text x="1214" y="234" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ReviewerUserId : long?</text>
+<rect x="1002" y="286" width="188" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 1008 286 L 1184 286 Q 1190 286 1190 292 L 1190 312 L 1002 312 L 1002 292 Q 1002 286 1008 286 Z" fill="#C2410C"/>
+<text x="1096.0" y="304" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">ContentRules</text>
+<text x="1012" y="328" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK RuleId : bigint</text>
+<text x="1012" y="346" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RuleType : nvarchar</text>
+<text x="1012" y="364" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Pattern : nvarchar</text>
+<text x="1012" y="382" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Severity : enum</text>
+<text x="1012" y="400" fill="#334155" font-size="10.8" font-weight="400" class="mono">   IsActive : bit</text>
+<rect x="1204" y="286" width="184" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 1210 286 L 1382 286 Q 1388 286 1388 292 L 1388 312 L 1204 312 L 1204 292 Q 1204 286 1210 286 Z" fill="#C2410C"/>
+<text x="1296.0" y="304" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">MarketPriceBenchmarks</text>
+<text x="1214" y="328" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK BenchmarkId : bigint</text>
+<text x="1214" y="346" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CityCode, DistrictCode</text>
+<text x="1214" y="364" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PropertyType, ListType</text>
+<text x="1214" y="382" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Min / Avg / Max /m²</text>
+<text x="1214" y="400" fill="#334155" font-size="10.8" font-weight="400" class="mono">   EffectiveFrom : dto</text>
+<rect x="54" y="480" width="186" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 60 480 L 234 480 Q 240 480 240 486 L 240 506 L 54 506 L 54 486 Q 54 480 60 480 Z" fill="#6D28D9"/>
+<text x="147.0" y="498" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">PackageDefinitions</text>
+<text x="64" y="522" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK PackageId : bigint</text>
+<text x="64" y="540" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PackageCode : UQ</text>
+<text x="64" y="558" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Name, Kind</text>
+<text x="64" y="576" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Price : decimal</text>
+<text x="64" y="594" fill="#334155" font-size="10.8" font-weight="400" class="mono">   DurationDays : int</text>
+<rect x="262" y="480" width="186" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 268 480 L 442 480 Q 448 480 448 486 L 448 506 L 262 506 L 262 486 Q 262 480 268 480 Z" fill="#6D28D9"/>
+<text x="355.0" y="498" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">PurchasePackageSagas</text>
+<text x="272" y="522" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK CorrelationId : guid</text>
+<text x="272" y="540" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CurrentState : nvarchar</text>
+<text x="272" y="558" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId, UserId</text>
+<text x="272" y="576" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ChargeAmount : decimal</text>
+<text x="272" y="594" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PromoUsed, MainUsed</text>
+<rect x="54" y="648" width="186" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 60 648 L 234 648 Q 240 648 240 654 L 240 674 L 54 674 L 54 654 Q 54 648 60 648 Z" fill="#6D28D9"/>
+<text x="147.0" y="666" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">WorkflowInstances</text>
+<text x="64" y="690" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK CorrelationId : guid</text>
+<text x="64" y="708" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK ListingId, UserId</text>
+<text x="64" y="726" fill="#334155" font-size="10.8" font-weight="400" class="mono">   PackageCode, Amount</text>
+<text x="64" y="744" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status : enum</text>
+<text x="64" y="762" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RetryCount, ErrorMsg</text>
+<rect x="262" y="648" width="186" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 268 648 L 442 648 Q 448 648 448 654 L 448 674 L 262 674 L 262 654 Q 262 648 268 648 Z" fill="#6D28D9"/>
+<text x="355.0" y="666" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">WorkflowSteps</text>
+<text x="272" y="690" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK StepId : bigint</text>
+<text x="272" y="708" fill="#B45309" font-size="10.8" font-weight="700" class="mono">FK CorrelationId : guid</text>
+<text x="272" y="726" fill="#334155" font-size="10.8" font-weight="400" class="mono">   StepName : nvarchar</text>
+<text x="272" y="744" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status, Attempt</text>
+<text x="272" y="762" fill="#334155" font-size="10.8" font-weight="400" class="mono">   StartedAt / FinishedAt</text>
+<rect x="514" y="616" width="272" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 520 616 L 780 616 Q 786 616 786 622 L 786 642 L 514 642 L 514 622 Q 514 616 520 616 Z" fill="#334155"/>
+<text x="650.0" y="634" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">OutboxMessages</text>
+<text x="524" y="658" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK OutboxId : uniqueidentifier</text>
+<text x="524" y="676" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Type, PayloadJson : nvarchar(max)</text>
+<text x="524" y="694" fill="#334155" font-size="10.8" font-weight="400" class="mono">   CorrelationId : uniqueidentifier?</text>
+<text x="524" y="712" fill="#334155" font-size="10.8" font-weight="400" class="mono">   OccurredOn, ProcessedOn : dto?</text>
+<text x="524" y="730" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RetryCount (max 5), Error</text>
+<rect x="814" y="616" width="272" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 820 616 L 1080 616 Q 1086 616 1086 622 L 1086 642 L 814 642 L 814 622 Q 814 616 820 616 Z" fill="#334155"/>
+<text x="950.0" y="634" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">InboxMessages</text>
+<text x="824" y="658" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK Id : bigint</text>
+<text x="824" y="676" fill="#334155" font-size="10.8" font-weight="400" class="mono">   MessageId : uniqueidentifier (UQ)</text>
+<text x="824" y="694" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ConsumerName : nvarchar(200) (UQ)</text>
+<text x="824" y="712" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ProcessedOn : datetimeoffset</text>
+<text x="824" y="730" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Index: UQ(MessageId, ConsumerName)</text>
+<rect x="1114" y="616" width="272" height="126" rx="6" fill="#FFFFFF" stroke="#334155" stroke-width="1.6"/>
+<path d="M 1120 616 L 1380 616 Q 1386 616 1386 622 L 1386 642 L 1114 642 L 1114 622 Q 1114 616 1120 616 Z" fill="#334155"/>
+<text x="1250.0" y="634" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" class="sans">IdempotencyRequests</text>
+<text x="1124" y="658" fill="#1D4ED8" font-size="10.8" font-weight="700" class="mono">PK RequestId : bigint</text>
+<text x="1124" y="676" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Key, UserId, RequestPath (UQ)</text>
+<text x="1124" y="694" fill="#334155" font-size="10.8" font-weight="400" class="mono">   RequestHash : sha256</text>
+<text x="1124" y="712" fill="#334155" font-size="10.8" font-weight="400" class="mono">   Status, ResponseStatusCode, Body</text>
+<text x="1124" y="730" fill="#334155" font-size="10.8" font-weight="400" class="mono">   ExpiresAt : datetimeoffset</text>
+<line x1="240" y1="150" x2="264" y2="150" stroke="#1D4ED8" stroke-width="1.8"/>
+<text x="252" y="143" text-anchor="middle" fill="#1D4ED8" font-size="10" font-weight="700" class="sans">1:1</text>
+<polyline points="356,228 356,266" fill="none" stroke="#1D4ED8" stroke-width="1.8"/>
+<text x="366" y="252" fill="#1D4ED8" font-size="10" font-weight="700" class="sans">1:N</text>
+<polyline points="92,228 92,416 479,416 479,150 514,150" fill="none" stroke="#0F766E" stroke-width="1.7" stroke-dasharray="5,3"/>
+<text x="495" y="143" text-anchor="middle" fill="#0F766E" font-size="10" font-weight="700" class="sans">1:N</text>
+<line x1="746" y1="168" x2="768" y2="168" stroke="#15803D" stroke-width="1.8"/>
+<text x="757" y="162" text-anchor="middle" fill="#15803D" font-size="10" font-weight="700" class="sans">1:N</text>
+<line x1="746" y1="336" x2="768" y2="336" stroke="#15803D" stroke-width="1.8"/>
+<text x="757" y="330" text-anchor="middle" fill="#15803D" font-size="10" font-weight="700" class="sans">1:N</text>
+<polyline points="746,266 1296,266 1296,246" fill="none" stroke="#C2410C" stroke-width="1.7" stroke-dasharray="5,3"/>
+<line x1="1096" y1="266" x2="1096" y2="246" stroke="#C2410C" stroke-width="1.7" stroke-dasharray="5,3"/>
+<rect x="822" y="256" width="88" height="18" rx="3" fill="#FFFFFF"/>
+<text x="866" y="269" text-anchor="middle" fill="#C2410C" font-size="10.2" font-weight="700" class="sans">ListingId (1:N)</text>
+<line x1="240" y1="712" x2="262" y2="712" stroke="#6D28D9" stroke-width="1.8"/>
+<text x="251" y="706" text-anchor="middle" fill="#6D28D9" font-size="10" font-weight="700" class="sans">1:N</text>
+<polyline points="355,606 355,626 147,626 147,648" fill="none" stroke="#6D28D9" stroke-width="1.6"/>
+<text x="252" y="621" text-anchor="middle" fill="#6D28D9" font-size="10" font-weight="700" class="sans">CorrelationId (1:1)</text>
+</svg>

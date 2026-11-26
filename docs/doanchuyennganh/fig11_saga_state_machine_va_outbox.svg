@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="740" viewBox="0 0 1360 740" role="img" aria-label="Máy trạng thái PurchasePackageSaga và cơ chế Transactional Outbox Inbox">
+  <defs>
+    <style>
+      .sans { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+      .mono { font-family: 'Consolas', 'Courier New', monospace; }
+      .math { font-family: 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2B7BB9"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2E8B57"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#C93B3B"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#D96B27"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1360" height="740" fill="#FFFFFF"/>
+<text x="680" y="38" text-anchor="middle" fill="#111827" font-size="21" font-weight="700" class="sans">MÁY TRẠNG THÁI SAGA MUA GÓI (SPLIT REFUND) VÀ CƠ CHẾ OUTBOX / INBOX</text>
+<line x1="60" y1="54" x2="1300" y2="54" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="44" y="70" width="1272" height="340" rx="10" fill="#FAFCFF" stroke="#CBD5E1" stroke-width="1.8"/>
+<rect x="44" y="70" width="470" height="32" rx="6" fill="#1E3A5F"/>
+<text x="62" y="91" fill="#FFFFFF" font-size="13.5" font-weight="700" class="sans">A. MÁY TRẠNG THÁI PURCHASEPACKAGESAGA (MASSTRANSIT)</text>
+<circle cx="96" cy="182" r="13" fill="#111827"/>
+<text x="96" y="214" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" class="sans">Initial</text>
+<rect x="220" y="150" width="195" height="64" rx="10" fill="#EFF6FF" stroke="#2B7BB9" stroke-width="2.2"/>
+<text x="317.5" y="176" text-anchor="middle" fill="#111827" font-size="14" font-weight="700" class="sans">DeductingWallet</text>
+<text x="317.5" y="196" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Lưu PromoUsed, MainUsed</text>
+<rect x="555" y="150" width="200" height="64" rx="10" fill="#EFF6FF" stroke="#2B7BB9" stroke-width="2.2"/>
+<text x="655.0" y="176" text-anchor="middle" fill="#111827" font-size="14" font-weight="700" class="sans">UpgradingListing</text>
+<text x="655.0" y="196" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Cập nhật VIP &amp; PackageEnd</text>
+<rect x="920" y="150" width="195" height="64" rx="10" fill="#ECFDF5" stroke="#2E8B57" stroke-width="2.2"/>
+<text x="1017.5" y="176" text-anchor="middle" fill="#14532D" font-size="14" font-weight="700" class="sans">Completed</text>
+<text x="1017.5" y="196" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">RecordHistory + SyncSearch</text>
+<rect x="914" y="144" width="207" height="76" rx="13" fill="none" stroke="#2E8B57" stroke-width="1.5" stroke-dasharray="5,3"/>
+<rect x="220" y="298" width="195" height="64" rx="10" fill="#FEF2F2" stroke="#C93B3B" stroke-width="2.2"/>
+<text x="317.5" y="324" text-anchor="middle" fill="#7F1D1D" font-size="14" font-weight="700" class="sans">Failed</text>
+<text x="317.5" y="344" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Không đủ số dư ví</text>
+<rect x="555" y="298" width="200" height="64" rx="10" fill="#FFF7ED" stroke="#D96B27" stroke-width="2.2"/>
+<text x="655.0" y="324" text-anchor="middle" fill="#7C2D12" font-size="14" font-weight="700" class="sans">Compensating</text>
+<text x="655.0" y="344" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Publish RefundWalletCmd</text>
+<rect x="920" y="298" width="195" height="64" rx="10" fill="#FEFCE8" stroke="#CA8A04" stroke-width="2.2"/>
+<text x="1017.5" y="324" text-anchor="middle" fill="#713F12" font-size="14" font-weight="700" class="sans">Compensated</text>
+<text x="1017.5" y="344" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Hoàn đủ Promo + Main</text>
+<rect x="1142" y="145" width="154" height="218" rx="8" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.6"/>
+<text x="1219" y="170" text-anchor="middle" fill="#1E3A5F" font-size="12.5" font-weight="700" class="sans">Bảo toàn tách ví</text>
+<line x1="1154" y1="180" x2="1284" y2="180" stroke="#E2E8F0" stroke-width="1.2"/>
+<text x="1219" y="205" text-anchor="middle" fill="#111827" font-size="13" class="math">p = min(P, C)</text>
+<text x="1219" y="232" text-anchor="middle" fill="#111827" font-size="13" class="math">m = C − p</text>
+<text x="1219" y="262" text-anchor="middle" fill="#2E8B57" font-size="12.5" font-weight="700" class="math">P′ = P − p + p</text>
+<text x="1219" y="286" text-anchor="middle" fill="#2E8B57" font-size="12.5" font-weight="700" class="math">M′ = M − m + m</text>
+<line x1="1154" y1="305" x2="1284" y2="305" stroke="#E2E8F0" stroke-width="1.2"/>
+<text x="1219" y="328" text-anchor="middle" fill="#475569" font-size="11" class="sans">Sai lệch tài chính:</text>
+<text x="1219" y="348" text-anchor="middle" fill="#14532D" font-size="13" font-weight="700" class="sans">ΔBalance = 0 VNĐ</text>
+<line x1="109" y1="182" x2="215" y2="182" stroke="#111827" stroke-width="2.1" marker-end="url(#ah-ink)"/>
+<text x="162" y="160" text-anchor="middle" fill="#111827" font-size="11" font-weight="600" class="sans">PurchaseRequested</text>
+<text x="162" y="174" text-anchor="middle" fill="#2B7BB9" font-size="10.5" class="sans">→ DeductWalletCmd</text>
+<line x1="415" y1="182" x2="550" y2="182" stroke="#2E8B57" stroke-width="2.2" marker-end="url(#ah-green)"/>
+<text x="482" y="160" text-anchor="middle" fill="#14532D" font-size="11" font-weight="600" class="sans">WalletDeducted</text>
+<text x="482" y="174" text-anchor="middle" fill="#2B7BB9" font-size="10.5" class="sans">→ UpgradeListingCmd</text>
+<line x1="755" y1="182" x2="911" y2="182" stroke="#2E8B57" stroke-width="2.2" marker-end="url(#ah-green)"/>
+<text x="833" y="160" text-anchor="middle" fill="#14532D" font-size="11" font-weight="600" class="sans">ListingUpgraded</text>
+<text x="833" y="174" text-anchor="middle" fill="#475569" font-size="10.5" class="sans">Hoàn tất Workflow</text>
+<line x1="317" y1="214" x2="317" y2="293" stroke="#C93B3B" stroke-width="2.1" stroke-dasharray="6,4" marker-end="url(#ah-red)"/>
+<text x="328" y="258" fill="#991B1B" font-size="11" font-weight="600" class="sans">WalletDeductionFailed</text>
+<line x1="655" y1="214" x2="655" y2="293" stroke="#D96B27" stroke-width="2.2" stroke-dasharray="6,4" marker-end="url(#ah-orange)"/>
+<text x="666" y="250" fill="#9A3412" font-size="11" font-weight="600" class="sans">ListingUpgradeFailed</text>
+<text x="666" y="266" fill="#9A3412" font-size="10.5" class="sans">→ RefundWalletCmd(p, m)</text>
+<line x1="755" y1="330" x2="915" y2="330" stroke="#D96B27" stroke-width="2.2" marker-end="url(#ah-orange)"/>
+<text x="835" y="318" text-anchor="middle" fill="#9A3412" font-size="11" font-weight="600" class="sans">WalletRefunded</text>
+<rect x="44" y="432" width="1272" height="282" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.8"/>
+<rect x="44" y="432" width="520" height="32" rx="6" fill="#2E6F40"/>
+<text x="62" y="453" fill="#FFFFFF" font-size="13.5" font-weight="700" class="sans">B. TRANSACTIONAL OUTBOX &amp; INBOX DEDUPLICATION (EXACTLY-ONCE)</text>
+<rect x="72" y="492" width="230" height="170" rx="8" fill="#F0FDF4" stroke="#2E8B57" stroke-width="2"/>
+<text x="187" y="516" text-anchor="middle" fill="#14532D" font-size="13" font-weight="700" class="sans">1. Giao dịch ACID đơn (SQL)</text>
+<rect x="88" y="530" width="198" height="36" rx="5" fill="#FFFFFF" stroke="#86EFAC" stroke-width="1.4"/>
+<text x="187" y="553" text-anchor="middle" fill="#111827" font-size="12" class="sans">Ghi Domain (Listing/Workflow)</text>
+<rect x="88" y="576" width="198" height="36" rx="5" fill="#FFFFFF" stroke="#86EFAC" stroke-width="1.4"/>
+<text x="187" y="599" text-anchor="middle" fill="#111827" font-size="12" class="sans">INSERT OutboxMessages</text>
+<text x="187" y="642" text-anchor="middle" fill="#166534" font-size="11.5" font-weight="700" class="sans">COMMIT nguyên tử (0% mất tin)</text>
+<rect x="358" y="492" width="248" height="170" rx="8" fill="#EFF6FF" stroke="#2B7BB9" stroke-width="2"/>
+<text x="482" y="516" text-anchor="middle" fill="#1E3A5F" font-size="13" font-weight="700" class="sans">2. OutboxDispatcherWorker</text>
+<text x="482" y="544" text-anchor="middle" fill="#334155" font-size="12" class="sans">Quét chu kỳ Δt = 2s (Batch ≤ 50)</text>
+<text x="482" y="568" text-anchor="middle" fill="#334155" font-size="12" class="sans">ProcessedOn IS NULL</text>
+<text x="482" y="592" text-anchor="middle" fill="#334155" font-size="12" class="sans">AND RetryCount &lt; 5</text>
+<rect x="374" y="610" width="216" height="38" rx="5" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.4"/>
+<text x="482" y="633" text-anchor="middle" fill="#991B1B" font-size="11.5" font-weight="600" class="sans">Retry ≥ 5 → Cách ly Poison-Pill</text>
+<rect x="662" y="528" width="155" height="98" rx="8" fill="#FFF7ED" stroke="#D96B27" stroke-width="2.2"/>
+<text x="739" y="564" text-anchor="middle" fill="#9A3412" font-size="14" font-weight="700" class="sans">3. RabbitMQ</text>
+<text x="739" y="586" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">At-Least-Once</text>
+<text x="739" y="604" text-anchor="middle" fill="#475569" font-size="11.5" class="sans">Persistent Queue</text>
+<rect x="875" y="492" width="412" height="170" rx="8" fill="#F8FAFC" stroke="#475569" stroke-width="2"/>
+<text x="1081" y="516" text-anchor="middle" fill="#0F172A" font-size="13" font-weight="700" class="sans">4. InboxDeduplicationFilter &amp; Consumers</text>
+<rect x="893" y="532" width="182" height="112" rx="6" fill="#FEFCE8" stroke="#CA8A04" stroke-width="1.6"/>
+<text x="984" y="556" text-anchor="middle" fill="#713F12" font-size="12" font-weight="700" class="sans">Kiểm tra InboxMessages</text>
+<text x="984" y="578" text-anchor="middle" fill="#334155" font-size="11" class="mono">UQ(MessageId,</text>
+<text x="984" y="594" text-anchor="middle" fill="#334155" font-size="11" class="mono">   ConsumerName)</text>
+<text x="984" y="620" text-anchor="middle" fill="#991B1B" font-size="11" font-weight="600" class="sans">Đã tồn tại → Bỏ qua (ACK)</text>
+<rect x="1102" y="532" width="168" height="112" rx="6" fill="#ECFDF5" stroke="#2E8B57" stroke-width="1.6"/>
+<text x="1186" y="556" text-anchor="middle" fill="#14532D" font-size="12" font-weight="700" class="sans">Thực thi đúng 1 lần</text>
+<text x="1186" y="580" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">• DeductWallet</text>
+<text x="1186" y="598" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">• UpgradeListing</text>
+<text x="1186" y="616" text-anchor="middle" fill="#334155" font-size="11.5" class="sans">• Refund / SyncSearch</text>
+<text x="1186" y="634" text-anchor="middle" fill="#166534" font-size="10.5" font-weight="600" class="sans">Lưu Inbox + Commit</text>
+<line x1="302" y1="577" x2="352" y2="577" stroke="#111827" stroke-width="2" marker-end="url(#ah-ink)"/>
+<line x1="606" y1="577" x2="656" y2="577" stroke="#2B7BB9" stroke-width="2" marker-end="url(#ah-blue)"/>
+<line x1="817" y1="577" x2="869" y2="577" stroke="#D96B27" stroke-width="2" marker-end="url(#ah-orange)"/>
+<line x1="1075" y1="588" x2="1097" y2="588" stroke="#2E8B57" stroke-width="2" marker-end="url(#ah-green)"/>
+<text x="1086" y="578" text-anchor="middle" fill="#14532D" font-size="10" font-weight="700" class="sans">Mới</text>
+</svg>

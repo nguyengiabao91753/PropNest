@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="600" viewBox="0 0 1360 600" role="img" aria-label="Ma trận nhầm lẫn AME trên 30 kịch bản và tối ưu hóa độ trễ Ollama Warmup">
+  <defs>
+    <style>
+      .sans { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+      .mono { font-family: 'Consolas', 'Courier New', monospace; }
+      .math { font-family: 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; }
+    </style>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#111827"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2B7BB9"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#2E8B57"/>
+    </marker>
+    <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#C93B3B"/>
+    </marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#D96B27"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1360" height="600" fill="#FFFFFF"/>
+<text x="680" y="36" text-anchor="middle" fill="#111827" font-size="20" font-weight="700" class="sans">ĐÁNH GIÁ ĐỘ CHÍNH XÁC PHÂN LOẠI AME (30 KỊCH BẢN) VÀ TỐI ƯU HÓA ĐỘ TRỄ OLLAMA</text>
+<line x1="44" y1="52" x2="1316" y2="52" stroke="#E2E8F0" stroke-width="1.5"/>
+<rect x="44" y="72" width="606" height="496" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.6"/>
+<text x="347" y="102" text-anchor="middle" fill="#1E3A5F" font-size="14.5" font-weight="700" class="sans">A. Ma trận nhầm lẫn AME (30 kịch bản kiểm thử chuẩn)</text>
+<text x="385" y="132" text-anchor="middle" fill="#475569" font-size="12.5" font-weight="700" class="sans">Quyết định dự đoán bởi AME (Predicted)</text>
+<text x="82" y="295" text-anchor="middle" fill="#475569" font-size="12.5" font-weight="700" class="sans" transform="rotate(-90 82 295)">Nhãn thực tế (Ground Truth)</text>
+<text x="269.0" y="155" text-anchor="middle" fill="#1E293B" font-size="12" font-weight="700" class="sans">Approved</text>
+<text x="397.0" y="155" text-anchor="middle" fill="#1E293B" font-size="12" font-weight="700" class="sans">ManualReview</text>
+<text x="525.0" y="155" text-anchor="middle" fill="#1E293B" font-size="12" font-weight="700" class="sans">Rejected</text>
+<text x="193" y="212.0" text-anchor="end" fill="#1E293B" font-size="12" font-weight="700" class="sans">Approved</text>
+<rect x="208" y="168" width="122" height="80" rx="6" fill="#16A34A" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="269.0" y="210.0" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="700" class="sans">10</text>
+<text x="269.0" y="230.0" text-anchor="middle" fill="#ECFDF5" font-size="10.5" font-weight="600" class="sans">TP (100%)</text>
+<rect x="336" y="168" width="122" height="80" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="397.0" y="210.0" text-anchor="middle" fill="#94A3B8" font-size="22" font-weight="700" class="sans">0</text>
+<rect x="464" y="168" width="122" height="80" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="525.0" y="210.0" text-anchor="middle" fill="#94A3B8" font-size="22" font-weight="700" class="sans">0</text>
+<text x="193" y="298.0" text-anchor="end" fill="#1E293B" font-size="12" font-weight="700" class="sans">ManualReview</text>
+<rect x="208" y="254" width="122" height="80" rx="6" fill="#FEE2E2" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="269.0" y="296.0" text-anchor="middle" fill="#991B1B" font-size="22" font-weight="700" class="sans">2</text>
+<text x="269.0" y="316.0" text-anchor="middle" fill="#991B1B" font-size="10.5" font-weight="600" class="sans">FN (2 biên)</text>
+<rect x="336" y="254" width="122" height="80" rx="6" fill="#22C55E" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="397.0" y="296.0" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="700" class="sans">8</text>
+<text x="397.0" y="316.0" text-anchor="middle" fill="#ECFDF5" font-size="10.5" font-weight="600" class="sans">TP (80%)</text>
+<rect x="464" y="254" width="122" height="80" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="525.0" y="296.0" text-anchor="middle" fill="#94A3B8" font-size="22" font-weight="700" class="sans">0</text>
+<text x="193" y="384.0" text-anchor="end" fill="#1E293B" font-size="12" font-weight="700" class="sans">Rejected</text>
+<rect x="208" y="340" width="122" height="80" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="269.0" y="382.0" text-anchor="middle" fill="#94A3B8" font-size="22" font-weight="700" class="sans">0</text>
+<rect x="336" y="340" width="122" height="80" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="397.0" y="382.0" text-anchor="middle" fill="#94A3B8" font-size="22" font-weight="700" class="sans">0</text>
+<rect x="464" y="340" width="122" height="80" rx="6" fill="#16A34A" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="525.0" y="382.0" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="700" class="sans">10</text>
+<text x="525.0" y="402.0" text-anchor="middle" fill="#ECFDF5" font-size="10.5" font-weight="600" class="sans">TP (100%)</text>
+<rect x="68" y="454" width="132" height="84" rx="7" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="134" y="486" text-anchor="middle" fill="#1E3A5F" font-size="20" font-weight="700" class="sans">93,33%</text>
+<text x="134" y="514" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" class="sans">Độ chính xác</text>
+<rect x="210" y="454" width="132" height="84" rx="7" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="276" y="486" text-anchor="middle" fill="#15803D" font-size="20" font-weight="700" class="sans">100,0%</text>
+<text x="276" y="514" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" class="sans">Rejected F1</text>
+<rect x="352" y="454" width="132" height="84" rx="7" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="418" y="486" text-anchor="middle" fill="#2B7BB9" font-size="20" font-weight="700" class="sans">100,0%</text>
+<text x="418" y="514" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" class="sans">Cảnh báo giá ảo</text>
+<rect x="494" y="454" width="132" height="84" rx="7" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.3"/>
+<text x="560" y="486" text-anchor="middle" fill="#B45309" font-size="20" font-weight="700" class="sans">88,89%</text>
+<text x="560" y="514" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" class="sans">ManualReview F1</text>
+<rect x="678" y="72" width="638" height="496" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.6"/>
+<text x="997" y="102" text-anchor="middle" fill="#1E3A5F" font-size="14.5" font-weight="700" class="sans">B. Độ trễ xử lý AME thực tế &amp; hiệu quả tối ưu Ollama Warmup</text>
+<rect x="706" y="122" width="582" height="156" rx="8" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.4"/>
+<text x="722" y="146" fill="#92400E" font-size="12.5" font-weight="700" class="sans">1. Khắc phục lỗi quá thời gian Bước 4 (Ollama qwen2.5:3b)</text>
+<text x="722" y="176" fill="#334155" font-size="11.5" font-weight="600" class="sans">Trước tối ưu (Cold-start mặc định):</text>
+<rect x="935" y="162" width="280" height="22" rx="4" fill="#DC2626"/>
+<text x="1075" y="177" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700" class="sans">&gt; 30.000 ms (Timeout → Fallback)</text>
+<text x="722" y="212" fill="#334155" font-size="11.5" font-weight="600" class="sans">Lifespan Warmup lúc khởi động:</text>
+<rect x="935" y="198" width="134" height="22" rx="4" fill="#F59E0B"/>
+<text x="1078" y="213" fill="#92400E" font-size="11.5" font-weight="700" class="sans">~14.200 ms (chạy nền 1 lần)</text>
+<text x="722" y="248" fill="#14532D" font-size="11.5" font-weight="700" class="sans">Sau tối ưu (Warm, num_ctx=2048):</text>
+<rect x="935" y="234" width="22" height="22" rx="4" fill="#16A34A"/>
+<text x="966" y="249" fill="#15803D" font-size="12" font-weight="700" class="sans">413 ms trung vị (373–748 ms) — Giảm &gt;97%</text>
+<text x="997" y="308" text-anchor="middle" fill="#1E3A5F" font-size="13" font-weight="700" class="sans">2. Độ trễ đầu cuối thực đo trên Container AME v2.3.0 (ms)</text>
+<line x1="758" y1="502.0" x2="1268" y2="502.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="506.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">0</text>
+<line x1="758" y1="467.0" x2="1268" y2="467.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="471.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">300</text>
+<line x1="758" y1="432.0" x2="1268" y2="432.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="436.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">600</text>
+<line x1="758" y1="397.0" x2="1268" y2="397.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="401.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">900</text>
+<line x1="758" y1="362.0" x2="1268" y2="362.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="366.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">1200</text>
+<line x1="758" y1="327.0" x2="1268" y2="327.0" stroke="#E2E8F0" stroke-width="1"/>
+<text x="750" y="331.0" text-anchor="end" fill="#475569" font-size="10.5" class="sans">1500</text>
+<line x1="758" y1="327" x2="758" y2="502" stroke="#334155" stroke-width="1.8"/>
+<line x1="758" y1="502" x2="1268" y2="502" stroke="#334155" stroke-width="1.8"/>
+<rect x="802.4" y="456.5" width="72" height="45.5" rx="5" fill="#F59E0B"/>
+<text x="838.4" y="449.5" text-anchor="middle" fill="#111827" font-size="12" font-weight="700" class="sans">390 ms</text>
+<text x="838.4" y="520" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">Rule Engine</text>
+<text x="838.4" y="535" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">(Định dạng)</text>
+<rect x="918.8" y="432.2" width="72" height="69.8" rx="5" fill="#DC2626"/>
+<text x="954.8" y="425.2" text-anchor="middle" fill="#111827" font-size="12" font-weight="700" class="sans">598 ms</text>
+<text x="954.8" y="520" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">Tầng 1 Reject</text>
+<text x="954.8" y="535" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">(Từ cấm/SĐT)</text>
+<rect x="1035.2" y="396.9" width="72" height="105.1" rx="5" fill="#2B7BB9"/>
+<text x="1071.2" y="389.9" text-anchor="middle" fill="#111827" font-size="12" font-weight="700" class="sans">901 ms</text>
+<text x="1071.2" y="520" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">Approved</text>
+<text x="1071.2" y="535" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">(Cảnh báo giá)</text>
+<rect x="1151.6" y="363.6" width="72" height="138.4" rx="5" fill="#16A34A"/>
+<text x="1187.6" y="356.6" text-anchor="middle" fill="#111827" font-size="12" font-weight="700" class="sans">1186 ms</text>
+<text x="1187.6" y="520" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">Approved</text>
+<text x="1187.6" y="535" text-anchor="middle" fill="#334155" font-size="11" font-weight="600" class="sans">(Chuẩn 4 tầng)</text>
+</svg>
