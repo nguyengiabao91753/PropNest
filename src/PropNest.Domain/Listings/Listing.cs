@@ -187,7 +187,7 @@ public sealed class Listing : AuditableEntity
             throw new InvalidOperationException("Cannot modify images while a listing is pending moderation.");
         }
 
-        if (Status is ListingStatus.Published or ListingStatus.Hidden or ListingStatus.PendingPayment)
+        if (Status is ListingStatus.Published or ListingStatus.Hidden or ListingStatus.PendingPayment or ListingStatus.Expired)
         {
             Status = ListingStatus.PendingModeration;
             ModerationDecision = ModerationDecision.Pending;
@@ -197,6 +197,17 @@ public sealed class Listing : AuditableEntity
 
         Touch();
         return false;
+    }
+
+    public void RecordMediaUpdate()
+    {
+        EnsureNotDeleted();
+        if (Status == ListingStatus.PendingModeration)
+        {
+            throw new InvalidOperationException("Cannot modify images while a listing is pending moderation.");
+        }
+
+        Touch();
     }
 
     public void SubmitForModeration()

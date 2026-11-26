@@ -13,7 +13,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public async Task<Listing?> GetByIdAsync(long listingId, CancellationToken cancellationToken = default)
     {
         return await dbContext.Listings
-            .Include(x => x.Images.OrderBy(img => img.SortOrder))
+            .Include(x => x.Images.OrderBy(img => img.IsCover ? 0 : 1).ThenBy(img => img.SortOrder))
             .SingleOrDefaultAsync(x => x.ListingId == listingId, cancellationToken);
     }
 
@@ -32,7 +32,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
 
     public async Task<IReadOnlyList<Listing>> GetByOwnerUserIdAsync(long ownerUserId, CancellationToken cancellationToken = default) =>
         await dbContext.Listings
-            .Include(x => x.Images.OrderBy(img => img.SortOrder))
+            .Include(x => x.Images.OrderBy(img => img.IsCover ? 0 : 1).ThenBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.OwnerUserId == ownerUserId)
             .OrderByDescending(x => x.CreatedAt)
@@ -41,7 +41,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
     public async Task<IReadOnlyList<Listing>> GetPendingModerationAsync(CancellationToken cancellationToken = default)
     {
         var items = await dbContext.Listings
-            .Include(x => x.Images.OrderBy(img => img.SortOrder))
+            .Include(x => x.Images.OrderBy(img => img.IsCover ? 0 : 1).ThenBy(img => img.SortOrder))
             .AsNoTracking()
             .Where(x => x.Status == ListingStatus.PendingModeration
                      && x.ModerationDecision == ModerationDecision.ManualReview)
@@ -80,7 +80,7 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
                         user != null ? user.Email : null,
                         user != null ? user.PhoneNumber : null,
                         l.CreatedAt,
-                        l.Images.OrderBy(img => img.SortOrder).Select(img => img.Url).ToList(),
+                        l.Images.OrderBy(img => img.IsCover ? 0 : 1).ThenBy(img => img.SortOrder).Select(img => img.Url).ToList(),
                         l.Floors,
                         l.Bedrooms,
                         l.Bathrooms,
@@ -319,13 +319,15 @@ public sealed class ListingRepository(PropNestDbContext dbContext) : IListingRep
         await dbContext.ListingImages
             .AsNoTracking()
             .Where(x => x.ListingId == listingId)
-            .OrderBy(x => x.SortOrder)
+            .OrderBy(x => x.IsCover ? 0 : 1)
+            .ThenBy(x => x.SortOrder)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ListingImage>> GetTrackedImagesByListingIdAsync(long listingId, CancellationToken cancellationToken = default) =>
         await dbContext.ListingImages
             .Where(x => x.ListingId == listingId)
-            .OrderBy(x => x.SortOrder)
+            .OrderBy(x => x.IsCover ? 0 : 1)
+            .ThenBy(x => x.SortOrder)
             .ToListAsync(cancellationToken);
 
     public Task<ListingImage?> GetImageByIdAsync(long imageId, CancellationToken cancellationToken = default) =>

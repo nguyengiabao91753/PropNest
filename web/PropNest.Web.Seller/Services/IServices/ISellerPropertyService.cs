@@ -14,6 +14,8 @@ public interface ISellerPropertyService
     Task<long?> CreatePropertyAsync(CreatePropertyInputModel input, CancellationToken cancellationToken = default);
     Task<UpdatePropertyStatus> UpdatePropertyAsync(long id, CreatePropertyInputModel input, CancellationToken cancellationToken = default);
     Task<bool> UploadPropertyImagesAsync(long listingId, List<IFormFile> files, CancellationToken cancellationToken = default);
+    Task<List<SellerListingImageItem>> GetPropertyImagesAsync(long listingId, CancellationToken cancellationToken = default);
+    Task<SyncImagesApiResult> SyncPropertyImagesAsync(long listingId, string orderManifest, List<IFormFile>? files, string? expectedRowVersion = null, bool deferModeration = false, CancellationToken cancellationToken = default);
     Task<List<HistoryDeltaViewModel>> GetHistoryDeltaAsync(long id, CancellationToken cancellationToken = default);
     Task<PurchasePackageApiResult> PurchasePackageAsync(long listingId, string packageCode, decimal amount, string? idempotencyKey = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SellerPackageDefinitionViewModel>> GetActivePackagesAsync(CancellationToken cancellationToken = default);

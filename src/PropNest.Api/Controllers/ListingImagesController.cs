@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropNest.Api.Extensions;
@@ -20,7 +21,7 @@ public sealed class ListingImagesController(
     };
 
     private const long MaxFileSizeInBytes = 10 * 1024 * 1024; // 10 MB
-    private const int MaxFilesPerRequest = 10;
+    private const int MaxFilesPerRequest = ListingImageService.MaxImagesPerListing;
 
     [HttpPost]
     [Authorize(Roles = "Seller, Admin")]
@@ -49,52 +50,10 @@ public sealed class ListingImagesController(
                 }));
             }
 
-            var items = new List<UploadImageItem>(files.Count);
-            foreach (var file in files)
+            var (items, validationError) = await ReadAndValidateFilesAsync(files, openedStreams, cancellationToken);
+            if (validationError is not null)
             {
-                if (file.Length == 0)
-                {
-                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
-                    {
-                        [file.FileName] = ["File cannot be empty."]
-                    }));
-                }
-
-                if (file.Length > MaxFileSizeInBytes)
-                {
-                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
-                    {
-                        [file.FileName] = ["File size must not exceed 10 MB."]
-                    }));
-                }
-
-                var extension = Path.GetExtension(file.FileName);
-                if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-                {
-                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
-                    {
-                        [file.FileName] = ["Only .jpg, .jpeg, .png, and .webp images are allowed."]
-                    }));
-                }
-
-                var memoryStream = new MemoryStream((int)Math.Min(file.Length, MaxFileSizeInBytes));
-                openedStreams.Add(memoryStream);
-                await file.CopyToAsync(memoryStream, cancellationToken);
-                memoryStream.Position = 0;
-
-                if (!HasValidImageSignature(memoryStream))
-                {
-                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
-                    {
-                        [file.FileName] = ["Tệp tải lên không phải là ảnh hợp lệ (JPEG/PNG/WEBP)."]
-                    }));
-                }
-
-                memoryStream.Position = 0;
-                items.Add(new UploadImageItem(
-                    memoryStream,
-                    file.FileName,
-                    file.ContentType));
+                return ValidationProblem(validationError);
             }
 
             var userId = GetRequiredUserId();
@@ -112,6 +71,131 @@ public sealed class ListingImagesController(
             {
                 await stream.DisposeAsync();
             }
+        }
+    }
+
+    [HttpPost("sync")]
+    [Authorize(Roles = "Seller, Admin")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<SyncListingImagesResult>> SyncImages(
+        long listingId,
+        [FromForm] string? orderManifest,
+        [FromForm] List<IFormFile>? files,
+        [FromForm] string? expectedRowVersion,
+        [FromForm] bool deferModeration = false,
+        CancellationToken cancellationToken = default)
+    {
+        var openedStreams = new List<Stream>();
+        try
+        {
+            List<string> orderTokens;
+            if (string.IsNullOrWhiteSpace(orderManifest))
+            {
+                orderTokens = [];
+            }
+            else
+            {
+                try
+                {
+                    orderTokens = JsonSerializer.Deserialize<List<string>>(orderManifest) ?? [];
+                }
+                catch (JsonException)
+                {
+                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                    {
+                        ["orderManifest"] = ["Thứ tự hình ảnh gửi lên không hợp lệ."]
+                    }));
+                }
+            }
+
+            byte[]? rowVersionBytes = null;
+            if (!string.IsNullOrWhiteSpace(expectedRowVersion))
+            {
+                try
+                {
+                    rowVersionBytes = Convert.FromBase64String(expectedRowVersion);
+                }
+                catch (FormatException)
+                {
+                    return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                    {
+                        ["expectedRowVersion"] = ["RowVersion must be a valid Base64 string."]
+                    }));
+                }
+            }
+
+            var incomingFiles = files ?? [];
+            if (incomingFiles.Count > MaxFilesPerRequest)
+            {
+                return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    ["files"] = [$"Chỉ được tải tối đa {MaxFilesPerRequest} hình ảnh mỗi lần."]
+                }));
+            }
+
+            var (items, validationError) = await ReadAndValidateFilesAsync(incomingFiles, openedStreams, cancellationToken);
+            if (validationError is not null)
+            {
+                return ValidationProblem(validationError);
+            }
+
+            var userId = GetRequiredUserId();
+            var isAdmin = currentUser.IsInRole("Admin");
+            var result = await listingImageService.SyncImagesAsync(
+                listingId,
+                userId,
+                orderTokens,
+                items,
+                rowVersionBytes,
+                deferModeration,
+                isAdmin,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return this.HandleException(ex);
+        }
+        finally
+        {
+            foreach (var stream in openedStreams)
+            {
+                await stream.DisposeAsync();
+            }
+        }
+    }
+
+    [HttpPut("reorder")]
+    [Authorize(Roles = "Seller, Admin")]
+    public async Task<ActionResult<IReadOnlyList<ListingImageDto>>> ReorderImages(
+        long listingId,
+        [FromBody] ReorderListingImagesRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (request is null || request.OrderedImageIds is null || request.OrderedImageIds.Count == 0)
+            {
+                return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    ["orderedImageIds"] = ["Danh sách thứ tự hình ảnh không được để trống."]
+                }));
+            }
+
+            var userId = GetRequiredUserId();
+            var isAdmin = currentUser.IsInRole("Admin");
+            var reordered = await listingImageService.ReorderImagesAsync(
+                listingId,
+                userId,
+                request.OrderedImageIds,
+                isAdmin,
+                cancellationToken);
+            return Ok(reordered);
+        }
+        catch (Exception ex)
+        {
+            return this.HandleException(ex);
         }
     }
 
@@ -191,6 +275,62 @@ public sealed class ListingImagesController(
         {
             return this.HandleException(ex);
         }
+    }
+
+    private static async Task<(List<UploadImageItem> Items, ValidationProblemDetails? Error)> ReadAndValidateFilesAsync(
+        List<IFormFile> files,
+        List<Stream> openedStreams,
+        CancellationToken cancellationToken)
+    {
+        var items = new List<UploadImageItem>(files.Count);
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                return (items, new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [file.FileName] = ["File cannot be empty."]
+                }));
+            }
+
+            if (file.Length > MaxFileSizeInBytes)
+            {
+                return (items, new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [file.FileName] = ["File size must not exceed 10 MB."]
+                }));
+            }
+
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+            {
+                return (items, new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [file.FileName] = ["Only .jpg, .jpeg, .png, and .webp images are allowed."]
+                }));
+            }
+
+            var memoryStream = new MemoryStream((int)Math.Min(file.Length, MaxFileSizeInBytes));
+            openedStreams.Add(memoryStream);
+            await file.CopyToAsync(memoryStream, cancellationToken);
+            memoryStream.Position = 0;
+
+            if (!HasValidImageSignature(memoryStream))
+            {
+                return (items, new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    [file.FileName] = ["Tệp tải lên không phải là ảnh hợp lệ (JPEG/PNG/WEBP)."]
+                }));
+            }
+
+            memoryStream.Position = 0;
+            items.Add(new UploadImageItem(
+                memoryStream,
+                file.FileName,
+                file.ContentType));
+        }
+
+        return (items, null);
     }
 
     private static bool HasValidImageSignature(Stream stream)

@@ -215,9 +215,10 @@ public class PropertiesController : Controller
     }
 
     [HttpGet("UploadImages/{id}")]
-    public async Task<IActionResult> UploadImages(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadImages(long id, [FromQuery] string? returnTo = null, CancellationToken cancellationToken = default)
     {
-        ViewData["ActiveNav"] = "Create";
+        ViewData["ActiveNav"] = string.Equals(returnTo, "details", StringComparison.OrdinalIgnoreCase) ? "Properties" : "Create";
+        ViewData["ReturnTo"] = returnTo;
         var item = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
         if (item == null)
         {
@@ -231,25 +232,62 @@ public class PropertiesController : Controller
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        item.ImageItems = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
         return View(item);
     }
 
     [HttpPost("UploadImages/{id}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadImages(long id, [FromForm] List<IFormFile> files, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadImages(
+        long id,
+        [FromForm] string? imageOrderManifest,
+        [FromForm] List<IFormFile>? files,
+        [FromForm] string? returnTo,
+        CancellationToken cancellationToken)
     {
-        ViewData["ActiveNav"] = "Create";
-        if (files != null && files.Count > 0)
+        ViewData["ActiveNav"] = string.Equals(returnTo, "details", StringComparison.OrdinalIgnoreCase) ? "Properties" : "Create";
+
+        var newFiles = files?.Where(f => f.Length > 0).ToList() ?? new List<IFormFile>();
+        var hasManifest = !string.IsNullOrWhiteSpace(imageOrderManifest);
+
+        if (hasManifest || newFiles.Count > 0)
         {
-            var success = await _sellerService.UploadPropertyImagesAsync(id, files, cancellationToken);
-            if (success)
+            var manifest = imageOrderManifest;
+            if (string.IsNullOrWhiteSpace(manifest))
             {
-                TempData["SuccessMessage"] = $"Đã tải lên {files.Count} hình ảnh cho tin đăng #{id} thành công!";
+                var existing = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
+                var tokens = existing.Select(x => $"existing:{x.ImageId}").ToList();
+                for (var i = 0; i < newFiles.Count; i++)
+                {
+                    tokens.Add($"new:{i}");
+                }
+                manifest = System.Text.Json.JsonSerializer.Serialize(tokens);
+            }
+
+            var syncResult = await _sellerService.SyncPropertyImagesAsync(
+                id,
+                manifest,
+                newFiles,
+                expectedRowVersion: null,
+                deferModeration: false,
+                cancellationToken: cancellationToken);
+
+            if (syncResult.Success)
+            {
+                TempData["SuccessMessage"] = newFiles.Count > 0
+                    ? $"Đã lưu hình ảnh (tải lên {newFiles.Count} ảnh mới) và thứ tự hiển thị cho tin đăng #{id} thành công!"
+                    : $"Đã cập nhật danh sách và thứ tự hình ảnh cho tin đăng #{id} thành công!";
             }
             else
             {
-                TempData["WarningMessage"] = "Không thể tải lên một số hình ảnh. Bạn có thể bổ sung lại sau.";
+                TempData["ErrorMessage"] = syncResult.ErrorMessage ?? "Không thể cập nhật hình ảnh. Vui lòng kiểm tra định dạng/dung lượng ảnh và thử lại.";
+                return RedirectToAction(nameof(UploadImages), new { id, returnTo });
             }
+        }
+
+        if (string.Equals(returnTo, "details", StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         return RedirectToAction(nameof(Index), new { status = "draft" });
@@ -272,6 +310,7 @@ public class PropertiesController : Controller
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        var imageItems = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
         var model = new CreatePropertyInputModel
         {
             Id = item.Id,
@@ -295,7 +334,8 @@ public class PropertiesController : Controller
             WardCode = item.WardCode,
             LegacyAddress = item.LegacyAddress,
             RowVersion = item.RowVersion,
-            ExistingImages = item.Images ?? new List<string>()
+            ExistingImages = imageItems.Count > 0 ? imageItems.Select(x => x.Url).ToList() : (item.Images ?? new List<string>()),
+            ExistingImageItems = imageItems
         };
         return View(model);
     }
@@ -305,6 +345,7 @@ public class PropertiesController : Controller
     public async Task<IActionResult> Edit(long id, CreatePropertyInputModel model, CancellationToken cancellationToken)
     {
         ViewData["ActiveNav"] = "Properties";
+        model.Id = id;
 
         if (string.Equals(model.AdministrativeMode, "PreMerger", StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.District))
@@ -314,6 +355,9 @@ public class PropertiesController : Controller
 
         if (!ModelState.IsValid)
         {
+            var currentImages = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
+            model.ExistingImageItems = currentImages;
+            model.ExistingImages = currentImages.Select(x => x.Url).ToList();
             return View(model);
         }
 
@@ -326,17 +370,22 @@ public class PropertiesController : Controller
             case UpdatePropertyStatus.ConcurrencyConflict:
                 TempData["ErrorMessage"] = "Tin đã bị người khác chỉnh sửa, vui lòng tải lại.";
                 var refreshed = await _sellerService.GetPropertyByIdAsync(id, cancellationToken);
+                var refreshedImages = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
                 if (refreshed != null)
                 {
                     model.RowVersion = refreshed.RowVersion;
-                    model.ExistingImages = refreshed.Images;
                 }
+                model.ExistingImageItems = refreshedImages;
+                model.ExistingImages = refreshedImages.Select(x => x.Url).ToList();
                 return View(model);
             case UpdatePropertyStatus.NotFound:
                 TempData["ErrorMessage"] = $"Không tìm thấy tin đăng #{id} để cập nhật.";
                 return RedirectToAction(nameof(Index));
             default:
-                TempData["ErrorMessage"] = "Có lỗi xảy ra khi cập nhật tin đăng. Vui lòng thử lại sau.";
+                TempData["ErrorMessage"] = "Có lỗi xảy ra khi cập nhật tin đăng hoặc hình ảnh. Vui lòng kiểm tra ảnh hợp lệ (JPG/PNG/WEBP ≤ 10MB, tối đa 15 ảnh) và thử lại.";
+                var fallbackImages = await _sellerService.GetPropertyImagesAsync(id, cancellationToken);
+                model.ExistingImageItems = fallbackImages;
+                model.ExistingImages = fallbackImages.Select(x => x.Url).ToList();
                 return View(model);
         }
     }

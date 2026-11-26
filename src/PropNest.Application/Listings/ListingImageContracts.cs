@@ -1,5 +1,7 @@
 namespace PropNest.Application.Listings;
 
+public sealed class ListingConcurrencyException(string message) : Exception(message);
+
 public sealed record ListingImageDto(
     long ImageId,
     long ListingId,
@@ -14,6 +16,13 @@ public sealed record UpdateListingImageRequest(
     int? SortOrder,
     bool? IsCover,
     string? Caption);
+
+public sealed record ReorderListingImagesRequest(
+    IReadOnlyList<long> OrderedImageIds);
+
+public sealed record SyncListingImagesResult(
+    IReadOnlyList<ListingImageDto> Images,
+    byte[] RowVersion);
 
 public sealed record UploadImageItem(
     Stream ContentStream,
@@ -39,6 +48,23 @@ public interface IListingImageService
         long imageId,
         long userId,
         UpdateListingImageRequest request,
+        bool isAdmin = false,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingImageDto>> ReorderImagesAsync(
+        long listingId,
+        long userId,
+        IReadOnlyList<long> orderedImageIds,
+        bool isAdmin = false,
+        CancellationToken cancellationToken = default);
+
+    Task<SyncListingImagesResult> SyncImagesAsync(
+        long listingId,
+        long userId,
+        IReadOnlyList<string> orderTokens,
+        IReadOnlyList<UploadImageItem> newFiles,
+        byte[]? expectedRowVersion = null,
+        bool deferReModeration = false,
         bool isAdmin = false,
         CancellationToken cancellationToken = default);
 

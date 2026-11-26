@@ -24,6 +24,9 @@ namespace PropNest.Web.Seller.Services
         [LoggerMessage(Level = LogLevel.Error, Message = "UploadPropertyImages thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogUploadImagesFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
 
+        [LoggerMessage(Level = LogLevel.Error, Message = "SyncPropertyImages thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
+        private static partial void LogSyncImagesFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
+
         [LoggerMessage(Level = LogLevel.Error, Message = "PurchasePackage thất bại cho tin đăng {ListingId}. Status: {StatusCode}, Chi tiết: {Details}")]
         private static partial void LogPurchasePackageFailed(ILogger logger, long listingId, System.Net.HttpStatusCode statusCode, string details);
 
@@ -328,6 +331,51 @@ namespace PropNest.Web.Seller.Services
             var url = $"/api/v1/listings/{id}";
             try
             {
+                var effectiveRowVersion = input.RowVersion ?? string.Empty;
+                var hasNewFiles = input.ImageFiles != null && input.ImageFiles.Count > 0;
+                var shouldSyncImages = input.ImagesModified || hasNewFiles;
+
+                // Đồng bộ ảnh (thêm / xóa / đổi thứ tự) TRƯỚC khi gọi PUT cập nhật nội dung
+                // với deferModeration = true để tránh lỗi 409 PendingModeration và gửi đúng bộ ảnh mới sang AME.
+                if (shouldSyncImages)
+                {
+                    var manifest = input.ImageOrderManifest;
+                    if (string.IsNullOrWhiteSpace(manifest))
+                    {
+                        var existing = await GetPropertyImagesAsync(id, cancellationToken);
+                        var fallbackTokens = existing.Select(img => $"existing:{img.ImageId}").ToList();
+                        var newCount = input.ImageFiles?.Count ?? 0;
+                        for (var i = 0; i < newCount; i++)
+                        {
+                            fallbackTokens.Add($"new:{i}");
+                        }
+                        manifest = JsonSerializer.Serialize(fallbackTokens);
+                    }
+
+                    var syncResult = await SyncPropertyImagesAsync(
+                        id,
+                        manifest,
+                        input.ImageFiles,
+                        expectedRowVersion: effectiveRowVersion,
+                        deferModeration: true,
+                        cancellationToken: cancellationToken);
+
+                    if (syncResult.IsConcurrencyConflict)
+                    {
+                        return UpdatePropertyStatus.ConcurrencyConflict;
+                    }
+
+                    if (!syncResult.Success)
+                    {
+                        return UpdatePropertyStatus.Failed;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(syncResult.NewRowVersion))
+                    {
+                        effectiveRowVersion = syncResult.NewRowVersion;
+                    }
+                }
+
                 var request = new ApiUpdateListingRequest(
                     input.Title,
                     input.Description,
@@ -339,7 +387,7 @@ namespace PropNest.Web.Seller.Services
                     input.District,
                     input.Ward,
                     input.Address,
-                    input.RowVersion ?? string.Empty,
+                    effectiveRowVersion,
                     input.Floors,
                     input.Bedrooms,
                     input.Bathrooms,
@@ -363,16 +411,96 @@ namespace PropNest.Web.Seller.Services
                 {
                     return UpdatePropertyStatus.Failed;
                 }
-                if (input.ImageFiles != null && input.ImageFiles.Count > 0)
-                {
-                    await UploadPropertyImagesAsync(id, input.ImageFiles, cancellationToken);
-                }
                 return UpdatePropertyStatus.Success;
             }
             catch (HttpRequestException ex)
             {
                 LogApiConnectionError(_logger, ex, url);
                 return UpdatePropertyStatus.Failed;
+            }
+        }
+
+        public async Task<List<SellerListingImageItem>> GetPropertyImagesAsync(long listingId, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{listingId}/images";
+            try
+            {
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new List<SellerListingImageItem>();
+                }
+                var dtos = await response.Content.ReadFromJsonAsync<List<ApiListingImageDto>>(_jsonOptions, cancellationToken);
+                if (dtos == null || dtos.Count == 0)
+                {
+                    return new List<SellerListingImageItem>();
+                }
+                return dtos
+                    .OrderBy(x => x.IsCover ? 0 : 1)
+                    .ThenBy(x => x.SortOrder)
+                    .Select(x => new SellerListingImageItem(x.ImageId, x.Url, x.SortOrder, x.IsCover, x.Caption))
+                    .ToList();
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return new List<SellerListingImageItem>();
+            }
+        }
+
+        public async Task<SyncImagesApiResult> SyncPropertyImagesAsync(
+            long listingId,
+            string orderManifest,
+            List<IFormFile>? files,
+            string? expectedRowVersion = null,
+            bool deferModeration = false,
+            CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/v1/listings/{listingId}/images/sync";
+            try
+            {
+                using var formData = new MultipartFormDataContent();
+                formData.Add(new StringContent(string.IsNullOrWhiteSpace(orderManifest) ? "[]" : orderManifest), "orderManifest");
+                formData.Add(new StringContent(deferModeration ? "true" : "false"), "deferModeration");
+                if (!string.IsNullOrWhiteSpace(expectedRowVersion))
+                {
+                    formData.Add(new StringContent(expectedRowVersion), "expectedRowVersion");
+                }
+
+                if (files != null)
+                {
+                    foreach (var file in files)
+                    {
+                        if (file.Length == 0) continue;
+                        var streamContent = new StreamContent(file.OpenReadStream());
+                        if (!string.IsNullOrWhiteSpace(file.ContentType))
+                        {
+                            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                        }
+                        formData.Add(streamContent, "files", file.FileName);
+                    }
+                }
+
+                var response = await _httpClient.PostAsync(url, formData, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    LogSyncImagesFailed(_logger, listingId, response.StatusCode, errorBody);
+                    var isConflict = response.StatusCode == System.Net.HttpStatusCode.Conflict &&
+                                     errorBody.Contains("Concurrency", StringComparison.OrdinalIgnoreCase);
+                    return new SyncImagesApiResult(false, null, isConflict, ExtractErrorMessage(errorBody));
+                }
+
+                var payload = await response.Content.ReadFromJsonAsync<ApiSyncListingImagesResultDto>(_jsonOptions, cancellationToken);
+                var newRowVersion = payload?.RowVersion is { Length: > 0 } rv
+                    ? Convert.ToBase64String(rv)
+                    : null;
+                return new SyncImagesApiResult(true, newRowVersion);
+            }
+            catch (HttpRequestException ex)
+            {
+                LogApiConnectionError(_logger, ex, url);
+                return new SyncImagesApiResult(false, null, false, "Không thể kết nối tới máy chủ để cập nhật hình ảnh.");
             }
         }
 
@@ -745,6 +873,23 @@ namespace PropNest.Web.Seller.Services
         }
 
         private sealed record ApiPurchasePackageRequest(string PackageCode, decimal ChargeAmount);
+
+        private sealed class ApiListingImageDto
+        {
+            public long ImageId { get; set; }
+            public long ListingId { get; set; }
+            public string Url { get; set; } = string.Empty;
+            public int SortOrder { get; set; }
+            public bool IsCover { get; set; }
+            public string? Caption { get; set; }
+            public string Status { get; set; } = string.Empty;
+        }
+
+        private sealed class ApiSyncListingImagesResultDto
+        {
+            public List<ApiListingImageDto>? Images { get; set; }
+            public byte[]? RowVersion { get; set; }
+        }
 
         private sealed class ApiWorkflowDto
         {

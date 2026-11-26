@@ -4,6 +4,19 @@ namespace PropNest.Web.Seller.Models.ViewModels;
 
 public sealed record PurchasePackageApiResult(bool Success, Guid? CorrelationId, string? ErrorMessage = null);
 
+public sealed record SellerListingImageItem(
+    long ImageId,
+    string Url,
+    int SortOrder,
+    bool IsCover,
+    string? Caption = null);
+
+public sealed record SyncImagesApiResult(
+    bool Success,
+    string? NewRowVersion = null,
+    bool IsConcurrencyConflict = false,
+    string? ErrorMessage = null);
+
 public sealed record SellerPackageDefinitionViewModel(
     string PackageCode,
     string Name,
@@ -50,6 +63,7 @@ public sealed class SellerPropertyItemViewModel
     public string SellerName { get; set; } = "Nguyễn Văn Minh";
     public string? SellerAvatar { get; set; }
     public List<string> Images { get; set; } = new();
+    public List<SellerListingImageItem> ImageItems { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? RejectReason { get; set; }
     public string? ModerationWarning { get; set; }

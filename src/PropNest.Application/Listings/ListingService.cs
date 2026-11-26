@@ -262,7 +262,11 @@ public sealed class ListingService(
         null,
         null,
         null,
-        listing.Images?.Select(img => img.Url).ToList() ?? new List<string>(),
+        listing.Images?
+            .OrderBy(img => img.IsCover ? 0 : 1)
+            .ThenBy(img => img.SortOrder)
+            .Select(img => img.Url)
+            .ToList() ?? new List<string>(),
         listing.Floors,
         listing.Bedrooms,
         listing.Bathrooms,
@@ -301,7 +305,11 @@ public sealed class ListingService(
         owner?.Email,
         owner?.PhoneNumber,
         listing.CreatedAt,
-        listing.Images?.Select(img => img.Url).ToList() ?? new List<string>(),
+        listing.Images?
+            .OrderBy(img => img.IsCover ? 0 : 1)
+            .ThenBy(img => img.SortOrder)
+            .Select(img => img.Url)
+            .ToList() ?? new List<string>(),
         listing.Floors,
         listing.Bedrooms,
         listing.Bathrooms,

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PropNest.Application.Listings;
 
 namespace PropNest.Api.Extensions
 {
@@ -21,7 +22,7 @@ namespace PropNest.Api.Extensions
                     detail: exception.Message,
                     statusCode: StatusCodes.Status400BadRequest,
                     title: "Bad Request"),
-                DbUpdateConcurrencyException => controller.Problem(
+                DbUpdateConcurrencyException or ListingConcurrencyException => controller.Problem(
                     detail: "The listing has been modified by another request. Please refresh and try again.",
                     statusCode: StatusCodes.Status409Conflict,
                     title: "Concurrency Conflict"),

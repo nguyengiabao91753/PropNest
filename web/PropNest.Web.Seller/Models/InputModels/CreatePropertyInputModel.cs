@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using PropNest.Web.Seller.Models.ViewModels;
 
 namespace PropNest.Web.Seller.Models.InputModels;
 
@@ -102,4 +103,19 @@ public sealed class CreatePropertyInputModel
     /// Danh sách URL ảnh hiện có (được Backend trả về khi tải form Sửa để xem preview)
     /// </summary>
     public List<string> ExistingImages { get; set; } = new();
+
+    /// <summary>
+    /// Danh sách chi tiết ảnh hiện có (kèm ImageId, SortOrder, IsCover) để xóa & đổi thứ tự
+    /// </summary>
+    public List<SellerListingImageItem> ExistingImageItems { get; set; } = new();
+
+    /// <summary>
+    /// Chuỗi JSON danh sách thứ tự ảnh kết hợp: ["existing:101","new:0","existing:102"]
+    /// </summary>
+    public string? ImageOrderManifest { get; set; }
+
+    /// <summary>
+    /// Đánh dấu người bán có thêm/xóa/đổi thứ tự ảnh trong form Edit hay không
+    /// </summary>
+    public bool ImagesModified { get; set; }
 }
